@@ -3,12 +3,13 @@
 using namespace xfinal;
 class Test {
 public:
-	void before() {
-
+	bool before(request& req,response& res) {
+		std::cout << "pre process aop" << std::endl;
+		return false;
 	}
 
-	bool after() {
-
+	bool after(request& req, response& res) {
+		return false;
 	}
 private:
 	int a;
@@ -24,7 +25,7 @@ int main()
 	server.listen("0.0.0.0", "8080");
 	server.router<GET>("/abc", [](request& req,response& res) {
 		std::cout << "hahaha "<<req.get_url() << std::endl;
-	});
+	}, Test{});
 	server.run();
 	std::cin.get();
 	return 0;
