@@ -42,6 +42,7 @@ namespace xfinal {
 				req_.method_ = request_info.method_;
 				req_.url_ = request_info.url_;
 				req_.headers_ = &(request_info.headers_);
+				req_.header_length_ = parser.get_header_size();
 				handler_read();
 				return;
 			}
@@ -81,7 +82,7 @@ namespace xfinal {
 			});
 		}
 		void write() {
-			socket_->async_write_some(asio::buffer("HTTP/1.1  200  OK\r\nServer: Apache-Coyote/1.1"), [handler = this->shared_from_this()](std::error_code const& ec, std::size_t write_size) {
+			socket_->async_write_some(asio::buffer("HTTP/1.1 200 OK\r\nServer: Apache-Coyote/1.1"), [handler = this->shared_from_this()](std::error_code const& ec, std::size_t write_size) {
 				handler->close();
 			});
 		}
@@ -97,7 +98,7 @@ namespace xfinal {
 		std::vector<char> buffers_;
 		std::size_t current_use_pos_ = 0;
 		std::size_t left_buffer_size_;
-		request_meta request_info;
+		xfinal::request_meta request_info;
 		request req_;
 		response res_;
 		http_router& router_;

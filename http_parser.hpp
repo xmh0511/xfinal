@@ -36,9 +36,10 @@ namespace xfinal {
 		}
 		std::pair<parse_state, bool> is_complete_header() {
 			auto current = begin_;
+			header_begin_ = begin_;
 			while (current != end_) {
 				if (*current == '\r' && *(current + 1) == '\n' && *(current + 2) == '\r' && *(current + 3) == '\n') {
-					header_end_ = current - 1;
+					header_end_ = current +4;
 					return { parse_state::valid,true };
 				}
 				++current;
@@ -128,9 +129,13 @@ namespace xfinal {
 				return { false,request_meta() };
 			}
 		}
+		std::size_t get_header_size() {
+			return (header_end_ - header_begin_);
+		}
 	private:
 		std::vector<char>::iterator begin_;
 		std::vector<char>::iterator end_;
 		std::vector<char>::iterator header_end_;
+		std::vector<char>::iterator header_begin_;
 	};
 }

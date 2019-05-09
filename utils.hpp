@@ -1,5 +1,6 @@
 #pragma once
 #include <array>
+#include <tuple>
 namespace xfinal {
 	class nocopyable {
 	public:
@@ -104,6 +105,55 @@ namespace xfinal {
 	struct http_method_str<> {
 		static auto methods_to_name() ->std::array<std::string, 0>{
 			return std::array<std::string, 0>{};
+		}
+	};
+
+	template<typename T,typename U = void>
+	struct is_aop {
+		static constexpr bool value = false;
+	};
+
+	template<typename T>
+	struct is_aop<T, std::void_t<std::tuple<decltype(&T::before),decltype(&T::after)>>> {
+		static constexpr bool value = true;
+	};
+
+	template<typename AopTuple, typename NoAopTuple,typename T,typename U = std::enable_if_t<is_aop<std::remove_reference_t<T>>::value>>
+	auto process_reorganize(int,AopTuple&& atp, NoAopTuple&& natp,T&& t) {
+		auto tp =  std::tuple_cat(atp, std::tuple<T>(t));
+		return std::make_tuple(tp, natp);
+	}
+
+	template<typename AopTuple, typename NoAopTuple, typename T, typename U = std::enable_if_t<!is_aop<std::remove_reference_t<T>>::value>>
+	auto process_reorganize(float,AopTuple&& atp, NoAopTuple&& natp, T&& t) {
+		auto tp = std::tuple_cat(natp, std::tuple<T>(t));
+		return std::make_tuple(atp, tp);
+	}
+
+	template<typename AopTuple, typename NoAopTuple>
+	auto reorganize_tuple(AopTuple&& atp, NoAopTuple&& natp) {
+		return std::make_tuple(atp, natp);
+	}
+
+	template<typename AopTuple,typename NoAopTuple,typename T,typename...Args>
+	auto reorganize_tuple(AopTuple&& atp, NoAopTuple&& natp,T&& t,Args&&...args) {
+		auto tp = process_reorganize(0, atp, natp, t);
+		return reorganize_tuple(std::get<0>(tp), std::get<1>(tp), std::forward<Args>(args)...);
+	}
+
+	template<std::size_t N,std::size_t Max>
+	struct each_tuple {
+		template<typename Tuple, typename Function>
+		void operator()(Tuple&& tp, Function&& function) {
+			function(std::get<N>(tp));
+			each_tuple<N + 1, Max>{}(std::forward<Tuple>(tp), std::forward<Function>(function));
+		}
+	};
+	template<std::size_t Max>
+	struct each_tuple<Max, Max> {
+		template<typename Tuple, typename Function>
+		void operator()(Tuple&& tp, Function&& function) {
+
 		}
 	};
 }
