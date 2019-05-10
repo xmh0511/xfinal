@@ -5,6 +5,8 @@
 #include <map>
 #include <algorithm>
 #include "utils.hpp"
+#include "code_parser.hpp"
+#include "string_view.hpp"
 namespace xfinal {
 	enum class parse_state :std::uint8_t
 	{
@@ -27,11 +29,14 @@ namespace xfinal {
 		std::string method_;
 		std::string url_;
 		std::map<std::string, std::string> headers_;
+		std::map<nonstd::string_view, nonstd::string_view> form_map_;
+		std::string body_;
+		std::string decode_body_;
 	};
 
-	class http_parser {
+	class http_parser_header final {
 	public:
-		http_parser(std::vector<char>::iterator begin, std::vector<char>::iterator end) :begin_(begin), end_(end) {
+		http_parser_header(std::vector<char>::iterator begin, std::vector<char>::iterator end) :begin_(begin), end_(end) {
 
 		}
 		std::pair<parse_state, bool> is_complete_header() {
@@ -87,7 +92,12 @@ namespace xfinal {
 					auto old_start = start;
 					while (start != begin_) {
 						if ((*start) == ':') {
-							headers.emplace(to_lower(std::string(old_start, start)), std::string(start+1, begin_));
+							auto key = std::string(old_start, start);
+							++start;
+							while ((*start) == ' ') {
+								++start;
+							}
+							headers.emplace(to_lower(std::move(key)), std::string(start, begin_));
 							begin_ += 2;
 							start = begin_;
 							break;
@@ -137,5 +147,44 @@ namespace xfinal {
 		std::vector<char>::iterator end_;
 		std::vector<char>::iterator header_end_;
 		std::vector<char>::iterator header_begin_;
+	};
+
+	class http_urlform_parser final {
+	public:
+		http_urlform_parser(std::string& body){
+			body = xfinal::get_string_by_urldecode(body);
+			begin_ = body.begin();
+			end_ = body.end();
+		}
+		void parse_data(std::map<nonstd::string_view, nonstd::string_view>& form) {
+			auto old = begin_;
+			while (begin_ != end_) {
+				if ((begin_ + 1) == end_) {
+					begin_++;
+					parse_key_value(form, old);
+					break;
+				}
+				if ((*begin_) == '&') {
+					parse_key_value(form, old);
+					++begin_;
+					old = begin_;
+				}
+				++begin_;
+			}
+		}
+	protected:
+		void parse_key_value(std::map<nonstd::string_view, nonstd::string_view>& form, std::string::iterator old) {
+			auto start = old;
+			while (old != begin_) {
+				if ((*old) == '=') {
+					auto key = nonstd::string_view(&(*start), old -start);
+					form.insert(std::make_pair(key, nonstd::string_view(&(*(old + 1)), begin_-1 - old)));
+				}
+				++old;
+			 }
+		}
+	private:
+		std::string::iterator begin_;
+		std::string::iterator end_;
 	};
 }

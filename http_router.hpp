@@ -53,7 +53,7 @@ namespace xfinal {
 		}
 	public:
 		void post_router(request& req, response& res) {
-			auto key = std::string(req.get_method()) + std::string(req.get_url());
+			auto key = std::string(req.method()) + std::string(req.url());
 			if (router_map_.find(key) != router_map_.end()) {
 				auto& it = router_map_.at(key);
 				it(req, res);

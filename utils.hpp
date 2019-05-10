@@ -1,7 +1,12 @@
 #pragma once
 #include <array>
 #include <tuple>
+#include "string_view.hpp"
+#include <vector>
 namespace xfinal {
+
+	struct GBK {};
+	struct UTF8{};
 	class nocopyable {
 	public:
 		nocopyable() = default;
@@ -156,4 +161,20 @@ namespace xfinal {
 
 		}
 	};
+
+	std::string view2str(nonstd::string_view view) {
+		return std::string(view.data(), view.size());
+	}
+
+	template<typename T,typename U = std::void_t<decltype(std::declval<T>().begin())>>
+	void forward_contain_data(T& contain,std::size_t data_begin,std::size_t data_end) {
+		auto old_begin = data_begin;
+		auto begin = contain.begin();
+		while (data_begin < data_end) {
+			*begin = contain[data_begin];
+			++data_begin;
+			++begin;
+		}
+		contain.resize(data_end- old_begin);
+	}
 }
