@@ -37,6 +37,10 @@ int main()
 		std::cout << "text: " << req.param<GBK>("text") << std::endl;
 	});
 
+	server.router<POST>("/upload", [](request& req, response& res) {
+		std::cout << "text: " << req.query("text") << std::endl;
+	});
+
 	server.run();
 	//nonstd::string_view str = "\r\n---abc123";
 	//std::cout << str.find(std::string("---abc")) << std::endl;

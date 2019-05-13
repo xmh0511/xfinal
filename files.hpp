@@ -18,7 +18,14 @@ namespace xfinal {
 				file_handle_->write(data.data(), data.size());
 			}
 		}
+		void set_original_name(std::string&& name) {
+			original_name_ = std::move(name);
+		}
+		std::string original_name() const {
+			return original_name_;
+		}
 	private:
 		std::shared_ptr<std::ofstream> file_handle_;
+		std::string original_name_;
 	};
 }

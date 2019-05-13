@@ -176,8 +176,8 @@ namespace xfinal {
 			++begin;
 		}
 		auto start = data_end - data_begin;
-		if (contain.capacity() > start) {
-			while (start < contain.capacity()) {
+		if (contain.size() > start) {
+			while (start < contain.size()) {
 				contain[start++] = '\0';
 			}
 		}

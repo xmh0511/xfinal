@@ -92,6 +92,11 @@ namespace xfinal {
 			auto start = begin_;
 			while (begin_ != end_) {
 				if ((*begin_) == '\r' && (*(begin_ + 1)) == '\n') {  //maybe a header = > key:value
+					if ((end_ - begin_) >= 4) {
+						if ((*(begin_ + 2)) == '\r' && (*(begin_ + 3)) == '\n') {
+							break;
+						}
+					}
 					auto old_start = start;
 					while (start != begin_) {
 						if ((*start) == ':') {
@@ -252,8 +257,8 @@ namespace xfinal {
 		}
 		bool is_end(std::vector<char>::iterator begin_, std::vector<char>::iterator end_) const {
 			nonstd::string_view buffer{ &(*begin_) ,std::size_t(end_ - begin_) };
-			auto it = buffer.find(boundary_end_key_);
-			if (it != nonstd::string_view::npos) {
+			auto e = std::string(&(*begin_), boundary_end_key_.size());
+			if (e == boundary_end_key_) {
 				return true;
 			}
 			return false;

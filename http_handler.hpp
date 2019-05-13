@@ -97,6 +97,15 @@ namespace xfinal {
 				return it->second;
 			}
 			else {
+				if (multipart_form_map_ != nullptr) {
+					auto itm = multipart_form_map_->find(view2str(key));
+					if (itm != multipart_form_map_->end()) {
+						return nonstd::string_view{ itm->second.data(),itm->second.size() };
+					}
+					else {
+						return "";
+					}
+				}
 				return "";
 			}
 		}
@@ -180,6 +189,8 @@ namespace xfinal {
 		std::map<nonstd::string_view, nonstd::string_view> url_params_;
 		std::map<std::string, std::string> gbk_decode_url_params_;
 		nonstd::string_view boundary_key_;
+		std::map<std::string, std::string> const* multipart_form_map_ = nullptr;
+		std::map<std::string, file> const* multipart_files_map_ = nullptr;
 	};
 	class response {
 
