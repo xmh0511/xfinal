@@ -21,7 +21,7 @@ private:
 };
 int main()
 {
-	http_server server(2);
+	http_server server(4);
 	server.listen("0.0.0.0", "8080");
 	server.router<GET,POST>("/abc", [](request& req,response& res) {
 		std::cout << req.query("id") << std::endl;

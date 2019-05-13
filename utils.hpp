@@ -170,11 +170,16 @@ namespace xfinal {
 	void forward_contain_data(T& contain,std::size_t data_begin,std::size_t data_end) {
 		auto old_begin = data_begin;
 		auto begin = contain.begin();
-		while (data_begin < data_end) {
-			*begin = contain[data_begin];
-			++data_begin;
+		while (old_begin < data_end) {
+			*begin = contain[old_begin];
+			++old_begin;
 			++begin;
 		}
-		contain.resize(data_end- old_begin);
+		auto start = data_end - data_begin;
+		if (contain.capacity() > start) {
+			while (start < contain.capacity()) {
+				contain[start++] = '\0';
+			}
+		}
 	}
 }

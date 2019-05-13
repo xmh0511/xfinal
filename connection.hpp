@@ -109,13 +109,10 @@ namespace xfinal {
 			auto header_size = req_.header_length_;
 			if (current_use_pos_ > header_size) {  //是不是读头的时候 把body也读取进来了 
 				forward_contain_data(buffers_, header_size, current_use_pos_);
-				current_use_pos_ = buffers_.size();
-				if (buffers_.capacity() < expand_buffer_size) {
-					buffers_.resize(expand_buffer_size);
-					left_buffer_size_ = expand_buffer_size - current_use_pos_;
-				}
+				current_use_pos_ -= header_size;
+				left_buffer_size_ = buffers_.capacity()- current_use_pos_;
 				auto body_length = req_.body_length();
-				if (body_length > buffers_.size()) {    //body没有读完整
+				if (body_length > current_use_pos_) {    //body没有读完整
 					continue_read_data([handler = this->shared_from_this(), type]() {
 						handler->process_body(type);
 					});
@@ -129,7 +126,7 @@ namespace xfinal {
 		}
 		void process_body(content_type type) {  //如果预读取body的时候没有读完整body 
 			auto body_length = req_.body_length();
-			if (body_length > buffers_.size()) {  //body没有读完整
+			if (body_length > current_use_pos_) {  //body没有读完整
 				continue_read_data([handler = this->shared_from_this(), type]() {
 					handler->process_body(type);
 				});
