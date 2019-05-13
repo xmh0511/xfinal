@@ -7,6 +7,7 @@
 #include "utils.hpp"
 #include "code_parser.hpp"
 #include "string_view.hpp"
+#include "files.hpp"
 namespace xfinal {
 	enum class parse_state :std::uint8_t
 	{
@@ -32,6 +33,8 @@ namespace xfinal {
 		std::map<nonstd::string_view, nonstd::string_view> form_map_;
 		std::string body_;
 		std::string decode_body_;
+		std::map<std::string, std::string> multipart_form_map_;
+		std::map<std::string, file> multipart_files_map_;
 	};
 
 	class http_parser_header final {
@@ -151,8 +154,10 @@ namespace xfinal {
 
 	class http_urlform_parser final {
 	public:
-		http_urlform_parser(std::string& body){
-			body = xfinal::get_string_by_urldecode(body);
+		http_urlform_parser(std::string& body,bool need_url_decode = true){
+			if (need_url_decode) {
+				body = xfinal::get_string_by_urldecode(body);
+			}
 			begin_ = body.begin();
 			end_ = body.end();
 		}
@@ -186,5 +191,106 @@ namespace xfinal {
 	private:
 		std::string::iterator begin_;
 		std::string::iterator end_;
+	};
+
+	class http_multipart_parser {
+	public:
+		http_multipart_parser(std::string const & boundary_start_key_, std::string const & boundary_end_key_):boundary_start_key_(boundary_start_key_), boundary_end_key_(boundary_end_key_){
+
+		}
+	public:
+		bool is_complete_part_header(std::vector<char>::iterator begin_, std::vector<char>::iterator end_) const {
+			nonstd::string_view buffer{ &(*begin_) ,std::size_t(end_ - begin_) };
+			auto it = buffer.find(boundary_start_key_);
+			if (it != nonstd::string_view::npos) {
+				auto it2 = buffer.find("\r\n\r\n");
+				if (it2 != nonstd::string_view::npos) {
+					return true;
+				}
+				else {
+					return false;
+				}
+			}
+			else {
+				return false;
+			}
+		}
+		std::pair<bool,std::size_t> is_complete_part_data(std::vector<char>& buffers) const {
+			nonstd::string_view buffer{ buffers.data() ,buffers.size() };
+			auto it = buffer.find(boundary_start_key_);
+			auto it2 = buffer.find(boundary_end_key_);
+			if (it != nonstd::string_view::npos) {
+				std::cout << buffer.substr( it ,boundary_start_key_.size() ) << std::endl;
+				return { true, it-2 };
+			}
+			else {
+				if (it2!= nonstd::string_view::npos) {
+					return { true ,it2 -2};
+				}
+				return { false,0 };
+			}
+		}
+		
+		std::pair<std::size_t ,std::map<std::string, std::string>> parser_part_head(std::vector<char>::iterator begin_, std::vector<char>::iterator end_) const {
+			nonstd::string_view buffer{ &(*begin_) ,std::size_t(end_ - begin_) };
+			auto it = buffer.find(boundary_start_key_);
+			if (it != nonstd::string_view::npos) {
+				auto parse_begin = it + boundary_start_key_.size()+2;
+				auto parse_end = buffer.find("\r\n\r\n", parse_begin);
+				if (parse_end != nonstd::string_view::npos) {
+					auto head_size = parse_end + 4;
+					auto multipart_head = get_header(buffer.begin() + parse_begin, buffer.begin() + head_size);
+					return { head_size,multipart_head };
+				}
+				else {
+					return { 0,{} };
+				}
+			}
+			else {
+				return { 0,{} };
+			}
+		}
+		bool is_end(std::vector<char>::iterator begin_, std::vector<char>::iterator end_) const {
+			nonstd::string_view buffer{ &(*begin_) ,std::size_t(end_ - begin_) };
+			auto it = buffer.find(boundary_end_key_);
+			if (it != nonstd::string_view::npos) {
+				return true;
+			}
+			return false;
+		}
+	protected:
+		std::map<std::string, std::string> get_header(nonstd::string_view::iterator start, nonstd::string_view::iterator stop) const {
+			std::map<std::string, std::string> headers;
+			auto start_ = start;
+			while (start != stop) {
+				auto c = *start;
+				auto c_next = *(start + 1);
+				if (((*start) == '\r') && ((*(start + 1)) == '\n')) {  //maybe a header = > key:value
+					auto old_start = start_;
+					while (start_ != start) {
+						if ((*start_) == ':') {
+							auto key = std::string(old_start, start_);
+							++start_;
+							while ((*start_) == ' ') {
+								++start_;
+							}
+							headers.emplace(to_lower(std::move(key)), std::string(start_, start));
+							start += 2;
+							start_ = start;
+							break;
+						}
+						++start_;
+					}
+					if (start_ != start) {
+						return {};
+					}
+				}
+				++start;
+			}
+			return headers;
+		}
+	private:
+		std::string boundary_start_key_;
+		std::string boundary_end_key_;
 	};
 }

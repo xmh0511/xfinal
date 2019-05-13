@@ -64,7 +64,9 @@ namespace xfinal {
 					pre_process_body(type);
 				}
 					break;
-				case xfinal::content_type::multipart_form:
+				case xfinal::content_type::multipart_form: {
+					pre_process_multipart_body(type);
+				}
 					break;
 				case xfinal::content_type::unknow:
 				{
@@ -123,6 +125,14 @@ namespace xfinal {
 					post_router();  //处理完毕 执行路由
 				}
 			}
+			else {  //如果刚好容器的大小读取了完整的head头
+				buffers_.clear();
+				current_use_pos_ = 0;
+				left_buffer_size_ = buffers_.capacity();
+				continue_read_data([handler = this->shared_from_this(), type]() {
+					handler->process_body(type);
+				},false);
+			}
 		}
 		void process_body(content_type type) {  //如果预读取body的时候没有读完整body 
 			auto body_length = req_.body_length();
@@ -151,12 +161,127 @@ namespace xfinal {
 			req_.body_ = nonstd::string_view(request_info.body_);
 		}
 
+		void pre_process_multipart_body(content_type type) { //预处理content_type 位multipart_form 类型的body
+			auto header_size = req_.header_length_;
+			if (current_use_pos_ > header_size) {  //是不是读request头的时候 把body也读取进来了 
+				forward_contain_data(buffers_, header_size, current_use_pos_);
+				current_use_pos_ -= header_size;
+				left_buffer_size_ = buffers_.capacity() - current_use_pos_;
+			}
+			else {
+				buffers_.clear();
+				current_use_pos_ = 0;
+				left_buffer_size_ = buffers_.capacity() - current_use_pos_;
+			}
+			process_multipart_body(type);
+		}
+
+		void process_multipart_body(content_type type) {
+			std::string boundary_start = view2str(req_.boundary_key_);
+			if (!boundary_start.empty()) {  //有boundary 
+				auto boundary_start_ = "--" + boundary_start;
+				auto boundary_end_ = boundary_start + std::string("--");
+				http_multipart_parser parser{ boundary_start_,boundary_end_ };
+				process_mutipart_head(parser, type);
+			}
+			else {  //如果content_type没有boundary 就是错误
+
+			}
+		}
+
+		void process_mutipart_head(http_multipart_parser parser, content_type type) {
+			if (parser.is_complete_part_header(buffers_.begin(), buffers_.end())) {  //如果当前buffer中有完整的部分multipart头
+				auto pr = parser.parser_part_head(buffers_.begin(), buffers_.end());//解析multipart part头部 
+				pre_process_multipart_data(pr, parser); //处理数据部分
+			}
+			else {
+				continue_read_data([type, parser, handler = this->shared_from_this()]() {
+					handler->process_mutipart_head(parser,type);
+				});
+			}
+		}
+
+		void pre_process_multipart_data(std::pair<std::size_t,std::map<std::string,std::string>> const& pr, http_multipart_parser const& parser) { //是否需要过滤掉mutipart head
+			if (pr.first != 0) {
+				if (current_use_pos_ > pr.first) {  //读取multipart head的时候 也读取了部分数据
+					forward_contain_data(buffers_, pr.first, current_use_pos_);//移除掉head部分 因为已经解析过了
+					current_use_pos_ -= pr.first;
+					left_buffer_size_ = buffers_.capacity() - current_use_pos_;
+					process_multipart_data(pr.second, parser);
+				}
+				else {  //没有读取multipart 的data部分
+					buffers_.clear();
+					buffers_.resize(1024);
+					current_use_pos_ = 0;
+					left_buffer_size_ = 1024;
+					auto head = pr.second;
+					continue_read_data([parser, head,handler = this->shared_from_this()]() {
+						handler->process_multipart_data(head,parser);
+					},false);
+				}
+			}
+		}
+
+		void process_multipart_data(std::map<std::string, std::string> const& head, http_multipart_parser const& parser) {
+			auto dpr = parser.is_complete_part_data(buffers_);
+			if (dpr.first) { //如果已经是完整的数据了
+				record_mutlipart_data(head, std::string(buffers_.data(), dpr.second), parser,true);
+			}
+			else {  //此处肯定没有boundary记号
+				record_mutlipart_data(head, std::string(buffers_.data(), buffers_.size()), parser,false);  
+			}
+		}
+
+		void record_mutlipart_data(std::map<std::string, std::string> const& head,std::string&& data, http_multipart_parser const& parser,bool is_complete) { 
+			auto value = head.at("content-disposition");
+			auto pos_name = value.find("name") + sizeof("name")+1;
+			auto name = value.substr(pos_name, value.find('\"', pos_name)-pos_name);
+			auto type = value.find("filename");
+			if (type != std::string::npos) {  //是文件类型
+				auto file = request_info.multipart_files_map_.find(name);
+				if (file != request_info.multipart_files_map_.end()) {
+					file->second.add_data(std::move(data));
+				}
+				else {
+					auto t = std::time(nullptr);
+					auto& fileo = request_info.multipart_files_map_[name];
+					auto path = std::string("./") + std::to_string(t);
+					fileo.open(path);
+					fileo.add_data(std::move(data));
+				}
+			}
+			else {  //是文本类型
+				request_info.multipart_form_map_[name] += data;
+			}
+			if (is_complete) {
+				if (parser.is_end(buffers_.begin(), buffers_.end())) {
+					return;
+				}
+				process_mutipart_head(parser, content_type::multipart_form);
+			}
+			else {
+				buffers_.clear();
+				if (buffers_.capacity() >= max_buffer_size_) {
+					buffers_.resize(1024);
+				}
+				current_use_pos_ = 0;
+				left_buffer_size_ = buffers_.capacity();
+				continue_read_data([handler = this->shared_from_this(), head, parser]() {
+					handler->process_multipart_data(head, parser);
+				});
+			}
+		}
+
+
+
 	public:
 		template<typename Function>
-		void continue_read_data(Function&& callback) { //用来继续读取body剩余数据的
-			bool b = expand_size();
-			if (!b) {
-				return; //超过最大可接受字节数 等待处理;
+		void continue_read_data(Function&& callback,bool is_expand = true) { //用来继续读取body剩余数据的
+			if (is_expand) {
+				bool b = expand_size();
+				if (!b) {
+					return; //超过最大可接受字节数 等待处理;
+				}
 			}
 			socket_->async_read_some(asio::buffer(&buffers_[current_use_pos_], left_buffer_size_), [handler = this->shared_from_this(),function = std::move(callback)](std::error_code const& ec, std::size_t read_size) {
 				if (ec) {

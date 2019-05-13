@@ -38,6 +38,8 @@ int main()
 	});
 
 	server.run();
+	//nonstd::string_view str = "\r\n---abc123";
+	//std::cout << str.find(std::string("---abc")) << std::endl;
 	std::cin.get();
 	return 0;
 }

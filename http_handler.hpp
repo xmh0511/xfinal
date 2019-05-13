@@ -154,6 +154,17 @@ namespace xfinal {
 			else {
 				content_type_ = content_type::unknow;
 			}
+			if (content_type_ == content_type::multipart_form) {
+				auto const & v = it->second;
+				auto f = v.find("boundary");
+				if (f != std::string::npos) {
+					auto pos = f + sizeof("boundary");
+					boundary_key_ = nonstd::string_view{ &(v[pos]),(v.size()- pos) };
+				}
+				else {
+					boundary_key_ = "";
+				}
+			}
 		}
 	private:
 		nonstd::string_view method_;
@@ -168,6 +179,7 @@ namespace xfinal {
 		std::string decode_url_params_;
 		std::map<nonstd::string_view, nonstd::string_view> url_params_;
 		std::map<std::string, std::string> gbk_decode_url_params_;
+		nonstd::string_view boundary_key_;
 	};
 	class response {
 
