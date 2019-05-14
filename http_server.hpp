@@ -19,6 +19,7 @@ namespace xfinal {
 	class http_server :private nocopyable {
 	public:
 		http_server(std::size_t thread_size):ioservice_pool_handler_(std::make_unique<ioservice_pool>(thread_size)), acceptor_(ioservice_pool_handler_->get_io()){
+			static_url_ = get_root_director(static_path_);
 		}
 	public:
 		bool listen(std::string const& ip,std::string const& port) {
@@ -27,7 +28,19 @@ namespace xfinal {
 		}
 	public:
 		void run() {
+			if (!fs::exists(static_path_)) {
+				fs::create_directories(static_path_);
+			}
 			ioservice_pool_handler_->run();
+		}
+	public:
+		///只能设置为相对当前程序允许目录的路径  "./xxx/xxx"
+		void set_static_path(std::string const& path) {
+			static_path_ = path;
+			static_url_ = get_root_director(static_path_);
+		}
+		std::string static_path() {
+			return static_path_;
 		}
 	private:
 		bool listen(asio::ip::tcp::resolver::query& query) {
@@ -59,7 +72,7 @@ namespace xfinal {
 		}
 	private:
 		void start_acceptor() {
-			auto connector = std::make_shared<connection>(ioservice_pool_handler_->get_io(), http_router_);
+			auto connector = std::make_shared<connection>(ioservice_pool_handler_->get_io(), http_router_, static_path_);
 			acceptor_.async_accept(connector->get_socket(), [this,connector](std::error_code const& ec) {
 				if (ec) {
 					return;
@@ -72,5 +85,7 @@ namespace xfinal {
 		std::unique_ptr<ioservice_pool> ioservice_pool_handler_;
 		asio::ip::tcp::acceptor acceptor_;
 		http_router http_router_;
+		std::string static_path_ = "./static";
+		std::string static_url_;
 	};
 }

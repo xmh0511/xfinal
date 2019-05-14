@@ -13,7 +13,7 @@
 namespace xfinal {
 	class connection :public std::enable_shared_from_this<connection> {
 	public:
-		connection(asio::io_service& io, http_router& router) :socket_(std::make_unique<asio::ip::tcp::socket>(io)), io_service_(io), buffers_(expand_buffer_size), router_(router) {
+		connection(asio::io_service& io, http_router& router,std::string const& static_path) :socket_(std::make_unique<asio::ip::tcp::socket>(io)), io_service_(io), buffers_(expand_buffer_size), router_(router),static_path_(static_path),req_(res_),res_(req_) {
 			left_buffer_size_ = buffers_.size();
 		}
 	public:
@@ -50,7 +50,7 @@ namespace xfinal {
 		}
 		void post_router() {
 			router_.post_router(req_, res_);
-			write();
+			write();  //回应请求
 		}
 		void parse_header(http_parser_header& parser) {  //解析请求头
 			auto request = parser.parse_request_header();
@@ -58,11 +58,15 @@ namespace xfinal {
 				request_info = std::move(request.second);
 				req_.method_ = request_info.method_;
 				req_.url_ = request_info.url_;
+				req_.version_ = request_info.version_;
 				req_.headers_ = &(request_info.headers_);
 				req_.header_length_ = parser.get_header_size();
+				req_.multipart_form_map_ = &(request_info.multipart_form_map_);
+				req_.multipart_files_map_ = &(request_info.multipart_files_map_);
 				handle_read();
 				return;
 			}
+			request_error("bad request,request header error");
 			//http request error;
 		}
 		void handle_read() {  //读取请求头完毕后 开始下一步处理
@@ -179,8 +183,6 @@ namespace xfinal {
 		}
 
 		void process_multipart_form() {
-			req_.multipart_form_map_ = &(request_info.multipart_form_map_);
-			req_.multipart_files_map_ = &(request_info.multipart_files_map_);
 			post_router();
 		}
 		////处理content_type 为multipart_form 的body数据  --start
@@ -209,7 +211,7 @@ namespace xfinal {
 				process_mutipart_head(parser, type);
 			}
 			else {  //如果content_type没有boundary 就是错误
-
+				request_error("bad request,multipart form error");
 			}
 		}
 
@@ -234,7 +236,7 @@ namespace xfinal {
 					left_buffer_size_ = buffers_.size() - current_use_pos_;
 					process_multipart_data(pr.second, parser);
 				}
-				else {  //没有读取multipart的data部分 就可以清除了 因为之前的头已经解析过了
+				else {  //读multipart head的时候没有读取到multipart的data部分 就可以清除了 因为之前的头已经解析过了
 					buffers_.clear();
 					buffers_.resize(1024);
 					current_use_pos_ = 0;
@@ -272,7 +274,7 @@ namespace xfinal {
 					auto extension = get_extension(f_type);
 					auto t = std::time(nullptr);
 					auto& fileo = request_info.multipart_files_map_[name];
-					auto path = std::string("./") + uuids::uuid_system_generator{}().to_short_str() + view2str(extension);
+					auto path = static_path_ +"/"+ uuids::uuid_system_generator{}().to_short_str() + view2str(extension);
 					fileo.open(path);
 					auto original_name = value.substr(type + sizeof("filename") + 1, value.find('\"', type) - type);
 					fileo.set_original_name(std::move(original_name));
@@ -362,10 +364,27 @@ namespace xfinal {
 				}
 			});
 		}
+
+		void request_error(std::string&& what_error) {
+			res_.write_string(std::move(what_error),http_status::bad_request);
+			write();
+		}
+
 		void write() {
-			socket_->async_write_some(asio::buffer("HTTP/1.1 200 OK\r\nServer: Apache-Coyote/1.1"), [handler = this->shared_from_this()](std::error_code const& ec, std::size_t write_size) {
-				handler->close();
-			});
+			auto is_chunked = res_.is_chunked_;
+			if (!is_chunked) {  //非chunked方式返回数据
+				forward_write();
+			}
+			else {
+
+			}
+		}
+		void forward_write() {
+			if (!socket_close_) {
+				socket_->async_write_some(res_.to_buffers(), [handler = this->shared_from_this()](std::error_code const& ec, std::size_t write_size) {
+					handler->close();
+				});
+			}
 		}
 	public:
 		void close() {
@@ -385,5 +404,6 @@ namespace xfinal {
 		response res_;
 		http_router& router_;
 		bool socket_close_ = false;
+		std::string const& static_path_;
 	};
 }

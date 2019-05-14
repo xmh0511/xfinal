@@ -28,6 +28,10 @@ int main()
 		std::cout << "hahaha "<<req.url() <<" text :"<<req.query<GBK>("text")<< std::endl;
 	}, Test{});
 
+	server.router<GET, POST>("/", [](request& req, response& res) {
+		res.write(std::string("hello world"), http_status::ok);
+	});
+
 	server.router<POST>("/json", [](request& req, response& res) {
 		std::cout << "body: " << req.body()<<std::endl;
 	});
@@ -40,11 +44,10 @@ int main()
 	server.router<POST>("/upload", [](request& req, response& res) {
 		std::cout << "text: " << req.query("text") << std::endl;
 		std::cout << req.file("img").size() << std::endl;
+		std::cout << req.query<GBK>("text2") << std::endl;
 	});
 
 	server.run();
-	//nonstd::string_view str = "\r\n---abc123";
-	//std::cout << str.find(std::string("---abc")) << std::endl;
 	std::cin.get();
 	return 0;
 }

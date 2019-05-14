@@ -23,15 +23,16 @@ namespace xfinal {
 		//request_meta(request_meta &&) = default;
 		//request_meta& operator=(request_meta const&) = default;
 		//request_meta& operator=(request_meta &&) = default;
-		request_meta(std::string&& method, std::string&& url, std::map<std::string, std::string>&& headers):method_(std::move(method)), url_(std::move(url)), headers_(std::move(headers)){
+		request_meta(std::string&& method, std::string&& url,std::string&& version, std::map<std::string, std::string>&& headers):method_(std::move(method)), url_(std::move(url)), version_(std::move(version)), headers_(std::move(headers)){
 
 		}
-		request_meta(request_meta&& r):method_(std::move(r.method_)), url_(std::move(r.url_)), headers_(std::move(r.headers_)), form_map_(std::move(r.form_map_)), body_(std::move(r.body_)), decode_body_(std::move(r.decode_body_)), multipart_form_map_(std::move(r.multipart_form_map_)), multipart_files_map_(std::move(r.multipart_files_map_)){
+		request_meta(request_meta&& r):method_(std::move(r.method_)), url_(std::move(r.url_)), version_(std::move(r.version_)), headers_(std::move(r.headers_)), form_map_(std::move(r.form_map_)), body_(std::move(r.body_)), decode_body_(std::move(r.decode_body_)), multipart_form_map_(std::move(r.multipart_form_map_)), multipart_files_map_(std::move(r.multipart_files_map_)){
 
 		}
 		request_meta& operator=(request_meta&& r) {
 			method_ = std::move(r.method_);
 			url_ = std::move(r.url_);
+			version_ = std::move(r.version_);
 			headers_ = std::move(r.headers_);
 			form_map_ = std::move(r.form_map_);
 			body_ = std::move(r.body_);
@@ -43,6 +44,7 @@ namespace xfinal {
 	public:
 		std::string method_;
 		std::string url_;
+		std::string version_;
 		std::map<std::string, std::string> headers_;
 		std::map<nonstd::string_view, nonstd::string_view> form_map_;
 		std::string body_;
@@ -143,7 +145,7 @@ namespace xfinal {
 					if (version.first == parse_state::valid) {
 						auto headers = get_header();
 						if (headers.first == parse_state::valid) {
-							return std::pair<bool, request_meta>( true, request_meta{std::move(method.second),std::move(url.second),std::move(headers.second)} );
+							return std::pair<bool, request_meta>( true, request_meta{std::move(method.second),std::move(url.second),std::move(version.second),std::move(headers.second)} );
 						}
 						else {
 							return { false,request_meta() };

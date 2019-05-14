@@ -35,6 +35,11 @@ namespace xfinal {
 		std::string path() const {
 			return path_;
 		}
+
+		std::string url_path() const {
+			return path_.substr(path_.find('.') + 1, path_.size());
+		}
+
 		void close() {
 			file_handle_->close();
 		}

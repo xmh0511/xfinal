@@ -3,6 +3,8 @@
 #include <tuple>
 #include "string_view.hpp"
 #include <vector>
+#include <filesystem.hpp>
+namespace fs = ghc::filesystem;
 namespace xfinal {
 
 	struct GBK {};
@@ -181,5 +183,14 @@ namespace xfinal {
 		//		contain[start++] = '\0';
 		//	}
 		//}
+	}
+
+	std::string get_root_director(fs::path path) {
+		auto c = path.parent_path();
+		while (c.stem() != ".") {
+			path = c;
+			c = c.parent_path();
+		}
+		return path.stem();
 	}
 }
