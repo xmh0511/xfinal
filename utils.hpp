@@ -175,11 +175,11 @@ namespace xfinal {
 			++old_begin;
 			++begin;
 		}
-		auto start = data_end - data_begin;
-		if (contain.size() > start) {
-			while (start < contain.size()) {
-				contain[start++] = '\0';
-			}
-		}
+		//auto start = data_end - data_begin;
+		//if (contain.size() > start) {
+		//	while (start < contain.size()) {
+		//		contain[start++] = '\0';
+		//	}
+		//}
 	}
 }

@@ -16,15 +16,29 @@ namespace xfinal {
 		unknow
 	};
 
-	class request_meta {
+	class request_meta:private nocopyable {
 	public:
 		request_meta() = default;
-		request_meta(request_meta const&) = default;
-		request_meta(request_meta &&) = default;
-		request_meta& operator=(request_meta const&) = default;
-		request_meta& operator=(request_meta &&) = default;
+		//request_meta(request_meta const&) = default;
+		//request_meta(request_meta &&) = default;
+		//request_meta& operator=(request_meta const&) = default;
+		//request_meta& operator=(request_meta &&) = default;
 		request_meta(std::string&& method, std::string&& url, std::map<std::string, std::string>&& headers):method_(std::move(method)), url_(std::move(url)), headers_(std::move(headers)){
 
+		}
+		request_meta(request_meta&& r):method_(std::move(r.method_)), url_(std::move(r.url_)), headers_(std::move(r.headers_)), form_map_(std::move(r.form_map_)), body_(std::move(r.body_)), decode_body_(std::move(r.decode_body_)), multipart_form_map_(std::move(r.multipart_form_map_)), multipart_files_map_(std::move(r.multipart_files_map_)){
+
+		}
+		request_meta& operator=(request_meta&& r) {
+			method_ = std::move(r.method_);
+			url_ = std::move(r.url_);
+			headers_ = std::move(r.headers_);
+			form_map_ = std::move(r.form_map_);
+			body_ = std::move(r.body_);
+			decode_body_ = std::move(r.body_);
+			multipart_form_map_ = std::move(r.multipart_form_map_);
+			multipart_files_map_ = std::move(r.multipart_files_map_);
+			return *this;
 		}
 	public:
 		std::string method_;
@@ -129,7 +143,7 @@ namespace xfinal {
 					if (version.first == parse_state::valid) {
 						auto headers = get_header();
 						if (headers.first == parse_state::valid) {
-							return { true,{std::move(method.second),std::move(url.second),std::move(headers.second)} };
+							return std::pair<bool, request_meta>( true, request_meta{std::move(method.second),std::move(url.second),std::move(headers.second)} );
 						}
 						else {
 							return { false,request_meta() };
@@ -220,15 +234,15 @@ namespace xfinal {
 				return false;
 			}
 		}
-		std::pair<bool,std::size_t> is_complete_part_data(std::vector<char>& buffers) const {
-			nonstd::string_view buffer{ buffers.data() ,buffers.size() };
+		std::pair<bool,std::size_t> is_complete_part_data(std::vector<char>& buffers,std::size_t size) const {
+			nonstd::string_view buffer{ buffers.data() ,size };
 			auto it = buffer.find(boundary_start_key_);
-			auto it2 = buffer.find(boundary_end_key_);
 			if (it != nonstd::string_view::npos) {
 				std::cout << buffer.substr( it ,boundary_start_key_.size() ) << std::endl;
 				return { true, it-2 };
 			}
 			else {
+				auto it2 = buffer.find(boundary_end_key_);
 				if (it2!= nonstd::string_view::npos) {
 					return { true ,it2 -2};
 				}

@@ -3,6 +3,7 @@
 #include "string_view.hpp"
 #include <map>
 #include "content_type.hpp"
+#include "files.hpp"
 namespace xfinal {
 
 
@@ -65,19 +66,29 @@ namespace xfinal {
 			auto view = param(key);
 			auto key_str = view2str(key);
 			if (!view.empty()) {
-				auto it = gbk_decode_url_params_.find(key_str);
-				if (it != gbk_decode_url_params_.end()) {
+				auto it = gbk_decode_params_.find(key_str);
+				if (it != gbk_decode_params_.end()) {
 					return { it->second.data(),it->second.size() };
 				}
 				else {
-					gbk_decode_url_params_.insert(std::make_pair(key_str, utf8_to_gbk(view2str(view))));
-					auto& v = gbk_decode_url_params_[key_str];
+					gbk_decode_params_.insert(std::make_pair(key_str, utf8_to_gbk(view2str(view))));
+					auto& v = gbk_decode_params_[key_str];
 					return { v.data(),v.size() };
 				}
 			}
 			else {
 				return "";
 			}
+		}
+
+		file const& file(nonstd::string_view filename) const{
+			if (multipart_files_map_ != nullptr) {
+				auto it = multipart_files_map_->find(view2str(filename));
+				if (it != multipart_files_map_->end()) {
+					return it->second;
+				}
+			}
+			return nullfile_;
 		}
 
 		nonstd::string_view method() const {
@@ -187,10 +198,11 @@ namespace xfinal {
 		std::map<std::string, std::string> gbk_decode_form_map_;
 		std::string decode_url_params_;
 		std::map<nonstd::string_view, nonstd::string_view> url_params_;
-		std::map<std::string, std::string> gbk_decode_url_params_;
+		std::map<std::string, std::string> gbk_decode_params_;
 		nonstd::string_view boundary_key_;
 		std::map<std::string, std::string> const* multipart_form_map_ = nullptr;
-		std::map<std::string, file> const* multipart_files_map_ = nullptr;
+		std::map<std::string, xfinal::file> const* multipart_files_map_ = nullptr;
+		xfinal::file nullfile_;
 	};
 	class response {
 

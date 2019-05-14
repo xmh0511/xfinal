@@ -39,6 +39,7 @@ int main()
 
 	server.router<POST>("/upload", [](request& req, response& res) {
 		std::cout << "text: " << req.query("text") << std::endl;
+		std::cout << req.file("img").size() << std::endl;
 	});
 
 	server.run();

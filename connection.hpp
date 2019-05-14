@@ -23,11 +23,22 @@ namespace xfinal {
 		std::vector<char>& get_buffers() {
 			return buffers_;
 		}
-		bool expand_size() {
-			expand_buffer_size += 1024;
+		bool expand_size(bool is_multipart_data) {
+			expand_buffer_size += expand_buffer_size;
 			if (expand_buffer_size > max_buffer_size_) {
-				left_buffer_size_ = 0;
-				return false;
+				if (!is_multipart_data) {
+					left_buffer_size_ = 0;
+					return false;
+				}
+				else { //对于multipart 这种可能需要获取大量数据的 需要特殊处理 因为这里一定是处理mutltipart的数据部分的 之前数据已经被记录了 所以用完了可以清除
+					expand_buffer_size = max_buffer_size_;
+					if (buffers_.size() < expand_buffer_size) {
+						buffers_.resize(max_buffer_size_);
+					}
+					left_buffer_size_ = max_buffer_size_;
+					current_use_pos_ = 0;
+					return true;
+				}
 			}
 			buffers_.resize(expand_buffer_size);
 			left_buffer_size_ = expand_buffer_size - current_use_pos_;
@@ -95,6 +106,9 @@ namespace xfinal {
 			}
 				break;
 			case content_type::multipart_form:
+			{
+				process_multipart_form();
+			}
 				break;
 			case content_type::octet_stream:
 				break;
@@ -163,6 +177,12 @@ namespace xfinal {
 			req_.body_ = nonstd::string_view(request_info.body_);
 		}
 
+		void process_multipart_form() {
+			req_.multipart_form_map_ = &(request_info.multipart_form_map_);
+			req_.multipart_files_map_ = &(request_info.multipart_files_map_);
+			post_router();
+		}
+		////处理content_type 为multipart_form 的body数据  --start
 		void pre_process_multipart_body(content_type type) { //预处理content_type 位multipart_form 类型的body
 			auto header_size = req_.header_length_;
 			if (current_use_pos_ > header_size) {  //是不是读request头的时候 把body也读取进来了 
@@ -171,9 +191,10 @@ namespace xfinal {
 				left_buffer_size_ = buffers_.size() - current_use_pos_;
 			}
 			else {
+				left_buffer_size_ = buffers_.size();
 				buffers_.clear();
 				current_use_pos_ = 0;
-				left_buffer_size_ = buffers_.size() - current_use_pos_;
+				//left_buffer_size_ = buffers_.size() - current_use_pos_;
 			}
 			process_multipart_body(type);
 		}
@@ -191,27 +212,28 @@ namespace xfinal {
 			}
 		}
 
-		void process_mutipart_head(http_multipart_parser parser, content_type type) {
-			if (parser.is_complete_part_header(buffers_.begin(), buffers_.end())) {  //如果当前buffer中有完整的部分multipart头
-				auto pr = parser.parser_part_head(buffers_.begin(), buffers_.end());//解析multipart part头部 
+		void process_mutipart_head(http_multipart_parser const& parser, content_type type) {
+			auto end = buffers_.begin() + current_use_pos_;
+			if (parser.is_complete_part_header(buffers_.begin(), end)) {  //如果当前buffer中有完整的部分multipart头
+				auto pr = parser.parser_part_head(buffers_.begin(), end);//解析multipart part头部 
 				pre_process_multipart_data(pr, parser); //处理数据部分
 			}
 			else {
 				continue_read_data([type, parser, handler = this->shared_from_this()]() {
 					handler->process_mutipart_head(parser,type);
-				},true,true);
+				},true,false);  //只是读multipart的头 不需要对bufffer的容量特殊处理 超过就结束了
 			}
 		}
 
 		void pre_process_multipart_data(std::pair<std::size_t,std::map<std::string,std::string>> const& pr, http_multipart_parser const& parser) { //是否需要过滤掉mutipart head
 			if (pr.first != 0) {
-				if (current_use_pos_ > pr.first) {  //读取multipart head的时候 也读取了部分数据
+				if (current_use_pos_ > pr.first) {  //读取multipart head的时候 也读取了部分数据 处理数据的时候 把之前的头给移除了
 					forward_contain_data(buffers_, pr.first, current_use_pos_);//移除掉head部分 因为已经解析过了
 					current_use_pos_ -= pr.first;
 					left_buffer_size_ = buffers_.size() - current_use_pos_;
 					process_multipart_data(pr.second, parser);
 				}
-				else {  //没有读取multipart 的data部分
+				else {  //没有读取multipart的data部分 就可以清除了 因为之前的头已经解析过了
 					buffers_.clear();
 					buffers_.resize(1024);
 					current_use_pos_ = 0;
@@ -225,16 +247,16 @@ namespace xfinal {
 		}
 
 		void process_multipart_data(std::map<std::string, std::string> const& head, http_multipart_parser const& parser) {
-			auto dpr = parser.is_complete_part_data(buffers_);
+			auto dpr = parser.is_complete_part_data(buffers_,current_use_pos_);
 			if (dpr.first) { //如果已经是完整的数据了
-				record_mutlipart_data(head, std::string(buffers_.data(), dpr.second), parser,true);
+				record_mutlipart_data(head, nonstd::string_view(buffers_.data(), dpr.second), parser,true);
 			}
 			else {  //此处肯定没有boundary记号
-				record_mutlipart_data(head, std::string(buffers_.data(), current_use_pos_), parser,false);
+				record_mutlipart_data(head, nonstd::string_view(buffers_.data(), current_use_pos_), parser,false);
 			}
 		}
 
-		void record_mutlipart_data(std::map<std::string, std::string> const& head,std::string&& data, http_multipart_parser const& parser,bool is_complete) { 
+		void record_mutlipart_data(std::map<std::string, std::string> const& head,nonstd::string_view data, http_multipart_parser const& parser,bool is_complete) { 
 			auto value = head.at("content-disposition");
 			auto pos_name = value.find("name") + sizeof("name")+1;
 			auto name = value.substr(pos_name, value.find('\"', pos_name)-pos_name);
@@ -242,7 +264,7 @@ namespace xfinal {
 			if (type != std::string::npos) {  //是文件类型
 				auto file = request_info.multipart_files_map_.find(name);
 				if (file != request_info.multipart_files_map_.end()) {
-					file->second.add_data(std::move(data));
+					file->second.add_data(data);
 				}
 				else {
 					auto f_type = head.at("content-type");
@@ -253,39 +275,41 @@ namespace xfinal {
 					fileo.open(path);
 					auto original_name = value.substr(type + sizeof("filename") + 1, value.find('\"', type) - type);
 					fileo.set_original_name(std::move(original_name));
-					fileo.add_data(std::move(data));
+					fileo.add_data(data);
 				}
 			}
 			else {  //是文本类型
-				request_info.multipart_form_map_[name] += data;
+				request_info.multipart_form_map_[name] += view2str(data);
 			}
 			if (is_complete) {
-				if (parser.is_end((buffers_.begin()+ data.size()+2), buffers_.end())) { //回调multipart 操作
-					req_.multipart_form_map_ = &(request_info.multipart_form_map_);
-					req_.multipart_files_map_ = &(request_info.multipart_files_map_);
-					post_router();
+				if (parser.is_end((buffers_.begin()+ data.size()+2), buffers_.begin()+current_use_pos_)) { //判断是否全部接受完毕 回调multipart 路由
+					handle_body(content_type::multipart_form,0);
 					return;
 				}
-				forward_contain_data(buffers_, data.size(), current_use_pos_);
+				if (type != std::string::npos) {  //如果是文件 读取完了 就可以关闭文件指针了
+					request_info.multipart_files_map_[name].close();
+				}
+				forward_contain_data(buffers_, data.size(), current_use_pos_);  //把下一条的头部数据移动到buffer的前面来
 				current_use_pos_ -= data.size();
 				left_buffer_size_ = buffers_.size() - current_use_pos_;
 				process_mutipart_head(parser, content_type::multipart_form);
 			}
-			else {
+			else {  //buffers中所有的数据都是mulitpart 的数据 （不包含multipart头）所以可以清除
 				buffers_.clear();
-				if (expand_buffer_size >= max_buffer_size_) {
-					buffers_.resize(1024);
-					left_buffer_size_ = 1024;
-				}
-				else {
-					left_buffer_size_ = expand_buffer_size;
-				}
+				//if (expand_buffer_size >= max_buffer_size_) {
+				//	buffers_.resize(1024);
+				//	left_buffer_size_ = 1024;
+				//}
+				//else {
+				//	left_buffer_size_ = expand_buffer_size;
+				//}
 				current_use_pos_ = 0;
 				continue_read_data([handler = this->shared_from_this(), head, parser]() {
 					handler->process_multipart_data(head, parser);
 				},true,true);
 			}
 		}
+		////处理content_type 为multipart_form 的body数据  --end
 
 
 
@@ -293,16 +317,17 @@ namespace xfinal {
 		template<typename Function>
 		void continue_read_data(Function&& callback,bool is_expand = true,bool is_multipart = false) { //用来继续读取body剩余数据的
 			if (is_expand) {
-				bool b = expand_size();
+				bool b = expand_size(is_multipart);
 				if (!b) {
-					if (!is_multipart) {
-						return; //超过最大可接受字节数 等待处理;
-					}
-					else {
-						buffers_.clear();
-						current_use_pos_ = 0;
-						left_buffer_size_ = max_buffer_size_;
-					}
+					//if (!is_multipart) {
+					//	return; //超过最大可接受字节数 等待处理;
+					//}
+					//else {  //对于multipart 这种可能需要获取大量数据的 需要特殊处理
+					//	buffers_.clear();
+					//	current_use_pos_ = 0;
+					//	left_buffer_size_ = max_buffer_size_;
+					//}
+					return;
 				}
 			}
 			socket_->async_read_some(asio::buffer(&buffers_[current_use_pos_], left_buffer_size_), [handler = this->shared_from_this(),function = std::move(callback)](std::error_code const& ec, std::size_t read_size) {
@@ -330,7 +355,7 @@ namespace xfinal {
 						handler->parse_header(parser);
 					}
 					else {
-						handler->expand_size();
+						handler->expand_size(false);
 						handler->read_header();
 					}
 				}
@@ -344,6 +369,7 @@ namespace xfinal {
 	public:
 		void close() {
 			socket_->close();
+			socket_close_ = true;
 		}
 	private:
 		std::unique_ptr<asio::ip::tcp::socket> socket_;
@@ -357,5 +383,6 @@ namespace xfinal {
 		request req_;
 		response res_;
 		http_router& router_;
+		bool socket_close_ = false;
 	};
 }

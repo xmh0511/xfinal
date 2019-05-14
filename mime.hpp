@@ -227,7 +227,6 @@ namespace xfinal {
 	{ ".mtz", "application/metastream" },
 	{ ".mvb", "application/x-msmediaview" },
 	{ ".mzv", "application/metastream" },
-	{ ".nar", "application/zip" },
 	{ ".nbmp", "image/nbmp" },
 	{ ".nc", "application/x-netcdf" },
 	{ ".ndb", "x-lml/x-ndb" },
