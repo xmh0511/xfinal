@@ -20,6 +20,7 @@ namespace xfinal {
 	public:
 		http_server(std::size_t thread_size):ioservice_pool_handler_(std::make_unique<ioservice_pool>(thread_size)), acceptor_(ioservice_pool_handler_->get_io()){
 			static_url_ = get_root_director(static_path_);
+			upload_path_ = static_path_ + "/upload";
 		}
 	public:
 		bool listen(std::string const& ip,std::string const& port) {
@@ -28,8 +29,8 @@ namespace xfinal {
 		}
 	public:
 		void run() {
-			if (!fs::exists(static_path_)) {
-				fs::create_directories(static_path_);
+			if (!fs::exists(upload_path_)) {
+				fs::create_directories(upload_path_);
 			}
 			ioservice_pool_handler_->run();
 		}
@@ -37,6 +38,7 @@ namespace xfinal {
 		///只能设置为相对当前程序允许目录的路径  "./xxx/xxx"
 		void set_static_path(std::string const& path) {
 			static_path_ = path;
+			upload_path_ = static_path_ + "/upload";
 			static_url_ = get_root_director(static_path_);
 		}
 		std::string static_path() {
@@ -72,7 +74,7 @@ namespace xfinal {
 		}
 	private:
 		void start_acceptor() {
-			auto connector = std::make_shared<connection>(ioservice_pool_handler_->get_io(), http_router_, static_path_);
+			auto connector = std::make_shared<connection>(ioservice_pool_handler_->get_io(), http_router_, static_path_, upload_path_);
 			acceptor_.async_accept(connector->get_socket(), [this,connector](std::error_code const& ec) {
 				if (ec) {
 					return;
@@ -86,6 +88,7 @@ namespace xfinal {
 		asio::ip::tcp::acceptor acceptor_;
 		http_router http_router_;
 		std::string static_path_ = "./static";
+		std::string upload_path_;
 		std::string static_url_;
 	};
 }

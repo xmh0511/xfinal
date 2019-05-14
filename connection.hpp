@@ -13,7 +13,7 @@
 namespace xfinal {
 	class connection :public std::enable_shared_from_this<connection> {
 	public:
-		connection(asio::io_service& io, http_router& router,std::string const& static_path) :socket_(std::make_unique<asio::ip::tcp::socket>(io)), io_service_(io), buffers_(expand_buffer_size), router_(router),static_path_(static_path),req_(res_),res_(req_) {
+		connection(asio::io_service& io, http_router& router,std::string const& static_path,std::string const& upload_path) :socket_(std::make_unique<asio::ip::tcp::socket>(io)), io_service_(io), buffers_(expand_buffer_size), router_(router),static_path_(static_path),req_(res_),res_(req_), upload_path_(upload_path){
 			left_buffer_size_ = buffers_.size();
 		}
 	public:
@@ -274,7 +274,7 @@ namespace xfinal {
 					auto extension = get_extension(f_type);
 					auto t = std::time(nullptr);
 					auto& fileo = request_info.multipart_files_map_[name];
-					auto path = static_path_ +"/"+ uuids::uuid_system_generator{}().to_short_str() + view2str(extension);
+					auto path = upload_path_ +"/"+ uuids::uuid_system_generator{}().to_short_str() + view2str(extension);
 					fileo.open(path);
 					auto original_name = value.substr(type + sizeof("filename") + 1, value.find('\"', type) - type);
 					fileo.set_original_name(std::move(original_name));
@@ -379,7 +379,7 @@ namespace xfinal {
 
 			}
 		}
-		void forward_write() {
+		void forward_write() {  //Ö±½ÓÐ´ ·Çchunked
 			if (!socket_close_) {
 				socket_->async_write_some(res_.to_buffers(), [handler = this->shared_from_this()](std::error_code const& ec, std::size_t write_size) {
 					handler->close();
@@ -405,5 +405,6 @@ namespace xfinal {
 		http_router& router_;
 		bool socket_close_ = false;
 		std::string const& static_path_;
+		std::string const& upload_path_;
 	};
 }
