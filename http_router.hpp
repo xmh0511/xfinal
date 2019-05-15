@@ -69,7 +69,7 @@ namespace xfinal {
 	public:
 		void post_router(request& req, response& res) {
 			auto key = std::string(req.method()) + std::string(req.url());
-			if (key.back() == '/') {  //去除url 最后有/的干扰 /xxx/xxx/ - > /xxx/xxx
+			while (key.back() != '/') { //去除url 最后有/的干扰 /xxx/xxx/ - > /xxx/xxx
 				key = key.substr(0, key.size() - 1);
 			}
 			if (router_map_.find(key) != router_map_.end()) {
