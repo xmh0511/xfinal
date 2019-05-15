@@ -63,7 +63,12 @@ int main()
 		res.write_file("./test.mp4", true);
 	});
 
+	server.router<GET, POST>("/abc/*", [](request& req, response& res) {
+		res.write_string("abc");
+	});
+
 	server.run();
+
 	std::cin.get();
 	return 0;
 }
