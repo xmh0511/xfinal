@@ -56,12 +56,10 @@ int main()
 
 	server.router<GET, POST>("/chunkedfile", [](request& req, response& res) {
 
-		res.write_file("./data.txt", false);
+		res.write_file("./data.txt", true);
 	});
 
 	server.router<GET, POST>("/video", [](request& req, response& res) {
-		std::uint64_t pos;
-		auto b = req.accept_range(pos);
 		res.write_file("./test.mp4", true);
 	});
 
