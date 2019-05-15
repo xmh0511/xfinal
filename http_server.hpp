@@ -44,6 +44,17 @@ namespace xfinal {
 		std::string static_path() {
 			return static_path_;
 		}
+
+		void set_chunked_size(std::uint64_t size) {
+			if (size > 0) {
+				chunked_size_ = size;
+			}
+		}
+
+		std::uint64_t chunked_size() {
+			return chunked_size_;
+		}
+
 	private:
 		bool listen(asio::ip::tcp::resolver::query& query) {
 			bool result = false;
@@ -75,6 +86,7 @@ namespace xfinal {
 	private:
 		void start_acceptor() {
 			auto connector = std::make_shared<connection>(ioservice_pool_handler_->get_io(), http_router_, static_path_, upload_path_);
+			connector->set_chunked_size(chunked_size_);
 			acceptor_.async_accept(connector->get_socket(), [this,connector](std::error_code const& ec) {
 				if (ec) {
 					return;
@@ -90,5 +102,6 @@ namespace xfinal {
 		std::string static_path_ = "./static";
 		std::string upload_path_;
 		std::string static_url_;
+		std::uint64_t chunked_size_ = 1*1024*1024;
 	};
 }

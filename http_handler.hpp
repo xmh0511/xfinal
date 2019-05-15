@@ -8,6 +8,7 @@
 #include <asio.hpp>
 #include "response_status.hpp"
 #include <vector>
+#include <tuple>
 namespace xfinal {
 
 
@@ -16,33 +17,34 @@ namespace xfinal {
 	class request {
 		friend class connection;
 	public:
-		request(response& res):res_(res){
+		request(response& res) :res_(res) {
 
 		}
 	public:
-		nonstd::string_view get_header(std::string const& key) const noexcept {
+		nonstd::string_view header(std::string const& key) const noexcept {
+			auto lkey = to_lower(key);
 			if (headers_ != nullptr) {
-				if ((*headers_).find(key) != (*headers_).end()) {
-					return (*headers_).at(key);
+				if ((*headers_).find(lkey) != (*headers_).end()) {
+					return (*headers_).at(lkey);
 				}
 			}
 			return "";
 		}
 	public:
 		bool has_body() const noexcept {
-			if (get_header("content-length") == "") {
+			if (header("content-length") == "") {
 				return false;
 			}
-			if (std::atoi(get_header("content-length").data()) > 0) {
+			if (std::atoi(header("content-length").data()) > 0) {
 				return true;
 			}
 			return false;
 		}
 		std::size_t body_length() const noexcept {
-			if (get_header("content-length") == "") {
+			if (header("content-length") == "") {
 				return 0;
 			}
-			return std::atol(get_header("content-length").data());
+			return std::atol(header("content-length").data());
 		}
 
 		nonstd::string_view url() const noexcept {
@@ -56,7 +58,7 @@ namespace xfinal {
 			if (decode_url_params_.empty()) {
 				auto it = url_.find('?');
 				if (it != nonstd::string_view::npos) {
-					decode_url_params_ = url_decode(view2str(url_.substr(it+1, url_.size())));
+					decode_url_params_ = url_decode(view2str(url_.substr(it + 1, url_.size())));
 					http_urlform_parser{ decode_url_params_ }.parse_data(url_params_);
 				}
 			}
@@ -87,7 +89,7 @@ namespace xfinal {
 			}
 		}
 
-		file const& file(nonstd::string_view filename) const noexcept {
+		filewriter const& file(nonstd::string_view filename) const noexcept {
 			if (multipart_files_map_ != nullptr) {
 				auto it = multipart_files_map_->find(view2str(filename));
 				if (it != multipart_files_map_->end()) {
@@ -158,7 +160,17 @@ namespace xfinal {
 		nonstd::string_view body() const noexcept {
 			return body_;
 		}
-		protected:
+
+		bool accept_range(std::uint64_t& pos) {
+			auto range = header("range");
+			if (range.empty()) {
+				return false;
+			}
+			auto posv = range.substr(range.find('=')+1);
+			pos = std::atoll(posv.data());
+			return true;
+		}
+	protected:
 		void init_content_type() noexcept {
 			auto it = headers_->find("content-type");
 			if (it != headers_->end()) {
@@ -193,7 +205,7 @@ namespace xfinal {
 				auto f = v.find("boundary");
 				if (f != std::string::npos) {
 					auto pos = f + sizeof("boundary");
-					boundary_key_ = nonstd::string_view{ &(v[pos]),(v.size()- pos) };
+					boundary_key_ = nonstd::string_view{ &(v[pos]),(v.size() - pos) };
 				}
 				else {
 					boundary_key_ = "";
@@ -215,51 +227,145 @@ namespace xfinal {
 		std::map<std::string, std::string> gbk_decode_params_;
 		nonstd::string_view boundary_key_;
 		std::map<std::string, std::string> const* multipart_form_map_ = nullptr;
-		std::map<std::string, xfinal::file> const* multipart_files_map_ = nullptr;
-		xfinal::file nullfile_;
+		std::map<std::string, xfinal::filewriter> const* multipart_files_map_ = nullptr;
+		xfinal::filewriter nullfile_;
 		response& res_;
 	};
-
+	///响应
 	class response {
 		friend class connection;
+	protected:
+		enum class write_type {
+			string,
+			file
+		};
 	public:
-		response(request& req):req_(req){
+		response(request& req) :req_(req) {
 			add_header("server", "xfinal");//增加服务器标识
 		}
 	public:
-		void add_header(std::string const& k,std::string const& v) {
+		void add_header(std::string const& k, std::string const& v) {
 			header_map_[k] = v;
 		}
-		template<typename T,typename U = std::enable_if_t<std::is_same_v<std::remove_reference_t<T>,std::string>>>
-		void write(T&& body, http_status state = http_status::ok,std::string const& conent_type = "text/plain",bool is_chunked = false) {
+	protected:
+		template<typename T, typename U = std::enable_if_t<std::is_same_v<std::remove_reference_t<T>, std::string>>>
+		void write(T&& body, http_status state = http_status::ok, std::string const& conent_type = "text/plain", bool is_chunked = false) {
 			state_ = state;
 			body_ = std::move(body);
 			if (!is_chunked) {
-				header_map_["content-length"] = std::to_string(body_.size());
+				header_map_["Content-Length"] = std::to_string(body_.size());
 			}
-			header_map_["content-type"] = conent_type;
+			else {
+				header_map_["Transfer-Encoding"] = "chunked";
+			}
+			header_map_["Content-Type"] = conent_type;
 			is_chunked_ = is_chunked;
 		}
 	public:
-		void write_string(std::string&& content, http_status state = http_status::ok, bool is_chunked = false) {
-			write(std::move(content), state,"text/plain", is_chunked);
+		void write_string(std::string&& content, bool is_chunked = false, http_status state = http_status::ok) {
+			write(std::move(content), state, "text/plain", is_chunked);
+			write_type_ = write_type::string;
+			init_start_pos_ = 0;
+		}
+
+		void write_file(std::string const& filename, bool is_chunked = false) {
+			if (!filename.empty()) {
+				bool b = file_.open(filename);
+				if (!b) {
+					write_string("", false, http_status::bad_request);
+				}
+				else {
+					header_map_["Content-Type"] = view2str(file_.content_type());
+					write_type_ = write_type::file;
+					is_chunked_ = is_chunked;
+					if (!is_chunked) {
+						state_ = http_status::ok;
+						file_.read_all(body_);
+						init_start_pos_ = -1;
+					}
+					else {
+						header_map_["Transfer-Encoding"] = "chunked";
+						body_.resize((std::size_t)chunked_size_);
+						std::uint64_t pos = 0;
+						if (req_.accept_range(pos)) {
+							state_ = http_status::partial_content;
+							init_start_pos_ = pos;
+							auto filesize = file_.size();
+							header_map_["Content-Range"] = std::string("bytes ") + std::to_string(init_start_pos_) + std::string("-") + std::to_string(filesize - 1) + "/" + std::to_string(filesize);
+						}
+						else {
+							state_ = http_status::ok;
+							init_start_pos_ = -1;
+						}
+					}
+				}
+			}
+			else {
+				write_string("", false, http_status::bad_request);
+			}
 		}
 	private:
-		std::vector<asio::const_buffer> to_buffers() {
+		std::vector<asio::const_buffer> header_to_buffer() {
 			std::vector<asio::const_buffer> buffers_;
-			http_version_ = view2str(req_.http_version())+' ';//写入回应状态行 
+			http_version_ = view2str(req_.http_version()) + ' ';//写入回应状态行 
 			buffers_.emplace_back(asio::buffer(http_version_));
 			buffers_.emplace_back(http_state_to_buffer(state_));
 			for (auto& iter : header_map_) {  //回写响应头部
 				buffers_.emplace_back(asio::buffer(iter.first));
 				buffers_.emplace_back(asio::buffer(name_value_separator.data(), name_value_separator.size()));
 				buffers_.emplace_back(asio::buffer(iter.second));
-				buffers_.emplace_back(asio::buffer(crlf.data(),crlf.size()));
+				buffers_.emplace_back(asio::buffer(crlf.data(), crlf.size()));
 			}
 			buffers_.emplace_back(asio::buffer(crlf.data(), crlf.size())); //头部结束
+			return buffers_;
+		}
+		std::vector<asio::const_buffer> to_buffers() {  //非chunked 模式 直接返回所有数据
+			auto  buffers_ = header_to_buffer();
 			//写入body
 			buffers_.emplace_back(asio::buffer(body_.data(), body_.size()));
 			return buffers_;
+		}
+
+		std::tuple<bool, std::vector<asio::const_buffer>,std::int64_t> chunked_body(std::int64_t startpos) {
+			std::vector<asio::const_buffer> buffers;
+			switch (write_type_) {
+			case write_type::string:  //如果是文本数据
+			{
+				if ((body_.size()- (std::size_t)startpos) <= chunked_size_) {
+					auto size = body_.size() - startpos;
+					chunked_write_size_ = to_hex(size);
+					buffers.emplace_back(asio::buffer(chunked_write_size_));
+					buffers.emplace_back(asio::buffer(crlf.data(), crlf.size()));
+					buffers.emplace_back(asio::buffer(&body_[(std::size_t)startpos], (std::size_t)size));
+					buffers.emplace_back(asio::buffer(crlf.data(), crlf.size()));
+					return { true, buffers,0};
+				}
+				else {  //还有超过每次chunked传输的数据大小
+					auto nstart = startpos + chunked_size_;
+					chunked_write_size_ = to_hex(chunked_size_);
+					buffers.emplace_back(asio::buffer(chunked_write_size_));
+					buffers.emplace_back(asio::buffer(crlf.data(), crlf.size()));
+					buffers.emplace_back(asio::buffer(&body_[(std::size_t)startpos], (std::size_t)chunked_size_));
+					buffers.emplace_back(asio::buffer(crlf.data(), crlf.size()));
+					return { false,buffers,nstart };
+				}
+			}
+			break;
+			case write_type::file:  //如果是文件数据
+			{
+				auto read_size = file_.read(startpos, &(body_[0]), chunked_size_);
+				chunked_write_size_ = to_hex(read_size);
+				buffers.emplace_back(asio::buffer(chunked_write_size_));
+				buffers.emplace_back(asio::buffer(crlf.data(), crlf.size()));
+				buffers.emplace_back(asio::buffer(&body_[0], (std::size_t)read_size));
+				buffers.emplace_back(asio::buffer(crlf.data(), crlf.size()));
+				return { (read_size < chunked_size_),buffers, -1 };
+			}
+				break;
+			default:
+				return { false,buffers ,0 };
+				break;
+			}
 		}
 	private:
 		request& req_;
@@ -268,5 +374,10 @@ namespace xfinal {
 		http_status state_;
 		bool is_chunked_ = false;
 		std::string http_version_;
+		write_type write_type_ = write_type::string;
+		std::uint64_t chunked_size_;
+		std::string chunked_write_size_;
+		filereader file_;
+		std::int64_t init_start_pos_ ;
 	};
 }

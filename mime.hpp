@@ -489,6 +489,8 @@ namespace xfinal {
 	{ ".json", "application/json" },
 	};
 
+	static nonstd::string_view unknow_file = "application/octet-stream";
+
 	static nonstd::string_view get_extension(std::string const& key) {
 		for (auto& iter : mime_map) {
 			if (iter.second == key) {
@@ -496,5 +498,15 @@ namespace xfinal {
 			}
 		}
 		return "";
+	}
+
+	static nonstd::string_view get_content_type(std::string const& key) {
+		auto it = mime_map.find(key);
+		if (it != mime_map.end()) {
+			return it->second;
+		}
+		else {
+			return unknow_file;
+		}
 	}
 }

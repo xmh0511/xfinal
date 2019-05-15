@@ -13,7 +13,7 @@
 namespace xfinal {
 	class connection :public std::enable_shared_from_this<connection> {
 	public:
-		connection(asio::io_service& io, http_router& router,std::string const& static_path,std::string const& upload_path) :socket_(std::make_unique<asio::ip::tcp::socket>(io)), io_service_(io), buffers_(expand_buffer_size), router_(router),static_path_(static_path),req_(res_),res_(req_), upload_path_(upload_path){
+		connection(asio::io_service& io, http_router& router, std::string const& static_path, std::string const& upload_path) :socket_(std::make_unique<asio::ip::tcp::socket>(io)), io_service_(io), buffers_(expand_buffer_size), router_(router), static_path_(static_path), req_(res_), res_(req_), upload_path_(upload_path) {
 			left_buffer_size_ = buffers_.size();
 		}
 	public:
@@ -274,7 +274,7 @@ namespace xfinal {
 					auto extension = get_extension(f_type);
 					auto t = std::time(nullptr);
 					auto& fileo = request_info.multipart_files_map_[name];
-					auto path = upload_path_ +"/"+ uuids::uuid_system_generator{}().to_short_str() + view2str(extension);
+					auto path = upload_path_ + "/" + uuids::uuid_system_generator{}().to_short_str() + view2str(extension);
 					fileo.open(path);
 					auto original_name = value.substr(type + sizeof("filename") + 1, value.find('\"', type) - type);
 					fileo.set_original_name(std::move(original_name));
@@ -366,7 +366,7 @@ namespace xfinal {
 		}
 
 		void request_error(std::string&& what_error) {
-			res_.write_string(std::move(what_error),http_status::bad_request);
+			res_.write_string(std::move(what_error),false, http_status::bad_request);
 			write();
 		}
 
@@ -376,7 +376,7 @@ namespace xfinal {
 				forward_write();
 			}
 			else {
-
+				chunked_write();
 			}
 		}
 		void forward_write() {  //Ö±½ÓÐ´ ·Çchunked
@@ -386,10 +386,55 @@ namespace xfinal {
 				});
 			}
 		}
+
+		void chunked_write() {
+			if (!socket_close_) {
+				socket_->async_write_some(res_.header_to_buffer(), [handler = this->shared_from_this(),startpos = res_.init_start_pos_](std::error_code const& ec, std::size_t write_size) {
+					if (ec) {
+						return;
+					}
+					handler->write_body_chunked(startpos);
+				});
+			}
+		}
+
+		void write_body_chunked(std::int64_t startpos) {
+			auto tp = res_.chunked_body(startpos);
+			if (!socket_close_) {
+				socket_->async_write_some(std::get<1>(tp), [handler = this->shared_from_this(), pos = std::get<2>(tp),eof = std::get<0>(tp)](std::error_code const& ec, std::size_t write_size) {
+					if (ec) {
+						return;
+					}
+					if (!eof) {
+						handler->write_body_chunked(pos);
+					}
+					else {
+						handler->write_end_chunked();
+					}
+				});
+			}
+		}
+
+		void write_end_chunked() {
+			std::vector<asio::const_buffer> buffers;
+			res_.chunked_write_size_ = "0";
+			buffers.emplace_back(asio::buffer(res_.chunked_write_size_));
+			buffers.emplace_back(asio::buffer(crlf.data(),crlf.size()));
+			buffers.emplace_back(asio::buffer(crlf.data(), crlf.size()));
+			if (!socket_close_) {
+				socket_->async_write_some(buffers, [handler = this->shared_from_this()](std::error_code const& ec, std::size_t write_size) {
+					handler->close();
+				});
+			}
+		}
 	public:
 		void close() {
 			socket_->close();
 			socket_close_ = true;
+		}
+	public:
+		void set_chunked_size(std::uint64_t size) {
+			res_.chunked_size_ = size;
 		}
 	private:
 		std::unique_ptr<asio::ip::tcp::socket> socket_;

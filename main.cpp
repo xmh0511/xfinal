@@ -29,7 +29,7 @@ int main()
 	}, Test{});
 
 	server.router<GET, POST>("/", [](request& req, response& res) {
-		res.write(std::string("hello world"), http_status::ok);
+		res.write_string(std::string("hello world"),false);
 	});
 
 	server.router<POST>("/json", [](request& req, response& res) {
@@ -45,6 +45,24 @@ int main()
 		std::cout << "text: " << req.query("text") << std::endl;
 		std::cout << req.file("img").size() << std::endl;
 		std::cout << req.query<GBK>("text2") << std::endl;
+	});
+
+	server.router<GET, POST>("/chunkedstr", [](request& req, response& res) {
+		std::ifstream file("./data.txt");
+		std::stringstream ss;
+		ss << file.rdbuf();
+		res.write_string(ss.str(),true);
+	});
+
+	server.router<GET, POST>("/chunkedfile", [](request& req, response& res) {
+
+		res.write_file("./data.txt", false);
+	});
+
+	server.router<GET, POST>("/video", [](request& req, response& res) {
+		std::uint64_t pos;
+		auto b = req.accept_range(pos);
+		res.write_file("./test.mp4", true);
 	});
 
 	server.run();

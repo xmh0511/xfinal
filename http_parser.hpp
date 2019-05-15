@@ -50,7 +50,7 @@ namespace xfinal {
 		std::string body_;
 		std::string decode_body_;
 		std::map<std::string, std::string> multipart_form_map_;
-		std::map<std::string, file> multipart_files_map_;
+		std::map<std::string, filewriter> multipart_files_map_;
 	};
 
 	class http_parser_header final {
@@ -105,13 +105,17 @@ namespace xfinal {
 		}
 		std::pair < parse_state, std::map<std::string, std::string>> get_header() {
 			std::map<std::string, std::string> headers;
+			//std::cout << std::string(begin_, end_) << std::endl;
+			char r = ' ';
+			char n = ' ';
 			auto start = begin_;
 			while (begin_ != end_) {
+				auto c = *begin_;
+				auto c_next = *(begin_ + 1);
 				if ((*begin_) == '\r' && (*(begin_ + 1)) == '\n') {  //maybe a header = > key:value
 					if ((end_ - begin_) >= 4) {
-						if ((*(begin_ + 2)) == '\r' && (*(begin_ + 3)) == '\n') {
-							break;
-						}
+						r = *(begin_ + 2);
+						n = *(begin_ + 3);
 					}
 					auto old_start = start;
 					while (start != begin_) {
@@ -130,6 +134,9 @@ namespace xfinal {
 					}
 					if (start != begin_) {
 						return { parse_state::invalid ,{} };
+					}
+					if (r == '\r'&& n == '\n') {
+						break;
 					}
 				}
 				++begin_;

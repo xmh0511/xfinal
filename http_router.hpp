@@ -59,7 +59,7 @@ namespace xfinal {
 				it(req, res);
 			}
 			else {
-				res.write_string(std::string("the url \"") + view2str(req.url()) + "\" is not found", http_status::bad_request);
+				res.write_string(std::string("the url \"") + view2str(req.url()) + "\" is not found", false,http_status::bad_request);
 			}
 		}
 	private:

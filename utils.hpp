@@ -4,6 +4,7 @@
 #include "string_view.hpp"
 #include <vector>
 #include <filesystem.hpp>
+#include <sstream>
 namespace fs = ghc::filesystem;
 namespace xfinal {
 
@@ -192,5 +193,12 @@ namespace xfinal {
 			c = c.parent_path();
 		}
 		return path.stem();
+	}
+
+	template<typename T>
+	std::string to_hex(T number) {
+		std::stringstream ss;
+		ss << std::hex << number;
+		return ss.str();
 	}
 }
