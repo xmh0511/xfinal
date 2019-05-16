@@ -245,8 +245,8 @@ namespace xfinal {
 				return false;
 			}
 		}
-		std::pair<bool,std::size_t> is_complete_part_data(std::vector<char>& buffers,std::size_t size) const {
-			nonstd::string_view buffer{ buffers.data() ,size };
+		std::pair<bool,std::size_t> is_complete_part_data(char const* buffers,std::size_t size) const {
+			nonstd::string_view buffer{ buffers ,size };
 			auto it = buffer.find(boundary_start_key_);
 			if (it != nonstd::string_view::npos) {
 				std::cout << buffer.substr( it ,boundary_start_key_.size() ) << std::endl;

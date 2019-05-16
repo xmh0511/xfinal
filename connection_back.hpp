@@ -200,16 +200,14 @@ namespace xfinal {
 		void pre_process_multipart_body(content_type type) { //预处理content_type 位multipart_form 类型的body
 			auto header_size = req_.header_length_;
 			if (current_use_pos_ > header_size) {  //是不是读request头的时候 把body也读取进来了 
-				//forward_contain_data(buffers_, header_size, current_use_pos_);
-				start_read_pos_ = header_size;
-				//current_use_pos_ -= header_size;
+				forward_contain_data(buffers_, header_size, current_use_pos_);
+				current_use_pos_ -= header_size;
 				left_buffer_size_ = buffers_.size() - current_use_pos_;
 			}
 			else {
 				left_buffer_size_ = buffers_.size();
 				buffers_.clear();
 				current_use_pos_ = 0;
-				start_read_pos_ = 0;
 				//left_buffer_size_ = buffers_.size() - current_use_pos_;
 			}
 			process_multipart_body(type);
@@ -230,9 +228,8 @@ namespace xfinal {
 
 		void process_mutipart_head(http_multipart_parser const& parser, content_type type) {
 			auto end = buffers_.begin() + current_use_pos_;
-			//std::cout << nonstd::string_view{ buffers_.data() + start_read_pos_, current_use_pos_ - start_read_pos_ } << std::endl;
-			if (parser.is_complete_part_header(buffers_.begin()+ start_read_pos_, end)) {  //如果当前buffer中有完整的部分multipart头
-				auto pr = parser.parser_part_head(buffers_.begin()+ start_read_pos_, end);//解析multipart part头部 
+			if (parser.is_complete_part_header(buffers_.begin(), end)) {  //如果当前buffer中有完整的部分multipart头
+				auto pr = parser.parser_part_head(buffers_.begin(), end);//解析multipart part头部 
 				pre_process_multipart_data(pr, parser); //处理数据部分
 			}
 			else {
@@ -245,9 +242,8 @@ namespace xfinal {
 		void pre_process_multipart_data(std::pair<std::size_t, std::map<std::string, std::string>> const& pr, http_multipart_parser const& parser) { //是否需要过滤掉mutipart head
 			if (pr.first != 0) {
 				if (current_use_pos_ > pr.first) {  //读取multipart head的时候 也读取了部分数据 处理数据的时候 把之前的头给移除了
-					//forward_contain_data(buffers_, pr.first, current_use_pos_);//移除掉head部分 因为已经解析过了
-					start_read_pos_ += pr.first;
-					//current_use_pos_ -= pr.first;
+					forward_contain_data(buffers_, pr.first, current_use_pos_);//移除掉head部分 因为已经解析过了
+					current_use_pos_ -= pr.first;
 					left_buffer_size_ = buffers_.size() - current_use_pos_;
 					process_multipart_data(pr.second, parser);
 				}
@@ -256,7 +252,6 @@ namespace xfinal {
 					buffers_.resize(1024);
 					current_use_pos_ = 0;
 					left_buffer_size_ = 1024;
-					start_read_pos_ = 0;
 					auto head = pr.second;
 					continue_read_data([parser, head, handler = this->shared_from_this()]() {
 						handler->process_multipart_data(head, parser);
@@ -266,12 +261,12 @@ namespace xfinal {
 		}
 
 		void process_multipart_data(std::map<std::string, std::string> const& head, http_multipart_parser const& parser) {
-			auto dpr = parser.is_complete_part_data(buffers_.data()+start_read_pos_, current_use_pos_ - start_read_pos_);
+			auto dpr = parser.is_complete_part_data(buffers_, current_use_pos_);
 			if (dpr.first) { //如果已经是完整的数据了
-				record_mutlipart_data(head, nonstd::string_view(buffers_.data()+ start_read_pos_, dpr.second), parser, true);
+				record_mutlipart_data(head, nonstd::string_view(buffers_.data(), dpr.second), parser, true);
 			}
-			else {  //此处肯定没有完整boundary记号  这里可能有点问题 没有处理 boundary 边界问题
-				record_mutlipart_data(head, nonstd::string_view(buffers_.data()+ start_read_pos_, current_use_pos_ - start_read_pos_), parser, false);
+			else {  //此处肯定没有boundary记号
+				record_mutlipart_data(head, nonstd::string_view(buffers_.data(), current_use_pos_), parser, false);
 			}
 		}
 
@@ -301,28 +296,20 @@ namespace xfinal {
 				request_info.multipart_form_map_[name] += view2str(data);
 			}
 			if (is_complete) {
-				if (type != std::string::npos) {  //如果是文件 读取完了 就可以关闭文件指针了
-					request_info.multipart_files_map_[name].close();
-				}
-				if (parser.is_end((buffers_.begin()+ start_read_pos_ + data.size() + 2), buffers_.begin() + current_use_pos_)) { //判断是否全部接受完毕 回调multipart 路由
+				if (parser.is_end((buffers_.begin() + data.size() + 2), buffers_.begin() + current_use_pos_)) { //判断是否全部接受完毕 回调multipart 路由
 					handle_body(content_type::multipart_form, 0);
 					return;
 				}
-				//forward_contain_data(buffers_, data.size(), current_use_pos_);  //把下一条的头部数据移动到buffer的前面来
-				start_read_pos_ += data.size();
-				//current_use_pos_ -= data.size();
-				left_buffer_size_ = buffers_.size() - current_use_pos_;
-				if (left_buffer_size_ == 0) {
-					forward_contain_data(buffers_, start_read_pos_, current_use_pos_);
-					current_use_pos_ -= start_read_pos_;
-					start_read_pos_ = 0;
-					left_buffer_size_ = buffers_.size() - current_use_pos_;
+				if (type != std::string::npos) {  //如果是文件 读取完了 就可以关闭文件指针了
+					request_info.multipart_files_map_[name].close();
 				}
+				forward_contain_data(buffers_, data.size(), current_use_pos_);  //把下一条的头部数据移动到buffer的前面来
+				current_use_pos_ -= data.size();
+				left_buffer_size_ = buffers_.size() - current_use_pos_;
 				process_mutipart_head(parser, content_type::multipart_form);
 			}
 			else {  //buffers中所有的数据都是mulitpart 的数据 （不包含multipart头）所以可以清除
 				buffers_.clear();
-				start_read_pos_ = 0;
 				//if (expand_buffer_size >= max_buffer_size_) {
 				//	buffers_.resize(1024);
 				//	left_buffer_size_ = 1024;
@@ -399,6 +386,7 @@ namespace xfinal {
 				if (ec) {
 					return;
 				}
+				//handler->start_read_pos_ = handler->current_use_pos_;
 				handler->set_current_pos(read_size);
 				function();
 			});
