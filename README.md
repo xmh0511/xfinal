@@ -106,3 +106,24 @@ int main()
    http_server.run();
 }
 ````
+## xfinal 支持项目结构分层
+````
+#pragma once
+class Test{
+  public:
+    void shop(request& req,response& res){
+        res.write_string("shop !");
+    }
+}
+#include "http_server.hpp"
+using namespace xfinal;
+int main()
+{
+   http_server serve(4) //线程数
+   Test t;
+   serve.router<GET,POST>("/shop",&Test::shop,nullptr);
+    serve.router<GET,POST>("/shop",&Test::shop,t);
+   http_server.run();
+}
+````
+
