@@ -6,14 +6,34 @@
 #include "http_handler.hpp"
 
 namespace xfinal {
+	struct c11_auto_lambda_aop_before{
+		c11_auto_lambda_aop_before(bool& b, request& req, response& res):result(b),req_(req),res_(res){
+
+		}
+		template<typename T>
+		c11_auto_lambda_aop_before& operator()(T&& aop) {
+			result = result && (aop.before(req_, res_));
+			return *this;
+		}
+		bool& result;
+		request& req_;
+		response& res_;
+	};
+	//template<std::size_t N>
+	//struct router_caller {
+	//	template<typename Tuple>
+	//	constexpr static void apply_before(bool& b, request& req,response& res,Tuple&& tp) {
+	//		each_tuple<0, tuple_size<typename std::remove_reference<Tuple>::type>::value>{}(std::forward<Tuple>(tp), [&b,&req,&res](auto& aop) {
+	//			auto r = aop.before(req, res);
+	//			b = b && r;
+	//		});
+	//	}
+	//};
 	template<std::size_t N>
 	struct router_caller {
 		template<typename Tuple>
-		constexpr static void apply_before(bool& b, request& req,response& res,Tuple&& tp) {
-			each_tuple<0, std::tuple_size_v<std::remove_reference_t<Tuple>>>{}(std::forward<Tuple>(tp), [&b,&req,&res](auto& aop) {
-				auto r = aop.before(req, res);
-				b = b && r;
-			});
+		constexpr static void apply_before(bool& b, request& req, response& res, Tuple&& tp) {
+			each_tuple<0, tuple_size<typename std::remove_reference<Tuple>::type>::value>{}(std::forward<Tuple>(tp), c11_auto_lambda_aop_before{b,req,res});
 		}
 	};
 	template<>
@@ -52,15 +72,15 @@ namespace xfinal {
 		}
 		template<typename Function,typename Tuple>
 		void pre_handler(request& req, response& res, Function& function, Tuple& tp) {  //lambda
-			pre_handler_expand(req, res, function, tp, std::make_index_sequence<std::tuple_size_v<std::remove_reference_t<Tuple>>>{});
+			pre_handler_expand(req, res, function, tp, typename make_index_sequence<std::tuple_size<typename std::remove_reference<Tuple>::type>::value>::type{});
 		}
 
 		template<typename Function, typename Tuple,std::size_t...Indexs>
-		void pre_handler_expand(request& req, response& res, Function& function, Tuple& tp, std::index_sequence<Indexs...>) {
+		void pre_handler_expand(request& req, response& res, Function& function, Tuple& tp, index_sequence<Indexs...>) {
 			auto rtp = reorganize_tuple(std::tuple<>{}, std::tuple<>{}, std::get<Indexs>(tp)...);
 			bool b = true;
 			auto aop_tp = std::get<0>(rtp);
-			router_caller<std::tuple_size_v<std::remove_reference_t<decltype(aop_tp)>>>::template apply_before(b, req, res, aop_tp);
+			router_caller<std::tuple_size<typename std::remove_reference<decltype(aop_tp)>::type>::value>::template apply_before(b, req, res, aop_tp);
 			if (!b) {
 				return;
 			}

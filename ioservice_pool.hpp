@@ -9,7 +9,7 @@ namespace xfinal {
 	public:
 		ioservice_pool(std::size_t size) :io_pool_(size), io_index_(0), thread_counts(size) {
 			for (auto& iter : io_pool_) {
-				io_workers_.emplace_back(std::make_unique<asio::io_service::work>(iter));
+				io_workers_.emplace_back(std::unique_ptr<asio::io_service::work>(new asio::io_service::work(iter)));
 			}
 		}
 		asio::io_service& get_io() {
@@ -21,9 +21,9 @@ namespace xfinal {
 	protected:
 		void run() {
 			for (auto& iter : io_pool_) {
-				thread_pool_.emplace_back(std::make_unique<std::thread>([](asio::io_service& io) {
+				thread_pool_.emplace_back(std::unique_ptr<std::thread>(new std::thread([](asio::io_service& io) {
 					io.run();
-				}, std::ref(iter)));
+				}, std::ref(iter))));
 			}
 			for (auto&iter : thread_pool_) {
 				iter->join();

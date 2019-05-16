@@ -13,7 +13,7 @@
 namespace xfinal {
 	class connection :public std::enable_shared_from_this<connection> {
 	public:
-		connection(asio::io_service& io, http_router& router, std::string const& static_path, std::string const& upload_path) :socket_(std::make_unique<asio::ip::tcp::socket>(io)), io_service_(io), buffers_(expand_buffer_size), router_(router), static_path_(static_path), req_(res_), res_(req_), upload_path_(upload_path) {
+		connection(asio::io_service& io, http_router& router, std::string const& static_path, std::string const& upload_path) :socket_(std::unique_ptr<asio::ip::tcp::socket>(new asio::ip::tcp::socket(io))), io_service_(io), buffers_(expand_buffer_size), router_(router), static_path_(static_path), req_(res_), res_(req_), upload_path_(upload_path) {
 			left_buffer_size_ = buffers_.size();
 		}
 	public:

@@ -25,7 +25,7 @@ namespace uuids
    namespace detail
    {
       template <typename TChar>
-      constexpr inline unsigned char hex2char(TChar const ch)
+      inline unsigned char hex2char(TChar const ch)
       {
          if (ch >= static_cast<TChar>('0') && ch <= static_cast<TChar>('9'))
             return ch - static_cast<TChar>('0');
@@ -37,7 +37,7 @@ namespace uuids
       }
 
       template <typename TChar>
-      constexpr inline bool is_hex(TChar const ch)
+      inline bool is_hex(TChar const ch)
       {
          return
             (ch >= static_cast<TChar>('0') && ch <= static_cast<TChar>('9')) ||
@@ -46,7 +46,7 @@ namespace uuids
       }
 
       template <typename TChar>
-      constexpr inline unsigned char hexpair2char(TChar const a, TChar const b)
+      inline unsigned char hexpair2char(TChar const a, TChar const b)
       {
          return (hex2char(a) << 4) | hex2char(b);
       }
@@ -618,7 +618,7 @@ namespace uuids
          create(str.data(), str.size());
       }
 
-      constexpr uuid_variant variant() const noexcept
+      uuid_variant variant() const noexcept
       {
          if ((data[8] & 0x80) == 0x00)
             return uuid_variant::ncs;
@@ -630,7 +630,7 @@ namespace uuids
             return uuid_variant::reserved;
       }
 
-      constexpr uuid_version version() const noexcept
+      uuid_version version() const noexcept
       {
          if ((data[6] & 0xF0) == 0x10)
             return uuid_version::time_based;
@@ -886,6 +886,11 @@ namespace uuids
       }
    };
 
+   template<typename T>
+   void do_nothing(T&&) {
+
+   }
+
    template <typename UniformRandomNumberGenerator>
    class basic_uuid_random_generator 
    {
@@ -900,9 +905,9 @@ namespace uuids
       }
 
       explicit basic_uuid_random_generator(UniformRandomNumberGenerator& gen) :
-         generator(&gen, [](auto) {}) {}
+         generator(&gen, &do_nothing) {}
       explicit basic_uuid_random_generator(UniformRandomNumberGenerator* gen) :
-         generator(gen, [](auto) {}) {}
+         generator(gen, &do_nothing) {}
 
       uuid operator()()
       {
@@ -961,7 +966,7 @@ namespace uuids
       }
       
       template <typename char_type,
-                typename = std::enable_if_t<std::is_integral<char_type>::value>>
+                typename = typename std::enable_if<std::is_integral<char_type>::value>::type>
       void process_characters(char_type const * const characters, size_t const count)
       {
          for (size_t i = 0; i < count; i++) 

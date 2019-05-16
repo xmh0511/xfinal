@@ -82,7 +82,7 @@ namespace xfinal {
 		}
 
 		template<typename T>
-		std::enable_if_t<std::is_same_v<T, GBK>, nonstd::string_view> param(nonstd::string_view key) {
+		typename std::enable_if<std::is_same<T, GBK>::value, nonstd::string_view>::type param(nonstd::string_view key) {
 			auto view = param(key);
 			auto key_str = view2str(key);
 			if (!view.empty()) {
@@ -122,7 +122,7 @@ namespace xfinal {
 			return version_;
 		}
 
-		content_type content_type() const noexcept {
+		enum content_type content_type() const noexcept {
 			return content_type_;
 		}
 
@@ -146,7 +146,7 @@ namespace xfinal {
 		}
 
 		template<typename T>
-		std::enable_if_t<std::is_same_v<T, GBK>, nonstd::string_view> query(nonstd::string_view key) {
+		typename std::enable_if<std::is_same<T, GBK>::value, nonstd::string_view>::type query(nonstd::string_view key) {
 			auto view = query(key);
 			auto key_str = view2str(key);
 			if (!view.empty()) {
@@ -265,7 +265,7 @@ namespace xfinal {
 			header_map_[k] = v;
 		}
 	protected:
-		template<typename T, typename U = std::enable_if_t<std::is_same_v<std::remove_reference_t<T>, std::string>>>
+		template<typename T, typename U = typename std::enable_if<std::is_same<typename std::remove_reference<T>::type, std::string>::value>::type>
 		void write(T&& body, http_status state = http_status::ok, std::string const& conent_type = "text/plain", bool is_chunked = false) noexcept {
 			state_ = state;
 			body_ = std::move(body);

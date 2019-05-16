@@ -23,7 +23,7 @@ namespace xfinal {
 	public:
 		bool open(std::string const&  path) {
 			if (file_handle_ == nullptr) {
-				file_handle_ = std::make_unique<std::ofstream>(path, std::ios::app | std::ios::binary);
+				file_handle_ = std::move(std::unique_ptr<std::ofstream>(new std::ofstream(path, std::ios::app | std::ios::binary)));
 				path_ = path;
 				return file_handle_->is_open();
 			}
@@ -80,7 +80,7 @@ namespace xfinal {
 	public:
 		bool open(std::string const& filename) {
 			if (file_handle_ == nullptr) {
-				file_handle_ = std::make_unique<std::ifstream>(filename, std::ios::binary);
+				file_handle_ = std::move(std::unique_ptr<std::ifstream>(new std::ifstream(filename, std::ios::binary)));
 			}
 			bool b =  file_handle_->is_open();
 			if (b) {

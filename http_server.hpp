@@ -18,9 +18,10 @@ namespace xfinal {
 
 	class http_server :private nocopyable {
 	public:
-		http_server(std::size_t thread_size):ioservice_pool_handler_(std::make_unique<ioservice_pool>(thread_size)), acceptor_(ioservice_pool_handler_->get_io()){
-			static_url_ = get_root_director(static_path_);
+		http_server(std::size_t thread_size):ioservice_pool_handler_(std::unique_ptr<ioservice_pool>(new ioservice_pool(thread_size))), acceptor_(ioservice_pool_handler_->get_io()){
+			static_url_ = std::string("/")+ get_root_director(static_path_)+ "/*";
 			upload_path_ = static_path_ + "/upload";
+			register_static_router(); //注册静态文件处理逻辑
 		}
 	public:
 		bool listen(std::string const& ip,std::string const& port) {
@@ -39,7 +40,7 @@ namespace xfinal {
 		void set_static_path(std::string const& path) {
 			static_path_ = path;
 			upload_path_ = static_path_ + "/upload";
-			static_url_ = get_root_director(static_path_);
+			static_url_ = std::string("/") + get_root_director(static_path_) + "/*";
 		}
 		std::string static_path() {
 			return static_path_;
@@ -80,7 +81,7 @@ namespace xfinal {
 	public:
 		template<http_method...Methods,typename Function,typename...Args>
 		void router(nonstd::string_view url, Function&& function, Args&&...args) {  
-			auto method_names = http_method_str<Methods...>::template methods_to_name();
+			auto method_names = http_method_str<Methods...>::methods_to_name();
 			http_router_.router(url, std::move(method_names), std::forward<Function>(function), std::forward<Args>(args)...);
 		}
 	private:
@@ -93,6 +94,21 @@ namespace xfinal {
 				}
 				connector->read_header();
 				start_acceptor();
+			});
+		}
+	private:
+		void register_static_router() {
+			router<GET>(nonstd::string_view{ static_url_.data(),static_url_.size() }, [this](request& req,response& res) {  //静态文件处理
+				auto url = req.url();
+				auto p = fs::path("."+view2str(url));
+				auto content_type = get_content_type(p.extension());
+				auto ab = fs::absolute(p);
+				if (ab.parent_path() == fs::current_path()) {  //目录到了程序文件的目录 视为不合法请求
+					res.write_string("", false, http_status::bad_request, view2str(content_type));
+				}
+				else {
+					res.write_file(p.string(), true);  //默认使用chunked方式返回文件数据
+				}
 			});
 		}
 	private:

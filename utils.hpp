@@ -25,7 +25,7 @@ namespace xfinal {
 		return str;
 	}
 
-	enum  class http_method
+	enum  class http_method:std::uint8_t
 	{
 		GET,
 		POST,
@@ -115,6 +115,46 @@ namespace xfinal {
 			return std::array<std::string, 0>{};
 		}
 	};
+	///cpp14 以上的工具类
+	template<typename...Args>
+	struct void_t {
+		using type = void;
+	};
+
+	template<typename T>
+	struct tuple_size {
+
+	};
+
+	template<typename...Args>
+	struct tuple_size<std::tuple<Args...>> {
+		static constexpr std::size_t value = sizeof...(Args);
+	};
+
+	template<std::size_t...N>
+	struct index_sequence {
+
+	};
+
+	template<std::size_t N,std::size_t...Indexs>
+	struct index_sequence<N, Indexs...> {
+		using type = typename index_sequence<N - 1, N - 1, Indexs...>::type;
+	};
+
+	template<std::size_t...Indexs>
+	struct index_sequence<0, Indexs...> {
+		using type = index_sequence<Indexs...>;
+	};
+	
+
+	template<std::size_t N>
+	struct make_index_sequence {
+		using type = typename index_sequence<N>::type;
+	};
+
+	///cpp14 以上的工具类
+
+
 
 	template<typename T,typename U = void>
 	struct is_aop {
@@ -122,29 +162,29 @@ namespace xfinal {
 	};
 
 	template<typename T>
-	struct is_aop<T, std::void_t<std::tuple<decltype(&T::before),decltype(&T::after)>>> {
+	struct is_aop<T, typename void_t<std::tuple<decltype(&T::before),decltype(&T::after)>>::type> {
 		static constexpr bool value = true;
 	};
 
-	template<typename AopTuple, typename NoAopTuple,typename T,typename U = std::enable_if_t<is_aop<std::remove_reference_t<T>>::value>>
-	auto process_reorganize(int,AopTuple&& atp, NoAopTuple&& natp,T&& t) {
+	template<typename AopTuple, typename NoAopTuple,typename T,typename U = typename std::enable_if<is_aop<typename std::remove_reference<T>::type>::value>::type>
+	auto process_reorganize(int,AopTuple&& atp, NoAopTuple&& natp,T&& t)->decltype(std::make_tuple(std::tuple_cat(atp, std::tuple<T>(t)), natp)) {
 		auto tp =  std::tuple_cat(atp, std::tuple<T>(t));
 		return std::make_tuple(tp, natp);
 	}
 
-	template<typename AopTuple, typename NoAopTuple, typename T, typename U = std::enable_if_t<!is_aop<std::remove_reference_t<T>>::value>>
-	auto process_reorganize(float,AopTuple&& atp, NoAopTuple&& natp, T&& t) {
+	template<typename AopTuple, typename NoAopTuple, typename T, typename U = typename std::enable_if<!is_aop<typename std::remove_reference<T>::type>::value>::type>
+	auto process_reorganize(float,AopTuple&& atp, NoAopTuple&& natp, T&& t) ->decltype(std::make_tuple(atp, std::tuple_cat(natp, std::tuple<T>(t)))) {
 		auto tp = std::tuple_cat(natp, std::tuple<T>(t));
 		return std::make_tuple(atp, tp);
 	}
 
 	template<typename AopTuple, typename NoAopTuple>
-	auto reorganize_tuple(AopTuple&& atp, NoAopTuple&& natp) {
+	auto reorganize_tuple(AopTuple&& atp, NoAopTuple&& natp)->decltype(std::make_tuple(atp, natp)) {
 		return std::make_tuple(atp, natp);
 	}
 
 	template<typename AopTuple,typename NoAopTuple,typename T,typename...Args>
-	auto reorganize_tuple(AopTuple&& atp, NoAopTuple&& natp,T&& t,Args&&...args) {
+	auto reorganize_tuple(AopTuple&& atp, NoAopTuple&& natp,T&& t,Args&&...args) ->decltype(reorganize_tuple(std::get<0>(process_reorganize(0, atp, natp, t)), std::get<1>(process_reorganize(0, atp, natp, t)), std::forward<Args>(args)...)) {
 		auto tp = process_reorganize(0, atp, natp, t);
 		return reorganize_tuple(std::get<0>(tp), std::get<1>(tp), std::forward<Args>(args)...);
 	}
@@ -169,7 +209,7 @@ namespace xfinal {
 		return std::string(view.data(), view.size());
 	}
 
-	template<typename T,typename U = std::void_t<decltype(std::declval<T>().begin())>>
+	template<typename T,typename U = typename void_t<decltype(std::declval<T>().begin())>::type>
 	void forward_contain_data(T& contain,std::size_t data_begin,std::size_t data_end) {
 		auto old_begin = data_begin;
 		auto begin = contain.begin();
