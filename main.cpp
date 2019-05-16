@@ -32,6 +32,22 @@ class Base {
 private:
 	bool b;
 };
+
+class Process {
+public:
+	void test(request& req,response& res) {
+		res.write_string("OK test!");
+	}
+};
+
+class Shop :public Controller {
+public:
+	void goshop() {
+		get_response().write_string(std::to_string(count++)+" go shop");
+	}
+private:
+	int count = 0;
+};
 int main()
 {
 	http_server server(4);
@@ -83,6 +99,12 @@ int main()
 	server.router<GET, POST>("/oct", [](request& req, response& res) {
 		res.write_string("abc");
 	});
+
+	Process c;
+	server.router<GET, POST>("/test",&Process::test,c);
+
+	Shop ss;
+	server.router<GET, POST>("/controller", &Shop::goshop,ss);
 
 	server.run();
 

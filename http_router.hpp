@@ -79,13 +79,43 @@ namespace xfinal {
 		}
 
 		template<typename Array,typename Function,typename...Args>
-		void router(nonstd::string_view url, Array&& methods, Function&& lambda, Args&&...args) { //lambda
+		void router(nonstd::string_view url, Array&& methods, Function&& lambda, Args&&...args) { //lambda or regular function
 			auto tp = std::tuple<Args...>(std::forward<Args>(args)...);
 			auto b = std::bind(&http_router::pre_handler<Function, std::tuple<Args...>>, this, std::placeholders::_1, std::placeholders::_2, std::forward<Function>(lambda), std::move(tp));
 			reg_router(url, std::forward<Array>(methods), std::move(b));
 		}
+
+		template<typename Array,typename Ret,typename Class,typename...Params,typename...Args>
+		void router(nonstd::string_view url, Array&& methods, Ret(Class::*memberfunc)(Params...), Class& that, Args&&...args) {  // member function
+			auto tp = std::tuple<Args...>(std::forward<Args>(args)...);
+			auto b = std::bind(&http_router::pre_handler_member_function<Ret(Class::*)(Params...), Class,std::tuple<Args...>>, this, std::placeholders::_1, std::placeholders::_2, memberfunc, &that, std::move(tp));
+			reg_router(url, std::forward<Array>(methods), std::move(b));
+		}
+
+		template<typename Array, typename Ret, typename Class, typename...Params, typename...Args>
+		void router(nonstd::string_view url, Array&& methods, Ret(Class::*memberfunc)(Params...), Class* that, Args&&...args) {  // member function
+			auto tp = std::tuple<Args...>(std::forward<Args>(args)...);
+			auto b = std::bind(&http_router::pre_handler_member_function<Ret(Class::*)(Params...), Class, std::tuple<Args...>>, this, std::placeholders::_1, std::placeholders::_2, memberfunc, that,std::move(tp));
+			reg_router(url, std::forward<Array>(methods), std::move(b));
+		}
+
+		template<typename Array, typename Class, typename...Args>
+		void router(nonstd::string_view url, Array&& methods, void(Class::*memberfunc)(), Class& that, Args&&...args) {  //¿ØÖÆÆ÷
+			auto tp = std::tuple<Args...>(std::forward<Args>(args)...);
+			auto b = std::bind(&http_router::pre_handler_controller<Class, std::tuple<Args...>>, this, std::placeholders::_1, std::placeholders::_2, memberfunc, &that, std::move(tp));
+			reg_router(url, std::forward<Array>(methods), std::move(b));
+		}
+
+		template<typename Array, typename Class, typename...Args>
+		void router(nonstd::string_view url, Array&& methods, void(Class::*memberfunc)(), Class* that, Args&&...args) {  //¿ØÖÆÆ÷
+			auto tp = std::tuple<Args...>(std::forward<Args>(args)...);
+			auto b = std::bind(&http_router::pre_handler_controller<Class, std::tuple<Args...>>, this, std::placeholders::_1, std::placeholders::_2, memberfunc, that, std::move(tp));
+			reg_router(url, std::forward<Array>(methods), std::move(b));
+		}
+
+		///lambda or regular function  process --start
 		template<typename Function,typename Tuple>
-		void pre_handler(request& req, response& res, Function& function, Tuple& tp) {  //lambda
+		void pre_handler(request& req, response& res, Function& function, Tuple& tp) {  //lambda or regular function
 			pre_handler_expand(req, res, function, tp, typename make_index_sequence<std::tuple_size<typename std::remove_reference<Tuple>::type>::value>::type{});
 		}
 
@@ -101,6 +131,66 @@ namespace xfinal {
 			function(req, res);
 			router_caller<std::tuple_size<typename std::remove_reference<decltype(aop_tp)>::type>::value>::template apply<c11_auto_lambda_aop_after>(b, req, res, aop_tp);
 		}
+		///lambda or regular function  process --end
+
+		///class member function process   --start
+		template<typename Function,typename Class, typename Tuple>
+		void pre_handler_member_function(request& req, response& res, Function& function, Class* that, Tuple& tp) {
+			pre_handler_member_function_expand(req, res, function, that, tp, typename make_index_sequence<std::tuple_size<typename std::remove_reference<Tuple>::type>::value>::type{});
+		}
+
+		template<typename Function, typename Class, typename Tuple, std::size_t...Indexs>
+		void pre_handler_member_function_expand(request& req, response& res, Function& function, Class* that, Tuple& tp, index_sequence<Indexs...>) {
+			auto rtp = reorganize_tuple(std::tuple<>{}, std::tuple<>{}, std::get<Indexs>(tp)...);
+			bool b = true;
+			auto aop_tp = std::get<0>(rtp);
+			router_caller<std::tuple_size<typename std::remove_reference<decltype(aop_tp)>::type>::value>::template apply<c11_auto_lambda_aop_before>(b, req, res, aop_tp);
+			if (!b) {
+				return;
+			}
+			if (that != nullptr) {
+				(that->*function)(req, res);
+			}
+			else {
+				(Class{}.*function)(req, res);
+			}
+
+			router_caller<std::tuple_size<typename std::remove_reference<decltype(aop_tp)>::type>::value>::template apply<c11_auto_lambda_aop_after>(b, req, res, aop_tp);
+		}
+
+		///class member function process   --end;
+
+		///controller process --start
+		template<typename Class,typename Tuple>
+		void pre_handler_controller(request& req, response& res, void(Class::*memberfunc)(), Class* that,Tuple& tp) {
+			handler_controller_expand(req, res, memberfunc, that, tp, typename make_index_sequence<std::tuple_size<typename std::remove_reference<Tuple>::type>::value>::type{});
+		}
+
+		template<typename Class,typename Tuple, std::size_t...Indexs>
+		void handler_controller_expand(request& req, response& res, void(Class::*memberfunc)(), Class* that, Tuple& tp, index_sequence<Indexs...>) {
+			auto rtp = reorganize_tuple(std::tuple<>{}, std::tuple<>{}, std::get<Indexs>(tp)...);
+			bool b = true;
+			auto aop_tp = std::get<0>(rtp);
+			router_caller<std::tuple_size<typename std::remove_reference<decltype(aop_tp)>::type>::value>::template apply<c11_auto_lambda_aop_before>(b, req, res, aop_tp);
+			if (!b) {
+				return;
+			}
+			if (that != nullptr) {
+				that->req_ = &req;
+				that->res_ = &res;
+				(that->*memberfunc)();
+			}
+			else {
+				Class c;
+				c.req_ = &req;
+				c.res_ = &res;
+				(c.*memberfunc)();
+			}
+			router_caller<std::tuple_size<typename std::remove_reference<decltype(aop_tp)>::type>::value>::template apply<c11_auto_lambda_aop_after>(b, req, res, aop_tp);
+		}
+
+		///controller process --end
+
 	public:
 		void post_router(request& req, response& res) {
 			auto url = req.url();

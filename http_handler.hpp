@@ -14,7 +14,7 @@ namespace xfinal {
 
 	class request;
 	class response;
-	class request {
+	class request:private nocopyable {
 		friend class connection;
 	public:
 		request(response& res) :res_(res) {
@@ -248,7 +248,7 @@ namespace xfinal {
 		response& res_;
 	};
 	///œÏ”¶
-	class response {
+	class response:private nocopyable {
 		friend class connection;
 	protected:
 		enum class write_type {
@@ -409,5 +409,21 @@ namespace xfinal {
 		std::string chunked_write_size_;
 		filereader file_;
 		std::int64_t init_start_pos_ ;
+	};
+
+	class Controller:private nocopyable {
+		friend class http_router;
+	public:
+		Controller() = default;
+	public:
+		request& get_request() {
+			return *req_;
+		}
+		response& get_response() {
+			return *res_;
+		}
+	private:
+		class request* req_;
+		class response* res_;
 	};
 }
