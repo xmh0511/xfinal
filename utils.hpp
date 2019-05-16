@@ -193,7 +193,10 @@ namespace xfinal {
 	struct each_tuple {
 		template<typename Tuple, typename Function>
 		void operator()(Tuple&& tp, Function&& function) {
-			function(std::get<N>(tp));
+			bool b = function(std::get<N>(tp));
+			if (!b) {
+				return;
+			}
 			each_tuple<N + 1, Max>{}(std::forward<Tuple>(tp), std::forward<Function>(function));
 		}
 	};

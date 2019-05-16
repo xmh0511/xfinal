@@ -4,15 +4,28 @@ using namespace xfinal;
 class Test {
 public:
 	bool before(request& req,response& res) {
-		std::cout << "pre process aop" << std::endl;
+		std::cout << "pre process aop 1" << std::endl;
 		return true;
 	}
 
 	bool after(request& req, response& res) {
-		return false;
+		return true;
 	}
 private:
 	int a;
+};
+
+class Test2 {
+public:
+	bool before(request& req, response& res) {
+		std::cout << "pre process aop 2" << std::endl;
+		return true;
+	}
+
+	bool after(request& req, response& res) {
+		std::cout << "after process aop 2" << std::endl;
+		return true;
+	}
 };
 
 class Base {
@@ -26,7 +39,7 @@ int main()
 	server.router<GET,POST>("/abc", [](request& req,response& res) {
 		std::cout << req.query("id") << std::endl;
 		std::cout << "hahaha "<<req.url() <<" text :"<<req.query<GBK>("text")<< std::endl;
-	}, Test{});
+	}, Test{}, Base{}, Test2{});
 
 	server.router<GET, POST>("/", [](request& req, response& res) {
 		res.write_string(std::string("hello world"),false);

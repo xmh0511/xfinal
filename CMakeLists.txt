@@ -25,6 +25,6 @@ add_executable(${project_name} ${XFINAL})
 include_directories(${CMAKE_SOURCE_DIR}/asio ${CMAKE_SOURCE_DIR}/ghc)
 
 
-target_link_libraries(${project_name} uuid -lstdc++fs)
+target_link_libraries(${project_name} uuid)
 
 install(TARGETS ${project_name} DESTINATION include)
