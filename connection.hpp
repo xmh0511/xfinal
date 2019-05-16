@@ -63,6 +63,7 @@ namespace xfinal {
 				req_.header_length_ = parser.get_header_size();
 				req_.multipart_form_map_ = &(request_info.multipart_form_map_);
 				req_.multipart_files_map_ = &(request_info.multipart_files_map_);
+				req_.oct_steam_ = &(request_info.oct_steam_);
 				handle_read();
 				return;
 			}
@@ -81,12 +82,19 @@ namespace xfinal {
 					pre_process_body(type);
 				}
 				break;
-				case xfinal::content_type::multipart_form: {
+				case xfinal::content_type::multipart_form:
+				{
 					pre_process_multipart_body(type);
 				}
-														   break;
+				break;
+				case xfinal::content_type::octet_stream:
+				{
+					pre_process_oct_stream();
+				}
+				break;
 				case xfinal::content_type::unknow:
 				{
+					request_error("unsupport content type request");
 					return;
 				}
 				break;
@@ -116,6 +124,9 @@ namespace xfinal {
 			}
 			break;
 			case content_type::octet_stream:
+			{
+				process_oct();
+			}
 				break;
 			case content_type::string:
 			{
@@ -314,7 +325,45 @@ namespace xfinal {
 		}
 		////处理content_type 为multipart_form 的body数据  --end
 
+		////处理content_type 为oct-stream 的body数据  --start
+		void pre_process_oct_stream() {
+			auto body_size = std::atoll(req_.header("content-length").data());
+			auto header_size = req_.header_length_;
+			if (current_use_pos_ > header_size) {  //是不是读request头的时候 把body也读取进来了 
+				request_info.oct_steam_.open(upload_path_ + "/" + uuids::uuid_system_generator{}().to_short_str());
+				request_info.oct_steam_.add_data(nonstd::string_view{ &(buffers_[header_size]),current_use_pos_ - header_size });
+				if ((current_use_pos_ - header_size) > body_size) {  //如果已经读完了所有数据
+					handle_body(content_type::octet_stream, (std::size_t)body_size);
+					return;
+				}
+			}
+			left_buffer_size_ = buffers_.size();
+			buffers_.clear();
+			current_use_pos_ = 0;
+			process_oct_stream(body_size);
+		}
 
+		void process_oct_stream(std::uint64_t body_size) {
+			auto size = request_info.oct_steam_.size();
+			if (request_info.oct_steam_.size() == body_size) {
+				request_info.oct_steam_.close();
+				handle_body(content_type::octet_stream, (std::size_t)body_size);
+				return;
+			}
+			expand_size(true);
+			socket_->async_read_some(asio::buffer(&buffers_[0], buffers_.size()), [handler = this->shared_from_this(), body_size](std::error_code const& ec, std::size_t read_size) {
+				if (ec) {
+					return;
+				}
+				handler->request_info.oct_steam_.add_data(nonstd::string_view{ &(handler->buffers_[0]) ,read_size });
+				handler->process_oct_stream(body_size);
+			});
+		}
+
+		void process_oct() {
+			post_router();
+		}
+		////处理content_type 为oct-stream 的body数据  --end
 
 	public:
 		template<typename Function>
@@ -337,6 +386,7 @@ namespace xfinal {
 				if (ec) {
 					return;
 				}
+				//handler->start_read_pos_ = handler->current_use_pos_;
 				handler->set_current_pos(read_size);
 				function();
 			});
@@ -366,7 +416,7 @@ namespace xfinal {
 		}
 
 		void request_error(std::string&& what_error) {
-			res_.write_string(std::move(what_error),false, http_status::bad_request);
+			res_.write_string(std::move(what_error), false, http_status::bad_request);
 			write();
 		}
 
@@ -389,7 +439,7 @@ namespace xfinal {
 
 		void chunked_write() {
 			if (!socket_close_) {
-				socket_->async_write_some(res_.header_to_buffer(), [handler = this->shared_from_this(),startpos = res_.init_start_pos_](std::error_code const& ec, std::size_t write_size) {
+				socket_->async_write_some(res_.header_to_buffer(), [handler = this->shared_from_this(), startpos = res_.init_start_pos_](std::error_code const& ec, std::size_t write_size) {
 					if (ec) {
 						return;
 					}
@@ -401,7 +451,7 @@ namespace xfinal {
 		void write_body_chunked(std::int64_t startpos) {
 			auto tp = res_.chunked_body(startpos);
 			if (!socket_close_) {
-				socket_->async_write_some(std::get<1>(tp), [handler = this->shared_from_this(), pos = std::get<2>(tp),eof = std::get<0>(tp)](std::error_code const& ec, std::size_t write_size) {
+				socket_->async_write_some(std::get<1>(tp), [handler = this->shared_from_this(), pos = std::get<2>(tp), eof = std::get<0>(tp)](std::error_code const& ec, std::size_t write_size) {
 					if (ec) {
 						return;
 					}
@@ -419,7 +469,7 @@ namespace xfinal {
 			std::vector<asio::const_buffer> buffers;
 			res_.chunked_write_size_ = "0";
 			buffers.emplace_back(asio::buffer(res_.chunked_write_size_));
-			buffers.emplace_back(asio::buffer(crlf.data(),crlf.size()));
+			buffers.emplace_back(asio::buffer(crlf.data(), crlf.size()));
 			buffers.emplace_back(asio::buffer(crlf.data(), crlf.size()));
 			if (!socket_close_) {
 				socket_->async_write_some(buffers, [handler = this->shared_from_this()](std::error_code const& ec, std::size_t write_size) {
@@ -451,5 +501,6 @@ namespace xfinal {
 		bool socket_close_ = false;
 		std::string const& static_path_;
 		std::string const& upload_path_;
+		std::size_t start_read_pos_ = 0;
 	};
 }

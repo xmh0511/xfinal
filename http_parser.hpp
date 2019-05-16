@@ -26,7 +26,7 @@ namespace xfinal {
 		request_meta(std::string&& method, std::string&& url,std::string&& version, std::map<std::string, std::string>&& headers):method_(std::move(method)), url_(std::move(url)), version_(std::move(version)), headers_(std::move(headers)){
 
 		}
-		request_meta(request_meta&& r):method_(std::move(r.method_)), url_(std::move(r.url_)), version_(std::move(r.version_)), headers_(std::move(r.headers_)), form_map_(std::move(r.form_map_)), body_(std::move(r.body_)), decode_body_(std::move(r.decode_body_)), multipart_form_map_(std::move(r.multipart_form_map_)), multipart_files_map_(std::move(r.multipart_files_map_)){
+		request_meta(request_meta&& r):method_(std::move(r.method_)), url_(std::move(r.url_)), version_(std::move(r.version_)), headers_(std::move(r.headers_)), form_map_(std::move(r.form_map_)), body_(std::move(r.body_)), decode_body_(std::move(r.decode_body_)), multipart_form_map_(std::move(r.multipart_form_map_)), multipart_files_map_(std::move(r.multipart_files_map_)), oct_steam_(std::move(r.oct_steam_)){
 
 		}
 		request_meta& operator=(request_meta&& r) {
@@ -39,6 +39,7 @@ namespace xfinal {
 			decode_body_ = std::move(r.body_);
 			multipart_form_map_ = std::move(r.multipart_form_map_);
 			multipart_files_map_ = std::move(r.multipart_files_map_);
+			oct_steam_ = std::move(r.oct_steam_);
 			return *this;
 		}
 	public:
@@ -51,6 +52,7 @@ namespace xfinal {
 		std::string decode_body_;
 		std::map<std::string, std::string> multipart_form_map_;
 		std::map<std::string, filewriter> multipart_files_map_;
+		filewriter oct_steam_;
 	};
 
 	class http_parser_header final {

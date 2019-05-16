@@ -68,10 +68,24 @@ namespace xfinal {
 		}
 	public:
 		void post_router(request& req, response& res) {
-			auto key = std::string(req.method()) + std::string(req.url());
-			while (key.back() == '/') { //去除url 最后有/的干扰 /xxx/xxx/ - > /xxx/xxx
-				key = key.substr(0, key.size() - 1);
+			auto url = req.url();
+			if (url.size() > 1) {  //确保这里不是 / 根路由
+				std::size_t back = 0;
+				while ((url.size() - back - 1)>0 && url[url.size() - back - 1] == '/') { //去除url 最后有/的干扰 /xxx/xxx/ - > /xxx/xxx
+					back++;
+				}
+				if (back > 0) {  //如果url不是规范的url 则重定向跳转
+					auto url_str = view2str(url.substr(0, url.size() - back));
+					auto params = req.params();
+					if (!params.empty()) {
+						url_str += "?";
+					}
+					url_str += view2str(params);
+					res.redirect(url_str);
+					return;
+				}
 			}
+			auto key = std::string(req.method()) + std::string(url);
 			if (router_map_.find(key) != router_map_.end()) {
 				auto& it = router_map_.at(key);
 				it(req, res);

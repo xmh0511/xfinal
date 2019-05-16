@@ -10,6 +10,16 @@ namespace xfinal {
 	class filewriter final:private nocopyable {
 	public:
 		filewriter() = default;
+		filewriter(filewriter&& f):file_handle_(std::move(f.file_handle_)), original_name_(std::move(f.original_name_)), size_(f.size_), path_(std::move(f.path_)){
+
+		}
+		filewriter& operator=(filewriter&& f) {
+			file_handle_ = std::move(f.file_handle_);
+			original_name_ = std::move(f.original_name_);
+			size_ = f.size_;
+			path_ = std::move(f.path_);
+			return *this;
+		}
 	public:
 		bool open(std::string const&  path) {
 			if (file_handle_ == nullptr) {
@@ -49,13 +59,24 @@ namespace xfinal {
 	private:
 		std::unique_ptr<std::ofstream> file_handle_;
 		std::string original_name_;
-		std::uint64_t size_;
+		std::uint64_t size_ = 0;
 		std::string path_;
 	};
 
 	class filereader final :private nocopyable {
 	public:
 		filereader() = default;
+		filereader(filereader&& f) :file_handle_(std::move(f.file_handle_)), size_(f.size_), path_(std::move(f.path_)), content_type_(f.content_type_){
+
+		}
+
+		filereader& operator=(filereader&& f) {
+			file_handle_ = std::move(f.file_handle_);
+			size_ = f.size_;
+			path_ = std::move(f.path_);
+			content_type_ = std::move(f.content_type_);
+			return *this;
+		}
 	public:
 		bool open(std::string const& filename) {
 			if (file_handle_ == nullptr) {
@@ -105,7 +126,7 @@ namespace xfinal {
 		}
 	private:
 		std::unique_ptr<std::ifstream> file_handle_;
-		std::uint64_t size_;
+		std::uint64_t size_ = 0;
 		std::string path_;
 		nonstd::string_view content_type_;
 	};

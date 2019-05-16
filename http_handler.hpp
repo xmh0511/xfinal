@@ -69,6 +69,18 @@ namespace xfinal {
 			return "";
 		}
 
+		nonstd::string_view params() const noexcept {
+			auto it = url_.find('?');
+			if (it != nonstd::string_view::npos) {
+				return url_.substr(it + 1, url_.size());
+			}
+			return "";
+		}
+
+		nonstd::string_view raw_url()  const noexcept {
+			return url_;
+		}
+
 		template<typename T>
 		std::enable_if_t<std::is_same_v<T, GBK>, nonstd::string_view> param(nonstd::string_view key) {
 			auto view = param(key);
@@ -96,7 +108,11 @@ namespace xfinal {
 					return it->second;
 				}
 			}
-			return nullfile_;
+			return *oct_steam_;
+		}
+
+		filewriter const& file() const noexcept {
+			return *oct_steam_;
 		}
 
 		nonstd::string_view method() const noexcept {
@@ -228,7 +244,7 @@ namespace xfinal {
 		nonstd::string_view boundary_key_;
 		std::map<std::string, std::string> const* multipart_form_map_ = nullptr;
 		std::map<std::string, xfinal::filewriter> const* multipart_files_map_ = nullptr;
-		xfinal::filewriter nullfile_;
+		xfinal::filewriter* oct_steam_;
 		response& res_;
 	};
 	///响应
@@ -237,19 +253,20 @@ namespace xfinal {
 	protected:
 		enum class write_type {
 			string,
-			file
+			file,
+			no_body
 		};
 	public:
 		response(request& req) :req_(req) {
 			add_header("server", "xfinal");//增加服务器标识
 		}
 	public:
-		void add_header(std::string const& k, std::string const& v) {
+		void add_header(std::string const& k, std::string const& v) noexcept {
 			header_map_[k] = v;
 		}
 	protected:
 		template<typename T, typename U = std::enable_if_t<std::is_same_v<std::remove_reference_t<T>, std::string>>>
-		void write(T&& body, http_status state = http_status::ok, std::string const& conent_type = "text/plain", bool is_chunked = false) {
+		void write(T&& body, http_status state = http_status::ok, std::string const& conent_type = "text/plain", bool is_chunked = false) noexcept {
 			state_ = state;
 			body_ = std::move(body);
 			if (!is_chunked) {
@@ -262,13 +279,13 @@ namespace xfinal {
 			is_chunked_ = is_chunked;
 		}
 	public:
-		void write_string(std::string&& content, bool is_chunked = false, http_status state = http_status::ok) {
-			write(std::move(content), state, "text/plain", is_chunked);
+		void write_string(std::string&& content, bool is_chunked = false, http_status state = http_status::ok, std::string const& conent_type = "text/plain") noexcept {
+			write(std::move(content), state, conent_type, is_chunked);
 			write_type_ = write_type::string;
 			init_start_pos_ = 0;
 		}
 
-		void write_file(std::string const& filename, bool is_chunked = false) {
+		void write_file(std::string const& filename, bool is_chunked = false) noexcept {
 			if (!filename.empty()) {
 				bool b = file_.open(filename);
 				if (!b) {
@@ -304,8 +321,19 @@ namespace xfinal {
 				write_string("", false, http_status::bad_request);
 			}
 		}
+
+		void redirect(nonstd::string_view url, bool is_temporary = true) noexcept {
+			write_type_ = write_type::no_body;
+			header_map_["Location"] = view2str(url);
+			if (is_temporary) {
+				state_ = http_status::moved_temporarily;
+			}
+			else {
+				state_ = http_status::moved_permanently;
+			}
+		}
 	private:
-		std::vector<asio::const_buffer> header_to_buffer() {
+		std::vector<asio::const_buffer> header_to_buffer() noexcept {
 			std::vector<asio::const_buffer> buffers_;
 			http_version_ = view2str(req_.http_version()) + ' ';//写入回应状态行 
 			buffers_.emplace_back(asio::buffer(http_version_));
@@ -319,14 +347,16 @@ namespace xfinal {
 			buffers_.emplace_back(asio::buffer(crlf.data(), crlf.size())); //头部结束
 			return buffers_;
 		}
-		std::vector<asio::const_buffer> to_buffers() {  //非chunked 模式 直接返回所有数据
+		std::vector<asio::const_buffer> to_buffers() noexcept {  //非chunked 模式 直接返回所有数据
 			auto  buffers_ = header_to_buffer();
 			//写入body
-			buffers_.emplace_back(asio::buffer(body_.data(), body_.size()));
+			if (write_type_ != write_type::no_body) {  //非no_body类型 
+				buffers_.emplace_back(asio::buffer(body_.data(), body_.size()));
+			}
 			return buffers_;
 		}
 
-		std::tuple<bool, std::vector<asio::const_buffer>,std::int64_t> chunked_body(std::int64_t startpos) {
+		std::tuple<bool, std::vector<asio::const_buffer>,std::int64_t> chunked_body(std::int64_t startpos) noexcept {
 			std::vector<asio::const_buffer> buffers;
 			switch (write_type_) {
 			case write_type::string:  //如果是文本数据
@@ -363,7 +393,7 @@ namespace xfinal {
 			}
 				break;
 			default:
-				return { false,buffers ,0 };
+				return { true,buffers ,0 };
 				break;
 			}
 		}

@@ -38,7 +38,7 @@ int main()
 
 	server.router<GET>("/params", [](request& req, response& res) {
 		std::cout << "id: " << req.param("id") << std::endl;
-		std::cout << "text: " << req.param<GBK>("text") << std::endl;
+		res.write_string("id");
 	});
 
 	server.router<POST>("/upload", [](request& req, response& res) {
@@ -63,7 +63,11 @@ int main()
 		res.write_file("./test.mp4", true);
 	});
 
-	server.router<GET, POST>("/abc/*", [](request& req, response& res) {
+	server.router<GET, POST>("/pathinfo/*", [](request& req, response& res) {
+		res.write_string("abc");
+	});
+
+	server.router<GET, POST>("/oct", [](request& req, response& res) {
 		res.write_string("abc");
 	});
 
