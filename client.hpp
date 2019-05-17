@@ -5,7 +5,6 @@
 #include <mutex>
 #include <random>
 #include <unordered_set>
-#include <vector>
 #include <sstream>
 #include "string_view.hpp"
 #include <string.h>
