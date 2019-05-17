@@ -139,7 +139,59 @@ int main()
    serve.run();
 }
 ````
+## 返回json
+````
+#include "http_server.hpp"
+using namespace xfinal;
+int main()
+{
+   http_server serve(4) //线程数
+   serve.listen("0.0.0.0","8080");
+   serve.router<GET>("/json",[](request& req,response& res){
+      json data;
+      data["name"] = "xfinal";
+      data["language"] = "morden c++";
+      res.write_json(data); /*第一个参数也可以直接传入json字符串,第二个接口用来控制返回方式*/
+   });
+   serve.run();
+}
+````
 
+## 视图层 用于前端模板渲染
+#### 视图层更多使用方法 参考 [https://github.com/xmh0511/inja](xmh051/inja) （在inja库的基础上修改了部分功能）
+````
+///test.html
+<!DOCTYPE html>
+
+<html lang="zh" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="utf-8" />
+    <title></title>
+</head>
+<body>
+    <div style="color:aqua">
+        <p><span>name:</span>@{name}</p>
+        <p><span>language:</span>@{language}</p>
+        <p>#{ @{language} }#</p>
+    </div>
+</body>
+</html>
+///test.html
+
+#include "http_server.hpp"
+using namespace xfinal;
+int main()
+{
+   http_server serve(4) //线程数
+   serve.listen("0.0.0.0","8080");
+   serve.router<GET>("/view",[](request& req,response& res){
+       res.set_attr("name", "xfinal");
+       res.set_attr("language", "c++");
+       res.write_view("./static/test.html");
+   });
+   serve.run();
+}
+````
 
 ## 文件请求
 ````
@@ -260,6 +312,8 @@ int main()
    serve.run();
 }
 ````
+# 以上所有使用lambda注册的路由 都可以替换成成员函数或controller
+
 # xfinal client 使用
 ## GET请求
 ### client 同步
