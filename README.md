@@ -1,23 +1,32 @@
 # xfinal
 一个用于快速使用c++ 开发web服务器的框架
+
 # xfinal简介
 高性能易用的http框架,基于c++14标准开发
 
 1. 统一而简单的接口
 2. header-only
 3. 跨平台
-5. 支持拦截器功能
+4. 支持拦截器功能
+5. 易用的客户端(http client)
 
-# 如何使用
+# 目录
+* [如何使用](#如何使用)
+* [快速示例](#快速示例)
+* [联系方式](#联系方式)
+
+
+#如何使用
 
 ## 编译依赖
 使用支持c++14标准的c++ 编译器即可编译运行,无需其他依赖(linux 下只需要uuid库，大部分linux系统默认都有)
 
-## 如何编译
+## 生成编译
 mkdir build
 cd build
 cmake ..
 即可生成相应平台下的编译项目
+
 
 # 快速示例
 
@@ -164,6 +173,7 @@ int main()
    http_server serve(4) //线程数
    /*接口不记录信息的*/
    serve.router<GET,POST>("/shop",&Test::shop,nullptr);
+   
    /*这里可以记录下每次请求的一些信息，用于下次请求使用*/
    Test t;
    serve.router<GET,POST>("/shop",&Test::shop,t);
@@ -198,4 +208,6 @@ int main()
    serve.run();
 }
 ````
-
+#联系方式
+QQ: 970252187
+Mail:970252187@qq.com
