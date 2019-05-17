@@ -59,6 +59,7 @@ namespace xfinal {
 	};
 	class http_router {
 		using router_function = std::function<void(request&, response&)>;
+		friend class http_server;
 	public:
 		template<typename Array,typename Bind>
 		void reg_router(nonstd::string_view url, Array&& methods, Bind&& router) {
@@ -213,11 +214,13 @@ namespace xfinal {
 			auto key = std::string(req.method()) + std::string(url);
 			if (router_map_.find(key) != router_map_.end()) {
 				auto& it = router_map_.at(key);
+				set_view_method(res);
 				it(req, res);
 			}
 			else {
 				for (auto& iter : genera_router_map_) {
 					if (iter.first == (key.substr(0, iter.first.size()))) {
+						set_view_method(res);
 						(iter.second)(req, res);
 						return;
 					}
@@ -226,7 +229,16 @@ namespace xfinal {
 			}
 		}
 	private:
+		void set_view_method(response& res) {
+			if (!view_method_map_.empty()) {
+				for (auto& iter : view_method_map_) {
+					res.view_env_->add_callback(iter.first, iter.second.first,iter.second.second);
+				}
+			}
+		}
+	private:
 		std::map<std::string, router_function> router_map_;
 		std::map<std::string, router_function> genera_router_map_;
+		std::map<std::string,std::pair<std::size_t, inja::CallbackFunction>> view_method_map_;
 	};
 }

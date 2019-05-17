@@ -49,6 +49,8 @@ public:
 private:
 	int count = 0;
 };
+
+
 int main()
 {
 	http_server server(4);
@@ -155,9 +157,12 @@ int main()
 		}
 	});
 
+	server.router<GET>("/view", [](request& req, response& res) {
+		res.set_attr("name", "xfinal");
+		res.set_attr("language", "c++");
+		res.write_view("./static/test.html");
+	});
+
 	server.run();
-
-
-	std::cin.get();
 	return 0;
 }

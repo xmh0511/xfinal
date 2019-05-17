@@ -56,6 +56,11 @@ namespace xfinal {
 			return chunked_size_;
 		}
 
+		///添加视图的处理方法
+		void add_view_method(std::string const& name,std::size_t args_number, inja::CallbackFunction const& callback) {
+			http_router_.view_method_map_.insert(std::make_pair(name, std::make_pair(args_number,callback)));
+		}
+
 	private:
 		bool listen(asio::ip::tcp::resolver::query& query) {
 			bool result = false;

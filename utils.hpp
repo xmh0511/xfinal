@@ -5,8 +5,11 @@
 #include <vector>
 #include <filesystem.hpp>
 #include <sstream>
+#include "json.hpp"
 namespace fs = ghc::filesystem;
 namespace xfinal {
+
+	using namespace nlohmann;
 
 	struct GBK {};
 	struct UTF8{};

@@ -9,6 +9,7 @@
 #include "response_status.hpp"
 #include <vector>
 #include <tuple>
+#include "inja.hpp"
 namespace xfinal {
 
 
@@ -32,7 +33,7 @@ namespace xfinal {
 		}
 	public:
 		bool has_body() const noexcept {
-			if (header("content-length") == "") {
+			if (header("content-length").empty()) {
 				return false;
 			}
 			if (std::atoi(header("content-length").data()) > 0) {
@@ -41,7 +42,7 @@ namespace xfinal {
 			return false;
 		}
 		std::size_t body_length() const noexcept {
-			if (header("content-length") == "") {
+			if (header("content-length").empty()) {
 				return 0;
 			}
 			return std::atol(header("content-length").data());
@@ -250,6 +251,7 @@ namespace xfinal {
 	///响应
 	class response:private nocopyable {
 		friend class connection;
+		friend class http_router;
 	protected:
 		enum class write_type {
 			string,
@@ -257,8 +259,11 @@ namespace xfinal {
 			no_body
 		};
 	public:
-		response(request& req) :req_(req) {
+		response(request& req) :req_(req), view_env_(std::make_unique<inja::Environment>()){
 			add_header("server", "xfinal");//增加服务器标识
+			//初始化view 配置
+			view_env_->set_expression("@{", "}");  
+			view_env_->set_element_notation(inja::ElementNotation::Dot);
 		}
 	public:
 		void add_header(std::string const& k, std::string const& v) noexcept {
@@ -322,6 +327,28 @@ namespace xfinal {
 			}
 		}
 
+		void write_json(json const& json,bool is_chunked = false) noexcept {
+			write_string(json.dump(), is_chunked, http_status::ok, "application/json");
+		}
+
+		void write_json(std::string&& json, bool is_chunked = false) noexcept {
+			write_string(std::move(json), is_chunked, http_status::ok, "application/json");
+		}
+
+		void write_view(std::string const& filename, bool is_chunked = false , http_status state = http_status::ok) noexcept {
+			std::string extension = "text/plain";
+			auto path = fs::path(filename);
+			if (path.has_extension()) {
+				extension = get_content_type(path.extension().string());
+			}
+			write_string(view_env_->render_file(filename, view_data_), is_chunked, state, extension);
+		}
+
+		void write_view(std::string const& filename,json const& json, bool is_chunked = false, http_status state = http_status::ok) noexcept {
+			view_data_ = json;
+			write_view(filename, is_chunked, state);
+		}
+
 		void redirect(nonstd::string_view url, bool is_temporary = true) noexcept {
 			write_type_ = write_type::no_body;
 			header_map_["Location"] = view2str(url);
@@ -331,6 +358,24 @@ namespace xfinal {
 			else {
 				state_ = http_status::moved_permanently;
 			}
+		}
+	public:
+		inja::Environment& view_environment() {
+			return *view_env_;
+		}
+
+		template<typename T,typename U = std::enable_if_t<!std::is_same_v<std::decay_t<T>,char const*>>>
+		void set_attr(std::string const& name,T&& value) {
+			view_data_[name] = std::forward<T>(value);
+		}
+
+		void set_attr(std::string const& name, std::string const& value) {
+			view_data_[name] = value;
+		}
+
+		template<typename T>
+		T get_attr(std::string const& name) {
+			return view_data_[name].get<T>();
 		}
 	private:
 		std::vector<asio::const_buffer> header_to_buffer() noexcept {
@@ -409,6 +454,8 @@ namespace xfinal {
 		std::string chunked_write_size_;
 		filereader file_;
 		std::int64_t init_start_pos_ ;
+		std::unique_ptr<inja::Environment> view_env_;
+		json view_data_;
 	};
 
 	class Controller:private nocopyable {
@@ -416,10 +463,10 @@ namespace xfinal {
 	public:
 		Controller() = default;
 	public:
-		request& get_request() {
+		request& get_request() noexcept {
 			return *req_;
 		}
-		response& get_response() {
+		response& get_response() noexcept {
 			return *res_;
 		}
 	private:
