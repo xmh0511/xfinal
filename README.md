@@ -174,6 +174,8 @@ int main()
         <p><span>name:</span>@{name}</p>
         <p><span>language:</span>@{language}</p>
         <p>#{ @{language} }#</p>  <!--原样输出-->
+	<a href="https://www.baidu.com">@{ str2int("30")}</a>
+        <p>@{ str2int(str)}</p>
     </div>
 </body>
 </html>
@@ -202,6 +204,11 @@ int main()
 {
    http_server serve(4) //线程数
    serve.listen("0.0.0.0","8080");
+   server.add_view_method("str2int", 1, [](inja::Arguments const& args) {
+	auto i = std::atoi(args[0]->get<std::string>().data());
+	return std::string("transform:") + std::to_string(i);
+   });
+   
    serve.router<GET>("/file",[](request& req,response& res){
       res.write_file("./static/need.bmp",/*这里有个bool类型参数 可以用来告诉接口 是直接返回文件内容(false) 还是以chunked的方式返回文件  
       (true)*/);
