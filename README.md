@@ -140,6 +140,7 @@ int main()
 }
 ````
 ## 返回json
+### 使用了第三方json库 更多用法参考 [nlohmann/json](https://github.com/nlohmann/json)
 ````
 #include "http_server.hpp"
 using namespace xfinal;
@@ -158,7 +159,7 @@ int main()
 ````
 
 ## 视图层 用于前端模板渲染
-#### 视图层更多使用方法 参考 [https://github.com/xmh0511/inja](xmh051/inja) （在inja库的基础上修改了部分功能）
+#### 视图层更多使用方法 参考 [xmh0511/inja](https://github.com/xmh0511/inja) （在inja库的基础上修改并增添了功能）
 ````
 ///test.html
 <!DOCTYPE html>
@@ -172,7 +173,7 @@ int main()
     <div style="color:aqua">
         <p><span>name:</span>@{name}</p>
         <p><span>language:</span>@{language}</p>
-        <p>#{ @{language} }#</p>
+        <p>#{ @{language} }#</p>  <!--原样输出-->
     </div>
 </body>
 </html>
