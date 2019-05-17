@@ -101,28 +101,92 @@ using namespace xfinal;
 int main()
 {
    http_server serve(4) //线程数
-   /*可以通过serve.static_path("./static") 改变目录 已经请求的标识*/
+   /*可以通过serve.static_path("./static") 改变目录 同时会自动改变静态资源的url的标识*/
    /*内置处理方式默认设置了static  用户可以通过localhost:8080/static/abc.png 来访问静态资源文件*/
-   http_server.run();
+   serve.run();
 }
 ````
+
+## xfinal 为你的接口提供拦截器
+````
+#include "http_server.hpp"
+using namespace xfinal;
+struct http_interceptor{
+   bool before(request& req,response& res){  //这里的返回值用来告诉框架是否还继续执行用户接下来的拦截器以及注册的路由逻辑
+       auto id = req.query("id");
+       if(id=="0"){
+          return true;
+       }else{
+         return false;
+       }
+   }
+   
+   bool after(request& req,response& res){
+      res.add_header("Access-Control-Allow-Origin","*");
+      return true;
+   }
+}
+int main()
+{
+   http_server serve(4) //线程数
+   serve.router<POST>("/interceptor",[](request& req,response& res){
+       res.write_string("OK");
+   },http_interceptor{}); //可以注册多个拦截器 定义如示例中的http_interceptor
+   serve.run();
+}
+````
+
 ## xfinal 支持项目结构分层
 ````
+////Test.hpp
 #pragma once
+#include "http_server.hpp"
 class Test{
   public:
     void shop(request& req,response& res){
         res.write_string("shop !");
     }
-}
+} 
+////Test.hpp
 #include "http_server.hpp"
+#include "Test.hpp"
 using namespace xfinal;
 int main()
 {
    http_server serve(4) //线程数
-   Test t;
+   /*接口不记录信息的*/
    serve.router<GET,POST>("/shop",&Test::shop,nullptr);
-    serve.router<GET,POST>("/shop",&Test::shop,t);
+   /*这里可以记录下每次请求的一些信息，用于下次请求使用*/
+   Test t;
+   serve.router<GET,POST>("/shop",&Test::shop,t);
+   http_server.run();
+}
+
+或者可以继承xfinal 的Controller
+
+///shop.hpp
+#pragma once
+#include "http_server.hpp"
+class Shop:public Controller{
+  public:
+    void go(){
+        this->get_response().write_string("go shopping!");
+    }
+}
+///shop.hpp
+
+#include "http_server.hpp"
+#include "shop.hpp"
+using namespace xfinal;
+int main()
+{
+   http_server serve(4) //线程数
+   /*不记录信息的*/
+   serve.router<GET,POST>("/shop",&Shop::go,nullptr);
+   
+    /*这里可以记录下每次请求的一些信息，用于下次请求使用*/
+   Shop t;
+   serve.router<GET,POST>("/shop",&Shop::go,t);
    http_server.run();
 }
 ````
