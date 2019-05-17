@@ -140,7 +140,7 @@ int main()
 }
 ````
 ## 返回json
-### 使用了第三方json库 更多用法参考 [nlohmann/json](https://github.com/nlohmann/json)
+#### 使用了第三方json库 更多用法参考 [nlohmann/json](https://github.com/nlohmann/json)
 ````
 #include "http_server.hpp"
 using namespace xfinal;
@@ -257,6 +257,7 @@ int main()
 ````
 
 ## xfinal 支持项目结构分层
+### 自定义class 
 ````
 ////Test.hpp
 #pragma once
@@ -283,9 +284,9 @@ int main()
    serve.router<GET,POST>("/shop",&Test::shop,t);
    serve.run();
 }
-
-或者可以继承xfinal 的Controller
-
+````
+### 继承xfinal 的Controller
+````
 ///shop.hpp
 #pragma once
 #include "http_server.hpp"
