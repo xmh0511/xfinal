@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 2.8)
 set(project_name xfinal)
 project(${project_name})
 set(CMAKE_BUILD_TYPE Release)
+SET(ENABLE_CLIENT_SSL OFF)
 #SET(CMAKE_CXX_FLAGS_RELEASE "$ENV{CXXFLAGS} -O3 -Wall")
 if (MSVC)
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /std:c++latest")
@@ -17,6 +18,10 @@ set(CMAKE_INSTALL_RPATH "/usr/local/lib:")
 #set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
 add_definitions(-DASIO_STANDALONE)
+
+if(ENABLE_CLIENT_SSL)
+	add_definitions(-DXFINAL_ENABLE_CLIENT_SSL)
+endif()
 
 set(XFINAL main.cpp)
 
