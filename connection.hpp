@@ -312,7 +312,7 @@ namespace xfinal {
 				start_read_pos_ += data.size();
 				//current_use_pos_ -= data.size();
 				left_buffer_size_ = buffers_.size() - current_use_pos_;
-				if (left_buffer_size_ == 0) {
+				if (left_buffer_size_ == 0) {  //buffers已经没有空间了 需要把已经处理的数据给清了，腾出空间
 					forward_contain_data(buffers_, start_read_pos_, current_use_pos_);
 					current_use_pos_ -= start_read_pos_;
 					start_read_pos_ = 0;
