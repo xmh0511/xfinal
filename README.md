@@ -103,6 +103,7 @@ int main()
    http_server serve(4) //线程数
    /*可以通过serve.static_path("./static") 改变目录 同时会自动改变静态资源的url的标识*/
    /*内置处理方式默认设置了static  用户可以通过localhost:8080/static/abc.png 来访问静态资源文件*/
+   /*对于多媒体等文件默认支持断点续传功能*/
    serve.run();
 }
 ````
