@@ -328,11 +328,21 @@ namespace xfinal {
 		}
 
 		void write_json(json const& json,bool is_chunked = false) noexcept {
-			write_string(json.dump(), is_chunked, http_status::ok, "application/json");
+			try {
+				write_string(json.dump(), is_chunked, http_status::ok, "application/json");
+			}
+			catch (json::type_error const& ec) {
+				write_string(ec.what(), false, http_status::bad_request);
+			}
 		}
 
 		void write_json(std::string&& json, bool is_chunked = false) noexcept {
-			write_string(std::move(json), is_chunked, http_status::ok, "application/json");
+			try {
+				write_string(std::move(json), is_chunked, http_status::ok, "application/json");
+			}
+			catch (json::type_error const& ec) {
+				write_string(ec.what(), false, http_status::bad_request);
+			}
 		}
 
 		void write_view(std::string const& filename, bool is_chunked = false , http_status state = http_status::ok) noexcept {
@@ -341,7 +351,12 @@ namespace xfinal {
 			if (path.has_extension()) {
 				extension = get_content_type(path.extension().string());
 			}
-			write_string(view_env_->render_file(filename, view_data_), is_chunked, state, extension);
+			try {
+				write_string(view_env_->render_file(filename, view_data_), is_chunked, state, extension);
+			}
+			catch (std::runtime_error const& ec) {
+				write_string(ec.what(), false, http_status::bad_request);
+			}
 		}
 
 		void write_view(std::string const& filename,json const& json, bool is_chunked = false, http_status state = http_status::ok) noexcept {
@@ -365,16 +380,16 @@ namespace xfinal {
 		}
 
 		template<typename T,typename U = std::enable_if_t<!std::is_same_v<std::decay_t<T>,char const*>>>
-		void set_attr(std::string const& name,T&& value) {
+		void set_attr(std::string const& name,T&& value) noexcept {
 			view_data_[name] = std::forward<T>(value);
 		}
 
-		void set_attr(std::string const& name, std::string const& value) {
+		void set_attr(std::string const& name, std::string const& value) noexcept {
 			view_data_[name] = value;
 		}
 
 		template<typename T>
-		T get_attr(std::string const& name) {
+		T get_attr(std::string const& name) noexcept {
 			return view_data_[name].get<T>();
 		}
 	private:
@@ -458,7 +473,7 @@ namespace xfinal {
 		json view_data_;
 	};
 
-	class Controller:private nocopyable {
+	class Controller :private nocopyable {
 		friend class http_router;
 	public:
 		Controller() = default;
@@ -473,4 +488,5 @@ namespace xfinal {
 		class request* req_;
 		class response* res_;
 	};
+
 }

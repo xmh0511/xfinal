@@ -55,6 +55,12 @@ int main()
 {
 	http_server server(4);
 	server.listen("0.0.0.0", "8080");
+
+	server.add_view_method("str2int", 1, [](inja::Arguments const& args) {
+		auto i = std::atoi(args[0]->get<std::string>().data());
+		return std::string("transform:") + std::to_string(i);
+	});
+
 	server.router<GET,POST>("/abc", [](request& req,response& res) {
 		std::cout << req.query("id") << std::endl;
 		std::cout << "hahaha "<<req.url() <<" text :"<<req.query<GBK>("text")<< std::endl;
@@ -160,6 +166,7 @@ int main()
 	server.router<GET>("/view", [](request& req, response& res) {
 		res.set_attr("name", "xfinal");
 		res.set_attr("language", "c++");
+		res.set_attr("str", "1024");
 		res.write_view("./static/test.html");
 	});
 
