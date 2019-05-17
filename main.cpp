@@ -1,5 +1,6 @@
 #include <iostream>
 #include "http_server.hpp"
+#include "client.hpp"
 using namespace xfinal;
 class Test {
 public:
@@ -105,6 +106,54 @@ int main()
 
 	Shop ss;
 	server.router<GET, POST>("/controller", &Shop::goshop,ss);
+
+	server.router<GET>("/client", [](request& req, response& res) {
+		http_client client("www.baidu.com");
+		auto con = client.request<GET>("/");
+		auto header = con.get_header("Content-Length");
+		auto state = con.get_status_code();
+		res.write_string(con.get_content());
+	});
+
+	server.router<GET>("/asyclient", [](request& req, response& res) {
+		http_client client("www.baidu.com");
+		client.request<GET>("/", [](http_client::client_response const& res,std::error_code const& ec) {
+			if (ec) {
+				return;
+			 }
+			std::cout << res.get_content() << std::endl;
+		});
+		client.run();
+		res.write_string("OK");
+	});
+
+	server.router<GET>("/client_post", [](request& req, response& res) {
+		try {
+			http_client client("127.0.0.1:8080");
+			client.add_header("name", "hello");
+			client.add_header("Content-Type", "application/x-www-form-urlencoded");
+			std::string form = "id=1234";
+			auto con = client.request<POST>("/test", form);
+			res.write_string(con.get_content());
+		}
+		catch (...) {
+			res.write_string("error");
+		}
+	});
+
+	server.router<GET>("/client_multipart", [](request& req, response& res) {
+		try {
+			http_client client("127.0.0.1:8020");
+			multipart_form form;
+			form.append("img", multipart_file{ "./static/upload/v2.jpg" });
+			form.append("text", "hello,world");
+			auto con = client.request<POST>("/upload", form);
+			res.write_string(con.get_content());
+		}
+		catch (...) {
+			res.write_string("error");
+		}
+	});
 
 	server.run();
 

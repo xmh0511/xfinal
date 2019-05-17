@@ -117,6 +117,7 @@ using namespace xfinal;
 int main()
 {
    http_server serve(4) //线程数
+   serve.listen("0.0.0.0","8080");
    /*可以通过serve.static_path("./static") 改变目录 同时会自动改变静态资源的url的标识*/
    /*内置处理方式默认设置了static  用户可以通过localhost:8080/static/abc.png 来访问静态资源文件*/
    /*对于多媒体等文件默认支持断点续传功能*/
@@ -146,6 +147,7 @@ struct http_interceptor{
 int main()
 {
    http_server serve(4) //线程数
+   serve.listen("0.0.0.0","8080");
    serve.router<POST>("/interceptor",[](request& req,response& res){
        res.write_string("OK");
    },http_interceptor{}); //可以注册多个拦截器 定义如示例中的http_interceptor
@@ -171,6 +173,7 @@ using namespace xfinal;
 int main()
 {
    http_server serve(4) //线程数
+   serve.listen("0.0.0.0","8080");
    /*接口不记录信息的*/
    serve.router<GET,POST>("/shop",&Test::shop,nullptr);
    
@@ -199,6 +202,7 @@ using namespace xfinal;
 int main()
 {
    http_server serve(4) //线程数
+   serve.listen("0.0.0.0","8080");
    /*不记录信息的*/
    serve.router<GET,POST>("/shop",&Shop::go,nullptr);
    
@@ -208,6 +212,107 @@ int main()
    serve.run();
 }
 ````
+# xfinal client 使用
+## GET请求
+### client 同步
+````
+#include "http_server.hpp"
+#include "client.hpp"
+using namespace xfinal;
+int main(){
+   http_server serve(4) //线程数
+   serve.listen("0.0.0.0","8080");
+
+   serve.router<GET>("/client",[](request& req,response& res){
+        http_client client("www.baidu.com");  //或者IP:端口号
+        auto con = client.request<GET>("/");  //请求的url
+		  auto header = con.get_header("Content-Length");  //获取响应头信息
+		  auto state = con.get_status_code();  //获取响应状态码
+		  res.write_string(con.get_content());  //获取响应的body
+   });
+   serve.run();
+}
+````
+### client 异步
+````
+#include "http_server.hpp"
+#include "client.hpp"
+using namespace xfinal;
+int main(){
+      http_server serve(4) //线程数
+      serve.listen("0.0.0.0","8080");
+      http_client client("www.baidu.com");
+
+      server.router<GET>("/asyclient", [](request& req, response& res) {
+		http_client client("www.baidu.com");
+         client.request<GET>("/", [](http_client::client_response const& res,std::error_code const& ec) {
+            if (ec) {
+               return;
+            }
+            std::cout << res.get_content() << std::endl;
+         });
+         client.run();
+         res.write_string("OK");
+	   });
+
+     serve.run();
+}
+````
+## POST请求
+````
+#include "http_server.hpp"
+#include "client.hpp"
+using namespace xfinal;
+int main(){
+      http_server serve(4) //线程数
+      serve.listen("0.0.0.0","8080");
+      server.router<GET>("/client_post", [](request& req, response& res) {
+         try {
+            http_client client("127.0.0.1:8080");
+            client.add_header("name", "hello");
+            client.add_header("Content-Type", "application/x-www-form-urlencoded");
+            std::string form = "id=1234";
+            auto con = client.request<POST>("/test", form);
+            res.write_string(con.get_content());
+         }
+         catch (...) {
+            res.write_string("error");
+         }
+	   });
+
+      serve.run();
+}
+````
+## POST multipart form
+````
+#include "http_server.hpp"
+#include "client.hpp"
+using namespace xfinal;
+int main(){
+      http_server serve(4) //线程数
+      serve.listen("0.0.0.0","8080");
+	   server.router<GET>("/client_multipart", [](request& req, response& res) {
+         try {
+            http_client client("127.0.0.1:8020");
+            multipart_form form;
+            form.append("img", multipart_file{ "./static/upload/v2.jpg" });
+            form.append("text", "hello,world");
+            auto con = client.request<POST>("/upload", form);
+            res.write_string(con.get_content());
+         }
+         catch (...) {
+            res.write_string("error");
+         }
+	   });
+      serve.run();
+}
+````
+## POST client 异步
+````
+同上 request 传入回调函数
+````
+# xfinal client 同时支持https
+
 #联系方式
-QQ: 970252187
-Mail:970252187@qq.com
+QQ: 970252187  
+Mail:970252187@qq.com  
