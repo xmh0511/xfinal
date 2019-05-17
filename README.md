@@ -314,7 +314,7 @@ int main()
    serve.run();
 }
 ````
-# 以上所有使用lambda注册的路由 都可以替换成成员函数或controller
+### 以上所有使用lambda注册的路由 都可以替换成成员函数或controller
 
 # xfinal client 使用
 ## GET请求
