@@ -45,6 +45,39 @@ int main()
    serve.run();
 }
 ````
+## GET请求 url参数获取
+````
+#include "http_server.hpp"
+using namespace xfinal;
+int main()
+{
+   http_server serve(4) //线程数
+   serve.listen("0.0.0.0","8080");
+   serve.router<GET>("/param",[](request& req,response& res){
+      auto id = req.param("id");
+      res.write_string(view2str(id));
+   });
+   serve.run();
+}
+````
+
+## GBK的支持
+````
+#include "http_server.hpp"
+using namespace xfinal;
+int main()
+{
+   http_server serve(4) //线程数
+   serve.listen("0.0.0.0","8080");
+   serve.router<GET,POST>("/url",[](request& req,response& res){
+      auto id = req.param<GBK>("id"); /*提供GBK转码的支持*/
+      auto name = req.query<GBK>("name"); /*提供GBK转码的支持*/
+      res.write_string("GBK support");
+   });
+   serve.run();
+}
+````
+
 ## url form 表单请求
 ````
 #include "http_server.hpp"
