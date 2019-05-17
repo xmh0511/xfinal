@@ -160,7 +160,7 @@ int main()
    /*这里可以记录下每次请求的一些信息，用于下次请求使用*/
    Test t;
    serve.router<GET,POST>("/shop",&Test::shop,t);
-   http_server.run();
+   serve.run();
 }
 
 或者可以继承xfinal 的Controller
@@ -188,7 +188,7 @@ int main()
     /*这里可以记录下每次请求的一些信息，用于下次请求使用*/
    Shop t;
    serve.router<GET,POST>("/shop",&Shop::go,t);
-   http_server.run();
+   serve.run();
 }
 ````
 
