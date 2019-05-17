@@ -8,7 +8,7 @@
 2. header-only
 3. 跨平台
 4. 支持拦截器功能
-5. 易用的客户端(http client)
+5. 易用的客户端(http client/ https client 可以通过CMakeList.txt中的ENABLE_CLIENT_SSL ON开启)
 
 # 目录
 * [如何使用](#如何使用)
@@ -313,6 +313,12 @@ int main(){
 ````
 # xfinal client 同时支持https
 
-#联系方式
+# RoadMap
+1.增加易用的session/cookie 接口
+2.提升xfinal的稳定性
+3.优化xfinal性能
+
+
+# 联系方式
 QQ: 970252187  
 Mail:970252187@qq.com  
