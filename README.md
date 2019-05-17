@@ -77,6 +77,20 @@ int main()
    serve.run();
 }
 ````
+## URL 重定向
+````
+#include "http_server.hpp"
+using namespace xfinal;
+int main()
+{
+   http_server serve(4) //线程数
+   serve.listen("0.0.0.0","8080");
+   serve.router<GET>("/redirect",[](request& req,response& res){
+       res.redirect("/abc",false); /*接口的第二个参数用来告诉框架是临时重定向 还是永久重定向 */
+   });
+   serve.run();
+}
+````
 
 ## url form 表单请求
 ````
