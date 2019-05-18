@@ -56,6 +56,10 @@ int main()
 	http_server server(4);
 	server.listen("0.0.0.0", "8080");
 
+	server.on_error([](std::exception const& ec) {  //提供用户记录错误日志
+		std::cout << ec.what() << std::endl;
+	});
+
 	server.add_view_method("str2int", 1, [](inja::Arguments const& args) {
 		auto i = std::atoi(args[0]->get<std::string>().data());
 		return std::string("transform:") + std::to_string(i);
@@ -137,7 +141,7 @@ int main()
 
 	server.router<GET>("/client_post", [](request& req, response& res) {
 		try {
-			http_client client("127.0.0.1:8080");
+			http_client client("127.0.0.1:8020");
 			client.add_header("name", "hello");
 			client.add_header("Content-Type", "application/x-www-form-urlencoded");
 			std::string form = "id=1234";

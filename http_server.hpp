@@ -61,6 +61,14 @@ namespace xfinal {
 			http_router_.view_method_map_.insert(std::make_pair(name, std::make_pair(args_number,callback)));
 		}
 
+		void on_error(std::function<void(std::exception const&)>&& event) {
+			http_router_.error_binder_ = std::move(event);
+		}
+
+		void trigger_error(std::exception const& ec) {
+			http_router_.trigger_error(ec);
+		}
+
 	private:
 		bool listen(asio::ip::tcp::resolver::query& query) {
 			bool result = false;
@@ -79,6 +87,7 @@ namespace xfinal {
 				catch (std::exception const& e) {
 					result = false;
 					std::cout << e.what() << std::endl;
+					http_router_.trigger_error(xfinal_exception{ e });
 				}
 			}
 			return result;

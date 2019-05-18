@@ -238,7 +238,7 @@ namespace xfinal {
 
 	std::string get_root_director(fs::path path) {
 		auto c = path.parent_path();
-		while (c.stem() != ".") {
+		while (c.stem().string() != ".") {
 			path = c;
 			c = c.parent_path();
 		}
@@ -251,4 +251,23 @@ namespace xfinal {
 		ss << std::hex << number;
 		return ss.str();
 	}
+
+	class xfinal_exception final :public std::exception {
+	public:
+		xfinal_exception(std::string&& msg) noexcept :msg_(std::move(msg)) {
+
+		}
+		xfinal_exception(std::string const& msg) noexcept:msg_(msg) {
+
+		}
+		xfinal_exception(std::exception const& ec) noexcept:msg_(ec.what()) {
+
+		}
+	public:
+		char const* what() const noexcept{
+			return msg_.c_str();
+		}
+	private:
+		std::string msg_;
+	};
 }

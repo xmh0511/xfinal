@@ -58,9 +58,10 @@ namespace xfinal {
 		}
 	};
 	class http_router {
-		using router_function = std::function<void(request&, response&)>;
 		friend class http_server;
 	public:
+		using router_function = std::function<void(request&, response&)>;
+	private:
 		template<typename Array,typename Bind>
 		void reg_router(nonstd::string_view url, Array&& methods, Bind&& router) {
 			auto generator = url.find('*');
@@ -228,6 +229,12 @@ namespace xfinal {
 				res.write_string(std::string("the url \"") + view2str(req.url()) + "\" is not found", false,http_status::bad_request);
 			}
 		}
+	 public:
+			void trigger_error(std::exception const& err) {
+				if (error_binder_ != nullptr) {
+					error_binder_(err);
+				}
+			}
 	private:
 		void set_view_method(response& res) {
 			if (!view_method_map_.empty()) {
@@ -240,5 +247,6 @@ namespace xfinal {
 		std::map<std::string, router_function> router_map_;
 		std::map<std::string, router_function> genera_router_map_;
 		std::map<std::string,std::pair<std::size_t, inja::CallbackFunction>> view_method_map_;
+		std::function<void(std::exception const&)> error_binder_;
 	};
 }
