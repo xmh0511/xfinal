@@ -249,7 +249,7 @@ namespace xfinal {
 			nonstd::string_view buffer{ buffers ,size };
 			auto it = buffer.find(boundary_start_key_);
 			if (it != nonstd::string_view::npos) {
-				std::cout << buffer.substr( it ,boundary_start_key_.size() ) << std::endl;
+				//std::cout << buffer.substr( it ,boundary_start_key_.size() ) << std::endl;
 				return { true, it-2 };
 			}
 			else {
