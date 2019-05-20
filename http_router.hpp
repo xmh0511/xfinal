@@ -4,7 +4,7 @@
 #include <tuple>
 #include "string_view.hpp"
 #include "http_handler.hpp"
-
+#include "session.hpp"
 namespace xfinal {
 	struct c11_auto_lambda_aop_before{
 		c11_auto_lambda_aop_before(bool& b, request& req, response& res):result(b),req_(req),res_(res){
@@ -57,6 +57,7 @@ namespace xfinal {
 			b = true;
 		}
 	};
+
 	class http_router {
 		friend class http_server;
 	public:

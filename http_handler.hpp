@@ -10,6 +10,7 @@
 #include <vector>
 #include <tuple>
 #include "inja.hpp"
+#include "session.hpp"
 namespace xfinal {
 
 
@@ -187,6 +188,26 @@ namespace xfinal {
 			pos = std::atoll(posv.data());
 			return true;
 		}
+	public:
+		 session& create_session() {
+			 return create_session("XFINAL");
+		 }
+		 session& create_session(std::string const& name) {
+			 session_ = std::make_shared<session>();
+			 session_->set_id(uuids::uuid_system_generator{}().to_short_str());
+			 session_->set_expires(600);
+			 session_->get_cookie().set_name(name);
+			 session_manager::get().add_session(session_->get_id(), session_);
+			 return *session_;
+		 }
+		 session& get_session(std::string const& name) {
+			 auto cookies_value = header("cookie");
+			 auto name_view = nonstd::string_view{ name.data(),name.size() };
+			 auto it = cookies_value.find(name_view);
+			 if (it == nonstd::string_view::npos) {
+
+			 }
+		 }
 	protected:
 		void init_content_type() noexcept {
 			auto it = headers_->find("content-type");
@@ -247,6 +268,7 @@ namespace xfinal {
 		std::map<std::string, xfinal::filewriter> const* multipart_files_map_ = nullptr;
 		xfinal::filewriter* oct_steam_;
 		response& res_;
+		std::shared_ptr<session> session_;
 	};
 	///œÏ”¶
 	class response:private nocopyable {

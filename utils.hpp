@@ -270,4 +270,25 @@ namespace xfinal {
 	private:
 		std::string msg_;
 	};
+
+	inline std::vector<nonstd::string_view> split(nonstd::string_view s, nonstd::string_view delimiter) {
+		size_t start = 0;
+		size_t end = s.find_first_of(delimiter);
+
+		std::vector<std::string_view> output;
+
+		while (end <= std::string_view::npos)
+		{
+			output.emplace_back(s.substr(start, end - start));
+
+			if (end == std::string_view::npos)
+				break;
+
+			start = end + 1;
+			end = s.find_first_of(delimiter, start);
+		}
+
+		return output;
+	}
+
 }

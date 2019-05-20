@@ -5,6 +5,7 @@
 #include "connection.hpp"
 #include "utils.hpp"
 #include "http_router.hpp"
+#include "session.hpp"
 namespace xfinal {
 	constexpr http_method GET = http_method::GET;
 	constexpr http_method POST = http_method::POST;
@@ -22,6 +23,7 @@ namespace xfinal {
 			static_url_ = std::string("/")+ get_root_director(static_path_)+ "/*";
 			upload_path_ = static_path_ + "/upload";
 			register_static_router(); //注册静态文件处理逻辑
+			set_session_storager();
 		}
 	public:
 		bool listen(std::string const& ip,std::string const& port) {
@@ -69,6 +71,10 @@ namespace xfinal {
 			http_router_.trigger_error(ec);
 		}
 
+		template<typename T = default_session_storage>
+		void set_session_storager() {
+			session_manager::get().set_storage(std::make_unique<T>());
+		}
 	private:
 		bool listen(asio::ip::tcp::resolver::query& query) {
 			bool result = false;
