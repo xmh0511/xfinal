@@ -271,7 +271,19 @@ int main()
    serve.run();
 }
 ````
-
+## xfinal 异常错误信息获取
+````
+#include "http_server.hpp"
+using namespace xfinal;
+int main(){
+  http_server serve(4) //线程数
+  serve.listen("0.0.0.0","8080");
+  serve.on_error([](std::exception const& ec) {  //提供用户记录错误日志
+       std::cout << ec.what() << std::endl;
+  });
+  serve.run();
+}
+````
 ## xfinal 支持项目结构分层
 ### 自定义class 
 ````
@@ -292,7 +304,7 @@ int main()
 {
    http_server serve(4) //线程数
    serve.listen("0.0.0.0","8080");
-   /*接口不记录信息的*/
+   /*不保存接口状态信息*/
    serve.router<GET,POST>("/shop",&Test::shop,nullptr);
    
    /*这里可以记录下每次请求的一些信息，用于下次请求使用*/
@@ -321,7 +333,7 @@ int main()
 {
    http_server serve(4) //线程数
    serve.listen("0.0.0.0","8080");
-   /*不记录信息的*/
+   /*不保存接口状态信息*/
    serve.router<GET,POST>("/shop",&Shop::go,nullptr);
    
     /*这里可以记录下每次请求的一些信息，用于下次请求使用*/
