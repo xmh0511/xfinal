@@ -20,7 +20,12 @@
 # 如何使用
 
 ## 编译依赖
-使用支持c++14标准的c++ 编译器即可编译运行,无需其他依赖(linux 下只需要uuid库，大部分linux系统默认都有)
+使用支持c++14标准的c++ 编译器即可编译运行,开箱即用,无需其他依赖(linux 下只需要uuid库，大部分linux系统默认都有)
+### Linux uuid安装
+##### centos
+sudo yum install libuuid-devel.x86_64  
+##### ubuntu
+sudo apt-get install uuid  
 
 ## 生成编译
 mkdir build  
