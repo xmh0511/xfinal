@@ -23,10 +23,10 @@
 使用支持c++14标准的c++ 编译器即可编译运行,无需其他依赖(linux 下只需要uuid库，大部分linux系统默认都有)
 
 ## 生成编译
-mkdir build
-cd build
-cmake ..
-即可生成相应平台下的编译项目
+mkdir build  
+cd build  
+cmake ..  
+即可生成相应平台下的编译项目  
 
 
 # 快速示例
