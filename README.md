@@ -192,6 +192,10 @@ int main()
 {
    http_server serve(4) //线程数
    serve.listen("0.0.0.0","8080");
+   server.add_view_method("str2int", 1, [](inja::Arguments const& args) {
+	auto i = std::atoi(args[0]->get<std::string>().data());
+	return std::string("transform:") + std::to_string(i);
+   });
    serve.router<GET>("/view",[](request& req,response& res){
        res.set_attr("name", "xfinal");
        res.set_attr("language", "c++");
