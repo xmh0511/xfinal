@@ -500,6 +500,12 @@ namespace xfinal {
 		void set_chunked_size(std::uint64_t size) {
 			res_.chunked_size_ = size;
 		}
+	public:
+		~connection() {
+			if (!socket_close_) {
+				socket_->close();
+			}
+		}
 	private:
 		std::unique_ptr<asio::ip::tcp::socket> socket_;
 		asio::io_service& io_service_;
