@@ -193,7 +193,7 @@ namespace xfinal {
 			 return create_session("XFINAL");
 		 }
 		 session& create_session(std::string const& name) {
-			 session_ = std::make_shared<session>();
+			 session_ = std::make_shared<session>(false);
 			 session_->set_id(uuids::uuid_system_generator{}().to_short_str());
 			 session_->set_expires(600);
 			 session_->get_cookie().set_name(name);

@@ -37,7 +37,7 @@ namespace xfinal {
 
 	class session final:private nocopyable {  //session 模块
 	public:
-		session():expires_(std::time(nullptr)), cookie_(uuid_, expires_){
+		session(bool is_empty = false):expires_(std::time(nullptr)), is_empty_(is_empty), cookie_(uuid_, expires_){
 
 		}
 	public:
@@ -97,6 +97,7 @@ namespace xfinal {
 	private:
 		std::string uuid_;
 		std::time_t expires_;//生命周期 时间戳 精确到秒
+		bool is_empty_;
 		cookie cookie_;
 		json data_;
 		std::mutex mutex_;
@@ -104,7 +105,8 @@ namespace xfinal {
 
 	class session_manager final :private nocopyable {
 	private:
-		session_manager() = default;
+		session_manager():empty_session_(std::make_shared<session>(true)){
+		}
 	public:
 		static session_manager& get() {
 			static session_manager manager_;
