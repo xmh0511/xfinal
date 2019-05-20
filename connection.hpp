@@ -207,7 +207,7 @@ namespace xfinal {
 			}
 			else {
 				left_buffer_size_ = buffers_.size();
-				buffers_.clear();
+				//buffers_.clear();
 				current_use_pos_ = 0;
 				start_read_pos_ = 0;
 				//left_buffer_size_ = buffers_.size() - current_use_pos_;
@@ -292,7 +292,8 @@ namespace xfinal {
 					auto& fileo = request_info.multipart_files_map_[name];
 					auto path = upload_path_ + "/" + uuids::uuid_system_generator{}().to_short_str() + view2str(extension);
 					fileo.open(path);
-					auto original_name = value.substr(type + sizeof("filename") + 1, value.find('\"', type) - type);
+					auto filename_start = type + sizeof("filename") + 1;
+					auto original_name = value.substr(filename_start, value.find('\"', filename_start) - filename_start);
 					fileo.set_original_name(std::move(original_name));
 					fileo.add_data(data);
 				}

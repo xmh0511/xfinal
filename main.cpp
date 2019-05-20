@@ -85,8 +85,14 @@ int main()
 
 	server.router<POST>("/upload", [](request& req, response& res) {
 		std::cout << "text: " << req.query("text") << std::endl;
-		std::cout << req.file("img").size() << std::endl;
+		auto& file = req.file("img");
+		std::cout << file.size() << std::endl;
 		std::cout << req.query<GBK>("text2") << std::endl;
+		json data;
+		data["name"] = file.original_name();
+		data["text"] = view2str(req.query("text"));
+		data["success"] = true;
+		res.write_json(data);
 	});
 
 	server.router<GET, POST>("/chunkedstr", [](request& req, response& res) {
