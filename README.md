@@ -251,11 +251,11 @@ int main()
    http_server serve(4) //线程数
    serve.listen("0.0.0.0","8080");
    serve.router<GET>("/login",[](request& req,response& res){
-       req.create_session().set_data("islogin",true);
+       req.create_session().set_data("islogin",true);  /*可以通过设置参数指定session名称 req.create_session("myname")*/
        res.write_string("OK");
    });
    serve.router<GET>("/checklogin",[](request& req,response& res){
-        auto& session = req.session();
+        auto& session = req.session();  /* req.session("myname") */
 	if(session.get_data<bool>("islogin")){
 	    res.write_string("yes");
 	}else{
