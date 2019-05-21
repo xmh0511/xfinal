@@ -15,6 +15,7 @@ namespace xfinal {
 	class session;
 	class session_storage {
 	public:
+		virtual bool init() = 0;
 		virtual void save(session& session) = 0;
 		virtual void remove(session& session) = 0;
 	};
@@ -245,6 +246,12 @@ namespace xfinal {
 	public:
 		default_session_storage() = default;
 	public:
+		bool init() {
+			if (!fs::exists(save_dir_)) {
+				fs::create_directory(save_dir_);
+			}
+			return true;
+		}
 		void save(session& session) {
 			auto context = session.serialize();
 			auto filepath = save_dir_ + "/" + session.get_id();

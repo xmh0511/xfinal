@@ -74,6 +74,7 @@ namespace xfinal {
 		template<typename T = default_session_storage>
 		void set_session_storager() {
 			session_manager::get().set_storage(std::make_unique<T>());
+			session_manager::get().get_storage().init();
 		}
 	private:
 		bool listen(asio::ip::tcp::resolver::query& query) {
