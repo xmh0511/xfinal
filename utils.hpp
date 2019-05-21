@@ -6,6 +6,8 @@
 #include <filesystem.hpp>
 #include <sstream>
 #include "json.hpp"
+#include <ctime>
+#include <unordered_map>
 namespace fs = ghc::filesystem;
 namespace xfinal {
 
@@ -118,7 +120,7 @@ namespace xfinal {
 			return std::array<std::string, 0>{};
 		}
 	};
-	///cpp14 以上的工具类
+	///cpp14 浠ヤ笂鐨勫伐鍏风被
 	template<typename...Args>
 	struct void_t {
 		using type = void;
@@ -155,7 +157,7 @@ namespace xfinal {
 		using type = typename index_sequence<N>::type;
 	};
 
-	///cpp14 以上的工具类
+	///cpp14 浠ヤ笂鐨勫伐鍏风被
 
 
 
@@ -272,23 +274,35 @@ namespace xfinal {
 	};
 
 	inline std::vector<nonstd::string_view> split(nonstd::string_view s, nonstd::string_view delimiter) {
-		size_t start = 0;
-		size_t end = s.find_first_of(delimiter);
-
 		std::vector<std::string_view> output;
-
-		while (end <= std::string_view::npos)
-		{
-			output.emplace_back(s.substr(start, end - start));
-
-			if (end == std::string_view::npos)
-				break;
-
-			start = end + 1;
-			end = s.find_first_of(delimiter, start);
+		auto b = 0;
+		auto it = s.find(delimiter);
+		while (it != nonstd::string_view::npos) {
+			output.push_back(nonstd::string_view{ s.data()+b,it - b });
+			b = it + delimiter.size();
+			it = s.find(delimiter, b);
 		}
-
+		if (b != s.size()) {
+			output.push_back(nonstd::string_view{ s.data() + b ,s.size()-b });
+		}
 		return output;
 	}
 
+	inline std::string get_gmt_time_str(std::time_t t)
+	{
+		struct tm* GMTime = gmtime(&t);
+		char buff[512] = { 0 };
+		strftime(buff, sizeof(buff), "%a, %d %b %Y %H:%M:%S %Z", GMTime);
+		return buff;
+	}
+
+	std::unordered_map<nonstd::string_view, nonstd::string_view> cookies_map(nonstd::string_view cookies) {
+		auto v = split(cookies, "; ");
+		std::unordered_map<nonstd::string_view, nonstd::string_view> out;
+		for (auto iter : v) {
+			auto v2 = split(iter, "=");
+			out.insert(std::make_pair(v2[0], v2[1]));
+		}
+		return out;
+	}
 }

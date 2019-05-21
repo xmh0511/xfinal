@@ -56,7 +56,7 @@ int main()
 	http_server server(4);
 	server.listen("0.0.0.0", "8080");
 
-	server.on_error([](std::exception const& ec) {  //提供用户记录错误日志
+	server.on_error([](std::exception const& ec) {  //鎻愪緵鐢ㄦ埛璁板綍閿欒鏃ュ織
 		std::cout << ec.what() << std::endl;
 	});
 
@@ -179,6 +179,25 @@ int main()
 		res.set_attr("str", "1024");
 		res.write_view("./static/test.html");
 	});
+
+	server.router<GET>("/session", [](request& req, response& res) {
+		auto& session = req.create_session();
+		session.set_data("time", std::to_string(std::time(nullptr)));
+		session.set_expires(30);
+		res.write_string("OK");
+	});
+
+	server.router<GET>("/login", [](request& req, response& res) {
+		auto& session = req.session();
+		auto t = session.get_data<std::string>("time");
+		if (t.empty()) {
+			res.write_string("no");
+		}
+		else {
+			res.write_string("yes");
+		}
+	});
+
 
 	server.run();
 	return 0;

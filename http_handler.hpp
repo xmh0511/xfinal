@@ -18,6 +18,7 @@ namespace xfinal {
 	class response;
 	class request:private nocopyable {
 		friend class connection;
+		friend class response;
 	public:
 		request(response& res) :res_(res) {
 
@@ -193,20 +194,35 @@ namespace xfinal {
 			 return create_session("XFINAL");
 		 }
 		 session& create_session(std::string const& name) {
-			 session_ = std::make_shared<session>(false);
+			 session_ = std::make_shared<class session>(false);
 			 session_->set_id(uuids::uuid_system_generator{}().to_short_str());
-			 session_->set_expires(600);
+			 //session_->set_expires(600);
 			 session_->get_cookie().set_name(name);
 			 session_manager::get().add_session(session_->get_id(), session_);
 			 return *session_;
 		 }
-		 session& get_session(std::string const& name) {
+		 class session& session(std::string const& name) {
 			 auto cookies_value = header("cookie");
 			 auto name_view = nonstd::string_view{ name.data(),name.size() };
 			 auto it = cookies_value.find(name_view);
 			 if (it == nonstd::string_view::npos) {
-
+				 session_ = session_manager::get().empty_session();
 			 }
+			 else {
+				 auto pos = it + name.size() + 1;
+				 auto id = cookies_value.substr(it + name.size() + 1, cookies_value.find('\"', pos) - pos);
+				 if (id.empty()) {
+					 session_ = session_manager::get().empty_session();
+				 }
+				 else {
+					 session_manager::get().validata(view2str(id));
+					 session_ =  session_manager::get().get_session(view2str(id));
+				 }
+			 }
+			 return *session_;
+		 }
+		 class session& session() {
+			 return session("XFINAL");
 		 }
 	protected:
 		void init_content_type() noexcept {
@@ -268,12 +284,13 @@ namespace xfinal {
 		std::map<std::string, xfinal::filewriter> const* multipart_files_map_ = nullptr;
 		xfinal::filewriter* oct_steam_;
 		response& res_;
-		std::shared_ptr<session> session_;
+		std::shared_ptr<class session> session_;
 	};
 	///响应
 	class response:private nocopyable {
 		friend class connection;
 		friend class http_router;
+		friend class request;
 	protected:
 		enum class write_type {
 			string,
@@ -420,6 +437,13 @@ namespace xfinal {
 			http_version_ = view2str(req_.http_version()) + ' ';//写入回应状态行 
 			buffers_.emplace_back(asio::buffer(http_version_));
 			buffers_.emplace_back(http_state_to_buffer(state_));
+			if ((req_.session_ !=nullptr) && !(req_.session_->empty())) {  //是否有session
+				if (req_.session_->cookie_update()) {
+					add_header("Set-Cookie", req_.session_->cookie_str());
+					req_.session_->set_cookie_update(false);
+				}
+				req_.session_->save(session_manager::get().get_storage());  //保存到存储介质
+			}
 			for (auto& iter : header_map_) {  //回写响应头部
 				buffers_.emplace_back(asio::buffer(iter.first));
 				buffers_.emplace_back(asio::buffer(name_value_separator.data(), name_value_separator.size()));

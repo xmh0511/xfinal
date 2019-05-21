@@ -213,6 +213,10 @@ namespace xfinal {
 					return;
 				}
 			}
+			//auto cookies = cookies_map(req.header("Cookie"));
+			//for (auto& iter : cookies) {
+			//	session_manager::get().validata(view2str(iter.second));
+			//}
 			auto key = std::string(req.method()) + std::string(url);
 			if (router_map_.find(key) != router_map_.end()) {
 				auto& it = router_map_.at(key);
