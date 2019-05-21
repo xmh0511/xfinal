@@ -493,9 +493,8 @@ int main(){
 # xfinal client 同时支持https
 
 # RoadMap
-1.增加易用的session/cookie 接口  
-2.提升xfinal的稳定性  
-3.优化xfinal性能  
+1.提升xfinal的稳定性  
+2.优化xfinal性能  
 
 # 联系方式
 QQ&ensp;:&ensp;970252187  
