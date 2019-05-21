@@ -5,6 +5,7 @@
 #include "string_view.hpp"
 #include "http_handler.hpp"
 #include "session.hpp"
+#include "ioservice_pool.hpp"
 namespace xfinal {
 	struct c11_auto_lambda_aop_before{
 		c11_auto_lambda_aop_before(bool& b, request& req, response& res):result(b),req_(req),res_(res){
@@ -62,6 +63,18 @@ namespace xfinal {
 		friend class http_server;
 	public:
 		using router_function = std::function<void(request&, response&)>;
+	public:
+		http_router():timer_(io_) {
+			check_session_expires();
+			thread_ = std::make_unique<std::thread>([](asio::io_service& io) {
+				io.run();
+			}, std::ref(io_));
+		}
+		~http_router() {
+			if (thread_->joinable()) {
+				thread_->join();
+			}
+		}
 	private:
 		template<typename Array,typename Bind>
 		void reg_router(nonstd::string_view url, Array&& methods, Bind&& router) {
@@ -248,10 +261,29 @@ namespace xfinal {
 				}
 			}
 		}
+	public:
+		void check_session_expires() {
+			timer_.expires_from_now(std::chrono::seconds(check_session_time_));
+			timer_.async_wait([this](std::error_code const& ec) {
+				session_manager::get().check_expires();
+				check_session_expires();
+			});
+		}
+		void set_check_session_rate(std::time_t seconds) {
+			check_session_time_ = seconds;
+		}
+
+		std::time_t check_session_rate() {
+			return check_session_time_;
+		}
 	private:
 		std::map<std::string, router_function> router_map_;
 		std::map<std::string, router_function> genera_router_map_;
 		std::map<std::string,std::pair<std::size_t, inja::CallbackFunction>> view_method_map_;
 		std::function<void(std::exception const&)> error_binder_;
+		asio::io_service io_;
+		asio::steady_timer timer_;
+		std::unique_ptr<std::thread> thread_;
+		std::time_t check_session_time_ = 10;
 	};
 }

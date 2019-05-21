@@ -10,6 +10,7 @@
 #include "ghc/filesystem.hpp"
 #include <memory>
 #include "code_parser.hpp"
+#include "files.hpp"
 namespace fs = ghc::filesystem;
 namespace xfinal {
 	class session;
@@ -27,16 +28,16 @@ namespace xfinal {
 		}
 	public:
 		void set_name(std::string const& name) {
+			session_.set_cookie_update(true);
 			name_ = name;
 		}
 		std::string name() {
-			session_.set_cookie_update(true);
 			return name_;
 		}
 		std::string str() {
 			std::string content;
 			content = content.append(name_).append("=").append(*uuid_);
-			if ((*expires_) >= 0) {
+			if (!session_.is_temp()) {
 				content = content.append("; ").append("Expires=").append(get_gmt_time_str(*expires_));
 			}
 			if (!domain_.empty()) {
@@ -84,7 +85,7 @@ namespace xfinal {
 	class session final:private nocopyable {  //session 模块
 	public:
 		session(bool is_empty = false):is_empty_(is_empty), cookie_(uuid_, expires_,*this), data_(json::object()){
-
+			expires_ = std::time(nullptr) + 600;
 		}
 	public:
 		void set_id(std::string const& id) {
@@ -159,6 +160,10 @@ namespace xfinal {
 			ss["expires"] = expires_;
 			ss["data"] = data_;
 			ss["id"] = uuid_;
+			ss["cookie_name"] = cookie_.name();
+			ss["http_only"] = cookie_.http_only();
+			ss["path"] = cookie_.path();
+			ss["domain"] = cookie_.domain();
 			return ss.dump();
 		}
 		bool empty() {
@@ -175,9 +180,20 @@ namespace xfinal {
 		std::mutex& get_mutex() {
 			return mutex_;
 		}
+		void replace_expires(std::time_t time) {
+			std::unique_lock<std::mutex> lock(mutex_);
+			expires_ = time;
+		}
+		void replace_data(json data) {
+			std::unique_lock<std::mutex> lock(mutex_);
+			data_ = data;
+		}
+		bool is_temp() {
+			return is_temp_;
+		}
 	private:
 		std::string uuid_;
-		std::time_t expires_ = -1;//生命周期 时间戳 精确到秒
+		std::time_t expires_;//生命周期 时间戳 精确到秒
 		bool is_empty_;
 		cookie<session> cookie_;
 		json data_;
@@ -215,13 +231,14 @@ namespace xfinal {
 			std::unique_lock<std::mutex> lock(mutex_);
 			session_map_[id] = session.lock();
 		}
-		void remove_session(std::string const& id) {
+		auto remove_session(std::string const& id) {
 			std::unique_lock<std::mutex> lock(mutex_);
 			auto it = session_map_.find(id);
 			if (it != session_map_.end()) {
 				(it->second)->remove(*storage_);
-				session_map_.erase(it);
+				it = session_map_.erase(it);
 			}
+			return it;
 		}
 		std::shared_ptr<session> empty_session() {
 			return empty_session_;
@@ -232,6 +249,19 @@ namespace xfinal {
 				auto expires = session->get_expires();
 				if (expires <= std::time(nullptr)) {
 					remove_session(id);
+				}
+			}
+		}
+		void check_expires() {
+			std::unique_lock<std::mutex> lock(mutex_);
+			for (auto iter = session_map_.begin(); iter != session_map_.end();) {
+				auto expires = iter->second->get_expires();
+				if (expires <= std::time(nullptr)) {
+					iter->second->remove(*storage_);
+					iter = session_map_.erase(iter);
+				}
+				else {
+					++iter;
 				}
 			}
 		}
@@ -249,6 +279,30 @@ namespace xfinal {
 		bool init() {
 			if (!fs::exists(save_dir_)) {
 				fs::create_directory(save_dir_);
+			}
+			auto iter = fs::directory_iterator(save_dir_);
+			for (; iter != fs::directory_iterator(); ++iter) {
+				if (!fs::is_directory(iter->path())) {  //session 文件
+					filereader reader;
+					reader.open(iter->path().string());
+					std::string buffer;
+					reader.read_all(buffer);
+					auto data = json::parse(buffer);
+					auto session = std::make_shared<class session>();
+					if (!data.is_null() && !data["expires"].is_null() && !data["id"].is_null() && !data["cookie_name"].is_null() && !data["path"].is_null() && !data["domain"].is_null() && !data["http_only"].is_null()) {
+						session->set_id(data["id"].get<std::string>());
+						session->replace_expires(data["expires"].get<std::time_t>());
+						session->get_cookie().set_name(data["cookie_name"].get<std::string>());
+						session->get_cookie().set_path(data["path"].get<std::string>());
+						session->get_cookie().set_domain(data["domain"].get<std::string>());
+						session->get_cookie().set_http_only(data["http_only"].get<bool>());
+						session->set_cookie_update(false);
+						if (!data["data"].is_null()) {
+							session->replace_data(data["data"]);
+						}
+						session_manager::get().add_session(session->get_id(), session);
+					}
+				}
 			}
 			return true;
 		}

@@ -73,8 +73,17 @@ namespace xfinal {
 
 		template<typename T = default_session_storage>
 		void set_session_storager() {
+			static_assert(std::is_base_of_v<session_storage, T>, "set storage is not base on session_storage!");
 			session_manager::get().set_storage(std::make_unique<T>());
-			session_manager::get().get_storage().init();
+			session_manager::get().get_storage().init();  //≥ı ºªØ 
+		}
+
+		void set_check_session_rate(std::time_t seconds) {
+			http_router_.check_session_time_ = seconds;
+		}
+
+		std::time_t check_session_rate() {
+			return http_router_.check_session_time_;
 		}
 	private:
 		bool listen(asio::ip::tcp::resolver::query& query) {

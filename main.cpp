@@ -183,7 +183,7 @@ int main()
 	server.router<GET>("/session", [](request& req, response& res) {
 		auto& session = req.create_session();
 		session.set_data("time", std::to_string(std::time(nullptr)));
-		session.set_expires(30);
+		//session.set_expires(15);
 		res.write_string("OK");
 	});
 
