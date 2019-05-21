@@ -8,7 +8,8 @@
 2. header-only
 3. 跨平台
 4. 支持拦截器功能
-5. 易用的客户端(http client/ https client 可以通过CMakeList.txt中的ENABLE_CLIENT_SSL ON开启)
+5. 支持session/cookie （持久化,默认保存到磁盘。用户可以自定义持久化介质）
+6. 易用的客户端(http client/ https client 可以通过CMakeList.txt中的ENABLE_CLIENT_SSL ON开启)
 
 # 目录
 * [如何使用](#如何使用)
@@ -241,7 +242,53 @@ int main()
    serve.run();
 }
 ````
-
+## xfinal session/cookie 支持
+````
+#include "http_server.hpp"
+using namespace xfinal;
+int main()
+{
+   http_server serve(4) //线程数
+   serve.listen("0.0.0.0","8080");
+   serve.router<GET>("/login",[](request& req,response& res){
+       req.create_session().set_data("islogin",true);
+       res.write_string("OK");
+   });
+   serve.router<GET>("/checklogin",[](request& req,response& res){
+        auto& session = req.session();
+	if(session.get_data<bool>("islogin")){
+	    res.write_string("yes");
+	}else{
+	  res.write_string("no");
+	}
+   });
+   serve.run();
+}
+````
+### 用户可以自定义持久化介质
+````
+#include "http_server.hpp"
+using namespace xfinal;
+class sql_storage:public session_storage{
+   public:
+       bool init(){
+       /*初始化操作，从介质读取数据*/
+      }
+      void save(session& session){
+        /*用来保存session*/
+      }
+      void remove(session& session){
+         /*用来移除session*/
+      }
+}
+int main()
+{
+   http_server serve(4) //线程数
+   serve.listen("0.0.0.0","8080");
+   serve.set_session_storager<sql_storage>(); /*设置session存储方式*/
+   serve.run();
+}
+````
 ## xfinal 为你的接口提供拦截器
 ````
 #include "http_server.hpp"
