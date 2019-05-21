@@ -100,6 +100,7 @@ namespace xfinal {
 		template<typename T>
 		void set_data(std::string const& name,T&& value) {
 			std::unique_lock<std::mutex> lock(mutex_);
+			data_update_ = true;
 			data_[name] = std::forward<T>(value);
 		}
 		template<typename T>
@@ -177,6 +178,14 @@ namespace xfinal {
 			std::unique_lock<std::mutex> lock(mutex_);
 			return is_update_;
 		}
+		void set_data_update(bool update) {
+			std::unique_lock<std::mutex> lock(mutex_);
+			data_update_ = update;
+		}
+		bool data_update() {
+			std::unique_lock<std::mutex> lock(mutex_);
+			return data_update_;
+		}
 		std::mutex& get_mutex() {
 			return mutex_;
 		}
@@ -200,6 +209,7 @@ namespace xfinal {
 		std::mutex mutex_;
 		bool is_temp_ = true;
 		bool is_update_ = true;
+		bool data_update_ = true;
 	};
 
 	class session_manager final :private nocopyable {
@@ -297,6 +307,7 @@ namespace xfinal {
 						session->get_cookie().set_domain(data["domain"].get<std::string>());
 						session->get_cookie().set_http_only(data["http_only"].get<bool>());
 						session->set_cookie_update(false);
+						session->set_data_update(false);
 						if (!data["data"].is_null()) {
 							session->replace_data(data["data"]);
 						}

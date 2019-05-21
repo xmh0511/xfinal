@@ -194,6 +194,18 @@ int main()
 			res.write_string("no");
 		}
 		else {
+			session.set_data("img", std::string("hello"));
+			res.write_string("yes");
+		}
+	});
+
+	server.router<GET>("/login2", [](request& req, response& res) {
+		auto& session = req.session();
+		auto t = session.get_data<std::string>("time");
+		if (t.empty()) {
+			res.write_string("no");
+		}
+		else {
 			res.write_string("yes");
 		}
 	});

@@ -440,9 +440,12 @@ namespace xfinal {
 			if ((req_.session_ !=nullptr) && !(req_.session_->empty())) {  //是否有session
 				if (req_.session_->cookie_update()) {
 					add_header("Set-Cookie", req_.session_->cookie_str());
-					req_.session_->set_cookie_update(false);
 				}
-				req_.session_->save(session_manager::get().get_storage());  //保存到存储介质
+				if (req_.session_->cookie_update() || req_.session_->data_update()) {
+					req_.session_->save(session_manager::get().get_storage());  //保存到存储介质
+					req_.session_->set_data_update(false);
+				}
+				req_.session_->set_cookie_update(false);
 			}
 			for (auto& iter : header_map_) {  //回写响应头部
 				buffers_.emplace_back(asio::buffer(iter.first));
