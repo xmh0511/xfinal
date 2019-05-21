@@ -8,6 +8,7 @@
 #include "json.hpp"
 #include <ctime>
 #include <unordered_map>
+#include "code_parser.hpp"
 namespace fs = ghc::filesystem;
 namespace xfinal {
 
@@ -292,7 +293,7 @@ namespace xfinal {
 	{
 		struct tm* GMTime = gmtime(&t);
 		char buff[512] = { 0 };
-		strftime(buff, sizeof(buff), "%a, %d %b %Y %H:%M:%S %Z", GMTime);
+		strftime(buff, sizeof(buff), "%a, %d %b %Y %H:%M:%S GMT", GMTime);
 		return buff;
 	}
 

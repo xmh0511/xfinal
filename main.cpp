@@ -183,7 +183,7 @@ int main()
 	server.router<GET>("/session", [](request& req, response& res) {
 		auto& session = req.create_session();
 		session.set_data("time", std::to_string(std::time(nullptr)));
-		//session.set_expires(15);
+		session.set_expires(15);
 		res.write_string("OK");
 	});
 
@@ -194,21 +194,10 @@ int main()
 			res.write_string("no");
 		}
 		else {
-			session.set_data("img", std::string("hello"));
 			res.write_string("yes");
 		}
 	});
 
-	server.router<GET>("/login2", [](request& req, response& res) {
-		auto& session = req.session();
-		auto t = session.get_data<std::string>("time");
-		if (t.empty()) {
-			res.write_string("no");
-		}
-		else {
-			res.write_string("yes");
-		}
-	});
 
 
 	server.run();
