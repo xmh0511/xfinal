@@ -6,6 +6,7 @@
 #include "http_handler.hpp"
 #include "session.hpp"
 #include "ioservice_pool.hpp"
+#include "websokcet.hpp"
 namespace xfinal {
 	struct c11_auto_lambda_aop_before{
 		c11_auto_lambda_aop_before(bool& b, request& req, response& res):result(b),req_(req),res_(res){
@@ -276,6 +277,10 @@ namespace xfinal {
 		std::time_t check_session_rate() {
 			return check_session_time_;
 		}
+	public:
+		websocket& websokcets() {
+			return websockets_;
+		}
 	private:
 		std::map<std::string, router_function> router_map_;
 		std::map<std::string, router_function> genera_router_map_;
@@ -285,5 +290,6 @@ namespace xfinal {
 		asio::steady_timer timer_;
 		std::unique_ptr<std::thread> thread_;
 		std::time_t check_session_time_ = 10;
+		websocket websockets_;
 	};
 }

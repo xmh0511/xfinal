@@ -323,6 +323,13 @@ namespace xfinal {
 			is_chunked_ = is_chunked;
 		}
 	public:
+		void write_state(http_status state = http_status::ok) {
+			write_type_ = write_type::no_body;
+			init_start_pos_ = 0;
+			state_ = state;
+			is_chunked_ = false;
+		}
+
 		void write_string(std::string&& content, bool is_chunked = false, http_status state = http_status::ok, std::string const& conent_type = "text/plain") noexcept {
 			write(std::move(content), state, conent_type, is_chunked);
 			write_type_ = write_type::string;

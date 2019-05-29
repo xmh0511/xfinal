@@ -9,6 +9,8 @@
 #include <ctime>
 #include <unordered_map>
 #include "code_parser.hpp"
+#include "sha1.hpp"
+#include <string>
 namespace fs = ghc::filesystem;
 namespace xfinal {
 
@@ -305,5 +307,89 @@ namespace xfinal {
 			out.insert(std::make_pair(v2[0], v2[1]));
 		}
 		return out;
+	}
+
+	inline std::string to_sha1(std::string const& src) {
+		sha1_context ctx;
+		init(ctx);
+		update(ctx, reinterpret_cast<unsigned char const*>(&src[0]), src.size());
+		std::string buff(20, '\0');
+		finish(ctx, &buff[0]);
+		return buff;
+	}
+
+	inline size_t base64_encode(char *_dst, const void *_src, size_t len, int url_encoded) {
+		char *dst = _dst;
+		const uint8_t *src = reinterpret_cast<const uint8_t *>(_src);
+		static const char *MAP_URL_ENCODED = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+			"abcdefghijklmnopqrstuvwxyz"
+			"0123456789-_";
+		static const char *MAP = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+			"abcdefghijklmnopqrstuvwxyz"
+			"0123456789+/";
+		const char *map = url_encoded ? MAP_URL_ENCODED : MAP;
+		uint32_t quad;
+
+		for (; len >= 3; src += 3, len -= 3) {
+			quad = ((uint32_t)src[0] << 16) | ((uint32_t)src[1] << 8) | src[2];
+			*dst++ = map[quad >> 18];
+			*dst++ = map[(quad >> 12) & 63];
+			*dst++ = map[(quad >> 6) & 63];
+			*dst++ = map[quad & 63];
+		}
+		if (len != 0) {
+			quad = (uint32_t)src[0] << 16;
+			*dst++ = map[quad >> 18];
+			if (len == 2) {
+				quad |= (uint32_t)src[1] << 8;
+				*dst++ = map[(quad >> 12) & 63];
+				*dst++ = map[(quad >> 6) & 63];
+				if (!url_encoded)
+					*dst++ = '=';
+			}
+			else {
+				*dst++ = map[(quad >> 12) & 63];
+				if (!url_encoded) {
+					*dst++ = '=';
+					*dst++ = '=';
+				}
+			}
+		}
+
+		*dst = '\0';
+		return dst - _dst;
+	}
+
+	inline std::string to_base64(std::string const& src) {
+		char buff[1024];
+		auto size = base64_encode(buff,src.data(), src.size(), 0);
+		return std::string(buff, size);
+	}
+
+	bool is_bigendian(){
+	  int a = 1;
+	  unsigned char& c = (unsigned char&)a;
+	  if (c == '\0') {
+		  return true;
+	  }
+	  return false;
+	}
+
+	template<typename T>
+	void netendian_to_l(T& t, unsigned char const* ptr) {
+		auto size = sizeof(T);
+		unsigned char* iter = (unsigned char*)&t;
+		if (is_bigendian()) {  //大端
+			for (auto i = 0; i < size; ++i) {
+				iter[i] = *ptr;
+				++ptr;
+			}
+		}
+		else {  //小端
+			for (auto i = size - 1; i >= 0; --i) {
+				iter[i] = *ptr;
+				++ptr;
+			}
+		}
 	}
 }

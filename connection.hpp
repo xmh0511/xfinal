@@ -105,8 +105,14 @@ namespace xfinal {
 				break;
 				}
 			}
-			else {
-				post_router();  //如果没有body部分
+			else {  //如果没有body部分 也有可能是websocket
+				auto& wss = router_.websokcets();
+				if (wss.is_websocket(req_)) {  //是websokcet请求
+					handle_websocket();  //去处理websocket
+				}
+				else {  //普通http请求
+					post_router();  
+				}
 			}
 		}
 
@@ -379,6 +385,14 @@ namespace xfinal {
 		}
 		////处理content_type 为oct-stream 的body数据  --end
 
+		void handle_websocket() {
+			router_.websokcets().update_to_websocket(res_);
+			forward_write(true);
+			socket_close_ = true; //对于connection来说 sokcet 逻辑关闭了 转交给websocket处理
+			auto ws = router_.websokcets().start_webscoket();
+			ws->move_socket(std::move(socket_));
+		}
+
 	public:
 		template<typename Function>
 		void continue_read_data(Function&& callback, bool is_expand = true, bool is_multipart = false) { //用来继续读取body剩余数据的
@@ -443,10 +457,12 @@ namespace xfinal {
 				chunked_write();
 			}
 		}
-		void forward_write() {  //直接写 非chunked
+		void forward_write(bool is_websokcet = false) {  //直接写 非chunked
 			if (!socket_close_) {
-				socket_->async_write_some(res_.to_buffers(), [handler = this->shared_from_this()](std::error_code const& ec, std::size_t write_size) {
-					handler->close();
+				socket_->async_write_some(res_.to_buffers(), [handler = this->shared_from_this(), is_websokcet](std::error_code const& ec, std::size_t write_size) {
+					if (!is_websokcet) {
+						handler->close();
+					}
 				});
 			}
 		}
