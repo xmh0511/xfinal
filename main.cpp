@@ -198,6 +198,12 @@ int main()
 		}
 	});
 
+	websocket_event event;
+	event.on("message", [](websocket& ws) {
+		std::cout << ws.messages() << std::endl;
+	});
+	server.router("/ws", event);
+
 
 
 	server.run();

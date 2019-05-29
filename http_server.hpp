@@ -110,9 +110,12 @@ namespace xfinal {
 		}
 	public:
 		template<http_method...Methods,typename Function,typename...Args>
-		void router(nonstd::string_view url, Function&& function, Args&&...args) {  
+		std::enable_if_t<!std::is_same_v<std::remove_reference_t<Function>,websocket_event>> router(nonstd::string_view url, Function&& function, Args&&...args) {
 			auto method_names = http_method_str<Methods...>::methods_to_name();
 			http_router_.router(url, std::move(method_names), std::forward<Function>(function), std::forward<Args>(args)...);
+		}
+		void router(nonstd::string_view url, websocket_event const& event) {
+			http_router_.websockets_.add_event(view2str(url), event);
 		}
 	private:
 		void start_acceptor() {

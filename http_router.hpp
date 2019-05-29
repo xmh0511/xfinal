@@ -278,7 +278,7 @@ namespace xfinal {
 			return check_session_time_;
 		}
 	public:
-		websocket& websokcets() {
+		class websockets& websokcets() {
 			return websockets_;
 		}
 	private:
@@ -290,6 +290,6 @@ namespace xfinal {
 		asio::steady_timer timer_;
 		std::unique_ptr<std::thread> thread_;
 		std::time_t check_session_time_ = 10;
-		websocket websockets_;
+		class websockets websockets_;
 	};
 }

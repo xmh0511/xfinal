@@ -380,16 +380,19 @@ namespace xfinal {
 		auto size = sizeof(T);
 		unsigned char* iter = (unsigned char*)&t;
 		if (is_bigendian()) {  //大端
-			for (auto i = 0; i < size; ++i) {
+			for (int i = 0; i < size; ++i) {
 				iter[i] = *ptr;
 				++ptr;
 			}
 		}
 		else {  //小端
-			for (auto i = size - 1; i >= 0; --i) {
+			for (int i = size - 1; i >= 0; --i) {
 				iter[i] = *ptr;
 				++ptr;
 			}
 		}
 	}
+
+	template<std::size_t N>
+	class number_content{};
 }

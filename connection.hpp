@@ -389,7 +389,7 @@ namespace xfinal {
 			router_.websokcets().update_to_websocket(res_);
 			forward_write(true);
 			socket_close_ = true; //对于connection来说 sokcet 逻辑关闭了 转交给websocket处理
-			auto ws = router_.websokcets().start_webscoket();
+			auto ws = router_.websokcets().start_webscoket(view2str(req_.url()));
 			ws->move_socket(std::move(socket_));
 		}
 
