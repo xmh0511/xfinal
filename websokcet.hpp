@@ -73,8 +73,10 @@ namespace xfinal {
 		std::string& uuid() {
 			return socket_uid_;
 		}
+	public:
 		void move_socket(std::unique_ptr<asio::ip::tcp::socket>&& socket) {
 			socket_ = std::move(socket);
+			websocket_event_manager.trigger(url_, "open", *this);
 			start_read();
 		}
 	private:
@@ -100,6 +102,12 @@ namespace xfinal {
 				socket_->close();
 				websocket_event_manager.websockets_.erase(nonstd::string_view(socket_uid_.data(), socket_uid_.size()));
 				return;
+			}
+			if (frame_info_.opcode == 9) {  //ping
+
+			}
+			if (frame_info_.opcode == 10) {  //pong
+
 			}
 			unsigned char c2 = frame[1];
 			frame_info_.mask = c2 >> 7;

@@ -201,6 +201,8 @@ int main()
 	websocket_event event;
 	event.on("message", [](websocket& ws) {
 		std::cout << ws.messages() << std::endl;
+	}).on("open", [](websocket& ws) {
+		std::cout << "open" << std::endl;
 	});
 	server.router("/ws", event);
 
