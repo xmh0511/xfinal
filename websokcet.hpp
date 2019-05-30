@@ -100,6 +100,7 @@ namespace xfinal {
 			frame_info_.opcode = c & 15;
 			if (frame_info_.opcode == 8) {  //关闭连接
 				socket_->close();
+				websocket_event_manager.trigger(url_, "close", *this);  //关闭事件
 				websocket_event_manager.websockets_.erase(nonstd::string_view(socket_uid_.data(), socket_uid_.size()));
 				return;
 			}
@@ -146,7 +147,7 @@ namespace xfinal {
 		}
 		void read_data() {
 			expand_buffer(frame_info_.payload_length);
-			socket_->async_read_some(asio::buffer(&buffers_[data_current_pos_], frame_info_.payload_length), [this](std::error_code const& ec, std::size_t read_size) {
+			socket_->async_read_some(asio::buffer(&buffers_[data_current_pos_], (std::size_t)frame_info_.payload_length), [this](std::error_code const& ec, std::size_t read_size) {
 				set_current_pos(read_size);
 				decode_data(read_size);
 			});
@@ -154,7 +155,7 @@ namespace xfinal {
 
 		void decode_data(std::size_t use_size) {
 			unsigned char* iter = &(buffers_[data_current_pos_ - use_size]);
-			for (auto i = 0; i < use_size;++i) {
+			for (std::size_t i = 0; i < use_size;++i) {
 				auto j = i % 4;
 				auto mask_key = frame_info_.mask_key[j];
 				*iter = (*iter) ^ mask_key;
@@ -176,11 +177,11 @@ namespace xfinal {
 		std::size_t left_buffer_size() {
 			return buffers_.size() - data_current_pos_;
 		}
-		void expand_buffer(std::size_t need_size) {
+		void expand_buffer(std::uint64_t need_size) {
 			auto left_size = left_buffer_size();
 			if (need_size > left_buffer_size()) {
 				auto total_size = buffers_.size() + (need_size - left_size);
-				buffers_.resize(total_size);
+				buffers_.resize((std::size_t)total_size);
 			}
 		}
 	private:

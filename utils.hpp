@@ -375,21 +375,31 @@ namespace xfinal {
 	  return false;
 	}
 
+
 	template<typename T>
 	void netendian_to_l(T& t, unsigned char const* ptr) {
 		auto size = sizeof(T);
-		unsigned char* iter = (unsigned char*)&t;
-		if (is_bigendian()) {  //大端
-			for (int i = 0; i < size; ++i) {
-				iter[i] = *ptr;
-				++ptr;
-			}
-		}
-		else {  //小端
-			for (int i = size - 1; i >= 0; --i) {
-				iter[i] = *ptr;
-				++ptr;
-			}
+		//unsigned char* iter = (unsigned char*)&t;
+		//if (is_bigendian()) {  //大端
+		//	for (int i = 0; i < size; ++i) {
+		//		iter[i] = *ptr;
+		//		++ptr;
+		//	}
+		//}
+		//else {  //小端
+		//	for (int i = size - 1; i >= 0; --i) {
+		//		iter[i] = *ptr;
+		//		++ptr;
+		//	}
+		//}
+		T tmp = -1;
+		t = -1;
+		for (int i = 0; i < size; ++i) {
+			auto p = ptr[i];
+			p = p << (size - i - 1)*8;
+			t = t & p;
+			tmp = tmp >> 8;
+			t = t | tmp;
 		}
 	}
 
