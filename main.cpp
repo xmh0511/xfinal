@@ -214,6 +214,8 @@ int main()
 		//ws.write(std::move(message), 1);
 	}).on("open", [](websocket& ws) {
 		std::cout << "open" << std::endl;
+	}).on("close", [](websocket& ws) {
+
 	});
 	server.router("/ws", event);
 
