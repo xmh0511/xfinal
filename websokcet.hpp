@@ -144,12 +144,11 @@ namespace xfinal {
 						unsigned char tmp_c = 126;
 						c2 = c2 | tmp_c;
 						a_frame.push_back(c2);
-						tmp_c = write_data_size;
-						auto data_length = l_to_netendian(tmp_c);
+						auto data_length = l_to_netendian(write_data_size);
 						a_frame.append(data_length);
 					}
 					else if (write_data_size < 126) {
-						unsigned char tmp_c = write_data_size;
+						unsigned char tmp_c = (unsigned char)write_data_size;
 						c2 = c2 | tmp_c;
 						a_frame.push_back(c2);
 					}
@@ -213,12 +212,12 @@ namespace xfinal {
 			if (frame_info_.opcode) {
 				message_opcode = (unsigned char)frame_info_.opcode;
 			}
-			if (frame_info_.opcode == 8) {  //�ر�����
+			if (frame_info_.opcode == 8) {  //关闭连接
 				close();
 				return;
 			}
 			if (frame_info_.opcode == 9) {  //ping
-				write("", 10);  //��Ӧ�ͻ�������
+				write("", 10);  //回应客户端心跳
 				return;
 			}
 			if (frame_info_.opcode == 10) {  //pong
@@ -227,21 +226,21 @@ namespace xfinal {
 			}
 			unsigned char c2 = frame[1];
 			frame_info_.mask = c2 >> 7;
-			if (frame_info_.mask != 1) {  //mask ������1
+			if (frame_info_.mask != 1) {  //mask 必须是1
 				close();
 				return;
 			}
 			c2 = c2 & 127;
-			if (c2 < 126) {  //���ݵĳ���Ϊ��ǰֵ
+			if (c2 < 126) {  //数据的长度为当前值
 				frame_info_.payload_length = c2;
 				handle_payload_length(0);
 			}
-			else if(c2 == 126){  //����2���ֽ� unsigned
+			else if(c2 == 126){ //后续2个字节 unsigned
 				socket_->async_read_some(asio::buffer(&frame[read_pos_], 2), [handler = this->shared_from_this()](std::error_code const& ec, std::size_t read_size) {
 					handler->handle_payload_length(2);
 				});
 			}
-			else if(c2 == 127){  //����8���ֽ� unsigned
+			else if(c2 == 127){  //后续8个字节 unsigned
 				socket_->async_read_some(asio::buffer(&frame[read_pos_], 8), [handler = this->shared_from_this()](std::error_code const& ec, std::size_t read_size) {
 					handler->handle_payload_length(8);
 				});
@@ -258,7 +257,7 @@ namespace xfinal {
 				netendian_to_l(tmp, &(frame[read_pos_]));
 				frame_info_.payload_length = tmp;
 			}
-			if (frame_info_.mask == 1) {  //Ӧ�ñ������1
+			if (frame_info_.mask == 1) {  //应该必须等于1
 				socket_->async_read_some(asio::buffer(&frame_info_.mask_key[0], 4), [handler = this->shared_from_this()](std::error_code const& ec, std::size_t read_size) {
 					handler->read_data();
 				});
@@ -285,7 +284,7 @@ namespace xfinal {
 				message_ = std::string(buffers_.begin(), buffers_.begin()+ data_current_pos_);
 				buffers_.resize(0);
 				data_current_pos_ = 0;
-				//����֡���������� �ص�
+				//数据帧都处理完整 回调
 				websocket_event_manager.trigger(url_, "message", *this);
 			}
 			start_read();
@@ -308,10 +307,10 @@ namespace xfinal {
 				socket_->close();
 				wait_timer_->cancel();
 				ping_pong_timer_->cancel();
-				websocket_event_manager.trigger(url_, "close", *this);  //�ر��¼�
+				websocket_event_manager.trigger(url_, "close", *this);  //关闭事件
 				websocket_event_manager.websockets_.erase(nonstd::string_view(socket_uid_.data(), socket_uid_.size()));
 			}
-			void null_close() {
+			void null_close() {  //无路由的空连接需要关闭
 				socket_->close();
 				wait_timer_->cancel();
 				ping_pong_timer_->cancel();
