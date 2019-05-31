@@ -9,7 +9,8 @@
 3. 跨平台
 4. 支持拦截器功能
 5. 支持session/cookie （持久化,默认保存到磁盘。用户可以自定义持久化介质）
-6. 易用的客户端(http client/ https client 可以通过CMakeList.txt中的ENABLE_CLIENT_SSL ON开启)
+6. 支持websocket 
+7. 易用的客户端(http client/ https client 可以通过CMakeList.txt中的ENABLE_CLIENT_SSL ON开启)
 
 # 目录
 * [如何使用](#如何使用)
@@ -390,6 +391,29 @@ int main()
 }
 ````
 ### 以上所有使用lambda注册的路由 都可以替换成成员函数或controller
+
+# 好用的webscoket
+````
+#include "http_server.hpp"
+int main()
+{
+    http_server serve(4) //线程数
+    serve.listen("0.0.0.0","8080");
+    
+    	websocket_event event;  //定义websocket 事件
+	event.on("message", [](websocket& ws) {
+		std::cout << ws.messages() << std::endl;  //消息内容
+		std::cout << (int)ws.message_code() << std::endl; //消息类型
+		std::string message;
+		for (auto i = 0; i <= 400; ++i) {
+			message.append(std::to_string(i));
+		}
+		ws.write_string(message);  //发送消息 ws.write_binary("xxx")用来写二进制类型的数据 ||  ws.write("xxx",opcode);
+	}).on("open", [](websocket& ws) {
+		std::cout << "open" << std::endl;
+	});
+}
+````
 
 # xfinal client 使用
 ## GET请求
