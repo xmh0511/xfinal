@@ -394,13 +394,24 @@ namespace xfinal {
 		//}
 		T tmp = -1;
 		t = -1;
-		for (int i = 0; i < size; ++i) {
+		for (int i = 0; i < (int)size; ++i) {
 			auto p = ptr[i];
 			p = p << (size - i - 1)*8;
 			t = t & p;
 			tmp = tmp >> 8;
 			t = t | tmp;
 		}
+	}
+
+	template<typename T>
+	std::string l_to_netendian(T t) {
+		auto size = sizeof(T);
+		std::string result;
+		for (std::size_t i = 0; i < size; i++) {
+			unsigned char c = (t >> ((size-i-1)*8)) & 255;
+			result.push_back(c);
+		}
+		return result;
 	}
 
 	template<std::size_t N>

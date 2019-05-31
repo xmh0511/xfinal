@@ -918,7 +918,7 @@ namespace xfinal {
                         auto content_length = stoull(header_it->second);
                         if(content_length > num_additional_bytes) {
                             session->connection->set_timeout();
-                            asio::async_read(*session->connection->socket, session->response->streambuf, asio::transfer_exactly(content_length - num_additional_bytes), [session](const error_code &ec, std::uint64_t /*bytes_transferred*/) {
+                            asio::async_read(*session->connection->socket, session->response->streambuf, asio::transfer_exactly((std::size_t)content_length - num_additional_bytes), [session](const error_code &ec, std::uint64_t /*bytes_transferred*/) {
                                 session->connection->cancel_timeout();
                                 auto lock = session->connection->handler_runner->continue_lock();
                                 if(!lock)
