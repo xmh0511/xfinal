@@ -1,7 +1,0 @@
-/mnt/d/git/xfinal/lbuild/CMakeFiles/install/strip.dir
-/mnt/d/git/xfinal/lbuild/CMakeFiles/edit_cache.dir
-/mnt/d/git/xfinal/lbuild/CMakeFiles/xfinal.dir
-/mnt/d/git/xfinal/lbuild/CMakeFiles/install.dir
-/mnt/d/git/xfinal/lbuild/CMakeFiles/rebuild_cache.dir
-/mnt/d/git/xfinal/lbuild/CMakeFiles/list_install_components.dir
-/mnt/d/git/xfinal/lbuild/CMakeFiles/install/local.dir

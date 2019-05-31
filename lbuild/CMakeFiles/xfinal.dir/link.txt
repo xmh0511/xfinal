@@ -1,1 +1,0 @@
-/usr/bin/c++    -pthread -std=c++14 -O3 -DNDEBUG  -rdynamic CMakeFiles/xfinal.dir/main.cpp.o  -o xfinal -Wl,-rpath,/usr/local/lib: -luuid 
