@@ -190,10 +190,10 @@ namespace xfinal {
 			return true;
 		}
 	public:
-		 session& create_session() {
+		 class session& create_session() {
 			 return create_session("XFINAL");
 		 }
-		 session& create_session(std::string const& name) {
+		 class session& create_session(std::string const& name) {
 			 session_ = std::make_shared<class session>(false);
 			 session_->set_id(uuids::uuid_system_generator{}().to_short_str());
 			 //session_->set_expires(600);
@@ -286,7 +286,7 @@ namespace xfinal {
 		response& res_;
 		std::shared_ptr<class session> session_;
 	};
-	///ÏìÓ¦
+	///ï¿½ï¿½Ó¦
 	class response:private nocopyable {
 		friend class connection;
 		friend class http_router;
@@ -299,8 +299,8 @@ namespace xfinal {
 		};
 	public:
 		response(request& req) :req_(req), view_env_(std::make_unique<inja::Environment>()){
-			add_header("server", "xfinal");//Ôö¼Ó·þÎñÆ÷±êÊ¶
-			//³õÊ¼»¯view ÅäÖÃ
+			add_header("server", "xfinal");//ï¿½ï¿½ï¿½Ó·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¶
+			//ï¿½ï¿½Ê¼ï¿½ï¿½view ï¿½ï¿½ï¿½ï¿½
 			view_env_->set_expression("@{", "}");  
 			view_env_->set_element_notation(inja::ElementNotation::Dot);
 		}
@@ -395,7 +395,7 @@ namespace xfinal {
 			std::string extension = "text/plain";
 			auto path = fs::path(filename);
 			if (path.has_extension()) {
-				extension = get_content_type(path.extension().string());
+				extension = view2str(get_content_type(path.extension().string()));
 			}
 			try {
 				write_string(view_env_->render_file(filename, view_data_), is_chunked, state, extension);
@@ -425,7 +425,7 @@ namespace xfinal {
 			return *view_env_;
 		}
 
-		template<typename T,typename U = std::enable_if_t<!std::is_same_v<std::decay_t<T>,char const*>>>
+		template<typename T,typename U = std::enable_if_t<!std::is_same<std::decay_t<T>,char const*>::value>>
 		void set_attr(std::string const& name,T&& value) noexcept {
 			view_data_[name] = std::forward<T>(value);
 		}
@@ -441,32 +441,32 @@ namespace xfinal {
 	private:
 		std::vector<asio::const_buffer> header_to_buffer() noexcept {
 			std::vector<asio::const_buffer> buffers_;
-			http_version_ = view2str(req_.http_version()) + ' ';//Ð´Èë»ØÓ¦×´Ì¬ÐÐ 
+			http_version_ = view2str(req_.http_version()) + ' ';//Ð´ï¿½ï¿½ï¿½Ó¦×´Ì¬ï¿½ï¿½ 
 			buffers_.emplace_back(asio::buffer(http_version_));
 			buffers_.emplace_back(http_state_to_buffer(state_));
-			if ((req_.session_ !=nullptr) && !(req_.session_->empty())) {  //ÊÇ·ñÓÐsession
+			if ((req_.session_ !=nullptr) && !(req_.session_->empty())) {  //ï¿½Ç·ï¿½ï¿½ï¿½session
 				if (req_.session_->cookie_update()) {
 					add_header("Set-Cookie", req_.session_->cookie_str());
 				}
 				if (req_.session_->cookie_update() || req_.session_->data_update()) {
-					req_.session_->save(session_manager::get().get_storage());  //±£´æµ½´æ´¢½éÖÊ
+					req_.session_->save(session_manager::get().get_storage());  //ï¿½ï¿½ï¿½æµ½ï¿½æ´¢ï¿½ï¿½ï¿½ï¿½
 					req_.session_->set_data_update(false);
 				}
 				req_.session_->set_cookie_update(false);
 			}
-			for (auto& iter : header_map_) {  //»ØÐ´ÏìÓ¦Í·²¿
+			for (auto& iter : header_map_) {  //ï¿½ï¿½Ð´ï¿½ï¿½Ó¦Í·ï¿½ï¿½
 				buffers_.emplace_back(asio::buffer(iter.first));
 				buffers_.emplace_back(asio::buffer(name_value_separator.data(), name_value_separator.size()));
 				buffers_.emplace_back(asio::buffer(iter.second));
 				buffers_.emplace_back(asio::buffer(crlf.data(), crlf.size()));
 			}
-			buffers_.emplace_back(asio::buffer(crlf.data(), crlf.size())); //Í·²¿½áÊø
+			buffers_.emplace_back(asio::buffer(crlf.data(), crlf.size())); //Í·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 			return buffers_;
 		}
-		std::vector<asio::const_buffer> to_buffers() noexcept {  //·Çchunked Ä£Ê½ Ö±½Ó·µ»ØËùÓÐÊý¾Ý
+		std::vector<asio::const_buffer> to_buffers() noexcept {  //ï¿½ï¿½chunked Ä£Ê½ Ö±ï¿½Ó·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 			auto  buffers_ = header_to_buffer();
-			//Ð´Èëbody
-			if (write_type_ != write_type::no_body) {  //·Çno_bodyÀàÐÍ 
+			//Ð´ï¿½ï¿½body
+			if (write_type_ != write_type::no_body) {  //ï¿½ï¿½no_bodyï¿½ï¿½ï¿½ï¿½ 
 				buffers_.emplace_back(asio::buffer(body_.data(), body_.size()));
 			}
 			return buffers_;
@@ -475,7 +475,7 @@ namespace xfinal {
 		std::tuple<bool, std::vector<asio::const_buffer>,std::int64_t> chunked_body(std::int64_t startpos) noexcept {
 			std::vector<asio::const_buffer> buffers;
 			switch (write_type_) {
-			case write_type::string:  //Èç¹ûÊÇÎÄ±¾Êý¾Ý
+			case write_type::string:  //ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä±ï¿½ï¿½ï¿½ï¿½ï¿½
 			{
 				if ((body_.size()- (std::size_t)startpos) <= chunked_size_) {
 					auto size = body_.size() - startpos;
@@ -486,7 +486,7 @@ namespace xfinal {
 					buffers.emplace_back(asio::buffer(crlf.data(), crlf.size()));
 					return { true, buffers,0};
 				}
-				else {  //»¹ÓÐ³¬¹ýÃ¿´Îchunked´«ÊäµÄÊý¾Ý´óÐ¡
+				else {  //ï¿½ï¿½ï¿½Ð³ï¿½ï¿½ï¿½Ã¿ï¿½ï¿½chunkedï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ý´ï¿½Ð¡
 					auto nstart = startpos + chunked_size_;
 					chunked_write_size_ = to_hex(chunked_size_);
 					buffers.emplace_back(asio::buffer(chunked_write_size_));
@@ -497,7 +497,7 @@ namespace xfinal {
 				}
 			}
 			break;
-			case write_type::file:  //Èç¹ûÊÇÎÄ¼þÊý¾Ý
+			case write_type::file:  //ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½ï¿½ï¿½ï¿½ï¿½
 			{
 				auto read_size = file_.read(startpos, &(body_[0]), chunked_size_);
 				chunked_write_size_ = to_hex(read_size);

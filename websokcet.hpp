@@ -41,12 +41,12 @@ namespace xfinal {
 			}
 		}
 	private:
-		template<std::size_t N,typename Function,typename...Args,typename U = std::enable_if_t<std::is_same_v<number_content<N>, number_content<0>>>>
+		template<std::size_t N,typename Function,typename...Args,typename U = std::enable_if_t<std::is_same<number_content<N>, number_content<0>>::value>>
 		auto on_help(int,Function&& function, Args&&...args) {
 			return std::bind(std::forward<Function>(function), std::placeholders::_1);
 		}
 
-		template<std::size_t N, typename Function, typename...Args, typename U = std::enable_if_t<!std::is_same_v<number_content<N>, number_content<0>>>>
+		template<std::size_t N, typename Function, typename...Args, typename U = std::enable_if_t<!std::is_same<number_content<N>, number_content<0>>::value>>
 		auto on_help(long,Function&& function, Args&&...args) {
 			return std::bind(std::forward<Function>(function), std::forward<Args>(args)..., std::placeholders::_1);
 		}
@@ -141,13 +141,16 @@ namespace xfinal {
 					a_frame.push_back(frame_head);
 					unsigned char c2 = 0;
 					if (write_data_size >= 126) {
-						c2 = c2 | unsigned char(126);
+						unsigned char tmp_c = 126;
+						c2 = c2 | tmp_c;
 						a_frame.push_back(c2);
-						auto data_length = l_to_netendian(unsigned short(write_data_size));
+						tmp_c = write_data_size;
+						auto data_length = l_to_netendian(tmp_c);
 						a_frame.append(data_length);
 					}
 					else if (write_data_size < 126) {
-						c2 = c2 | unsigned char(write_data_size);
+						unsigned char tmp_c = write_data_size;
+						c2 = c2 | tmp_c;
 						a_frame.push_back(c2);
 					}
 					a_frame.append(std::string(&message[read_pos], write_data_size));
@@ -210,12 +213,12 @@ namespace xfinal {
 			if (frame_info_.opcode) {
 				message_opcode = (unsigned char)frame_info_.opcode;
 			}
-			if (frame_info_.opcode == 8) {  //¹Ø±ÕÁ¬½Ó
+			if (frame_info_.opcode == 8) {  //ï¿½Ø±ï¿½ï¿½ï¿½ï¿½ï¿½
 				close();
 				return;
 			}
 			if (frame_info_.opcode == 9) {  //ping
-				write("", 10);  //»ØÓ¦¿Í»§¶ËÐÄÌø
+				write("", 10);  //ï¿½ï¿½Ó¦ï¿½Í»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 				return;
 			}
 			if (frame_info_.opcode == 10) {  //pong
@@ -224,21 +227,21 @@ namespace xfinal {
 			}
 			unsigned char c2 = frame[1];
 			frame_info_.mask = c2 >> 7;
-			if (frame_info_.mask != 1) {  //mask ±ØÐëÊÇ1
+			if (frame_info_.mask != 1) {  //mask ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½1
 				close();
 				return;
 			}
 			c2 = c2 & 127;
-			if (c2 < 126) {  //Êý¾ÝµÄ³¤¶ÈÎªµ±Ç°Öµ
+			if (c2 < 126) {  //ï¿½ï¿½ï¿½ÝµÄ³ï¿½ï¿½ï¿½Îªï¿½ï¿½Ç°Öµ
 				frame_info_.payload_length = c2;
 				handle_payload_length(0);
 			}
-			else if(c2 == 126){  //ºóÐø2¸ö×Ö½Ú unsigned
+			else if(c2 == 126){  //ï¿½ï¿½ï¿½ï¿½2ï¿½ï¿½ï¿½Ö½ï¿½ unsigned
 				socket_->async_read_some(asio::buffer(&frame[read_pos_], 2), [handler = this->shared_from_this()](std::error_code const& ec, std::size_t read_size) {
 					handler->handle_payload_length(2);
 				});
 			}
-			else if(c2 == 127){  //ºóÐø8¸ö×Ö½Ú unsigned
+			else if(c2 == 127){  //ï¿½ï¿½ï¿½ï¿½8ï¿½ï¿½ï¿½Ö½ï¿½ unsigned
 				socket_->async_read_some(asio::buffer(&frame[read_pos_], 8), [handler = this->shared_from_this()](std::error_code const& ec, std::size_t read_size) {
 					handler->handle_payload_length(8);
 				});
@@ -255,7 +258,7 @@ namespace xfinal {
 				netendian_to_l(tmp, &(frame[read_pos_]));
 				frame_info_.payload_length = tmp;
 			}
-			if (frame_info_.mask == 1) {  //Ó¦¸Ã±ØÐëµÈÓÚ1
+			if (frame_info_.mask == 1) {  //Ó¦ï¿½Ã±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½1
 				socket_->async_read_some(asio::buffer(&frame_info_.mask_key[0], 4), [handler = this->shared_from_this()](std::error_code const& ec, std::size_t read_size) {
 					handler->read_data();
 				});
@@ -282,7 +285,7 @@ namespace xfinal {
 				message_ = std::string(buffers_.begin(), buffers_.begin()+ data_current_pos_);
 				buffers_.resize(0);
 				data_current_pos_ = 0;
-				//Êý¾ÝÖ¡¶¼´¦ÀíÍêÕû »Øµ÷
+				//ï¿½ï¿½ï¿½ï¿½Ö¡ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Øµï¿½
 				websocket_event_manager.trigger(url_, "message", *this);
 			}
 			start_read();
@@ -305,7 +308,7 @@ namespace xfinal {
 				socket_->close();
 				wait_timer_->cancel();
 				ping_pong_timer_->cancel();
-				websocket_event_manager.trigger(url_, "close", *this);  //¹Ø±ÕÊÂ¼þ
+				websocket_event_manager.trigger(url_, "close", *this);  //ï¿½Ø±ï¿½ï¿½Â¼ï¿½
 				websocket_event_manager.websockets_.erase(nonstd::string_view(socket_uid_.data(), socket_uid_.size()));
 			}
 			void null_close() {

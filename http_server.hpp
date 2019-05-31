@@ -22,7 +22,7 @@ namespace xfinal {
 		http_server(std::size_t thread_size):ioservice_pool_handler_(std::unique_ptr<ioservice_pool>(new ioservice_pool(thread_size))), acceptor_(ioservice_pool_handler_->get_io()){
 			static_url_ = std::string("/")+ get_root_director(static_path_)+ "/*";
 			upload_path_ = static_path_ + "/upload";
-			register_static_router(); //×¢²á¾²Ì¬ÎÄ¼þ´¦ÀíÂß¼­
+			register_static_router(); //×¢ï¿½á¾²Ì¬ï¿½Ä¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ß¼ï¿½
 			set_session_storager();
 		}
 	public:
@@ -38,7 +38,7 @@ namespace xfinal {
 			ioservice_pool_handler_->run();
 		}
 	public:
-		///Ö»ÄÜÉèÖÃÎªÏà¶Ôµ±Ç°³ÌÐòÔÊÐíÄ¿Â¼µÄÂ·¾¶  "./xxx/xxx"
+		///Ö»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Îªï¿½ï¿½Ôµï¿½Ç°ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¿Â¼ï¿½ï¿½Â·ï¿½ï¿½  "./xxx/xxx"
 		void set_static_path(std::string const& path) {
 			static_path_ = path;
 			upload_path_ = static_path_ + "/upload";
@@ -58,7 +58,7 @@ namespace xfinal {
 			return chunked_size_;
 		}
 
-		///Ìí¼ÓÊÓÍ¼µÄ´¦Àí·½·¨
+		///ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í¼ï¿½Ä´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 		void add_view_method(std::string const& name,std::size_t args_number, inja::CallbackFunction const& callback) {
 			http_router_.view_method_map_.insert(std::make_pair(name, std::make_pair(args_number,callback)));
 		}
@@ -73,9 +73,9 @@ namespace xfinal {
 
 		template<typename T = default_session_storage>
 		void set_session_storager() {
-			static_assert(std::is_base_of_v<session_storage, T>, "set storage is not base on session_storage!");
+			static_assert(std::is_base_of<session_storage, T>::value, "set storage is not base on session_storage!");
 			session_manager::get().set_storage(std::make_unique<T>());
-			session_manager::get().get_storage().init();  //³õÊ¼»¯ 
+			session_manager::get().get_storage().init();  //ï¿½ï¿½Ê¼ï¿½ï¿½ 
 		}
 
 		void set_check_session_rate(std::time_t seconds) {
@@ -110,7 +110,7 @@ namespace xfinal {
 		}
 	public:
 		template<http_method...Methods,typename Function,typename...Args>
-		std::enable_if_t<!std::is_same_v<std::remove_reference_t<Function>,websocket_event>> router(nonstd::string_view url, Function&& function, Args&&...args) {
+		std::enable_if_t<!std::is_same<std::remove_reference_t<Function>,websocket_event>::value> router(nonstd::string_view url, Function&& function, Args&&...args) {
 			auto method_names = http_method_str<Methods...>::methods_to_name();
 			http_router_.router(url, std::move(method_names), std::forward<Function>(function), std::forward<Args>(args)...);
 		}
@@ -131,16 +131,16 @@ namespace xfinal {
 		}
 	private:
 		void register_static_router() {
-			router<GET>(nonstd::string_view{ static_url_.data(),static_url_.size() }, [this](request& req,response& res) {  //¾²Ì¬ÎÄ¼þ´¦Àí
+			router<GET>(nonstd::string_view{ static_url_.data(),static_url_.size() }, [this](request& req,response& res) {  //ï¿½ï¿½Ì¬ï¿½Ä¼ï¿½ï¿½ï¿½ï¿½ï¿½
 				auto url = req.url();
 				auto p = fs::path("."+view2str(url));
 				auto content_type = get_content_type(p.extension());
 				auto ab = fs::absolute(p);
-				if (ab.parent_path() == fs::current_path()) {  //Ä¿Â¼µ½ÁË³ÌÐòÎÄ¼þµÄÄ¿Â¼ ÊÓÎª²»ºÏ·¨ÇëÇó
+				if (ab.parent_path() == fs::current_path()) {  //Ä¿Â¼ï¿½ï¿½ï¿½Ë³ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½ï¿½ï¿½Ä¿Â¼ ï¿½ï¿½Îªï¿½ï¿½ï¿½Ï·ï¿½ï¿½ï¿½ï¿½ï¿½
 					res.write_string("", false, http_status::bad_request, view2str(content_type));
 				}
 				else {
-					res.write_file(p.string(), true);  //Ä¬ÈÏÊ¹ÓÃchunked·½Ê½·µ»ØÎÄ¼þÊý¾Ý
+					res.write_file(p.string(), true);  //Ä¬ï¿½ï¿½Ê¹ï¿½ï¿½chunkedï¿½ï¿½Ê½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½ï¿½ï¿½ï¿½ï¿½
 				}
 			});
 		}

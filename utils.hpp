@@ -277,7 +277,7 @@ namespace xfinal {
 	};
 
 	inline std::vector<nonstd::string_view> split(nonstd::string_view s, nonstd::string_view delimiter) {
-		std::vector<std::string_view> output;
+		std::vector<nonstd::string_view> output;
 		auto b = 0;
 		auto it = s.find(delimiter);
 		while (it != nonstd::string_view::npos) {
