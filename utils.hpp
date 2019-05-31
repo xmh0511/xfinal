@@ -392,14 +392,11 @@ namespace xfinal {
 		//		++ptr;
 		//	}
 		//}
-		T tmp = -1;
-		t = -1;
+		t = 0;
 		for (int i = 0; i < (int)size; ++i) {
-			auto p = ptr[i];
+			T p = (T)ptr[i];
 			p = p << (size - i - 1)*8;
-			t = t & p;
-			tmp = tmp >> 8;
-			t = t | tmp;
+			t = t |  p;
 		}
 	}
 

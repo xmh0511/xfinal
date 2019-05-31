@@ -200,7 +200,7 @@ int main()
 
 	websocket_event event;
 	event.on("message", [](websocket& ws) {
-		std::cout << ws.messages() << std::endl;
+		std::cout << utf8_to_gbk(view2str(ws.messages())) << std::endl;
 		std::cout << (int)ws.message_code() << std::endl;
 		if (ws.messages() == nonstd::string_view{ "close" }) {
 			//ws.close();
@@ -211,7 +211,6 @@ int main()
 			message.append(std::to_string(i));
 		}
 		ws.write_string(message);
-		//ws.write(std::move(message), 1);
 	}).on("open", [](websocket& ws) {
 		std::cout << "open" << std::endl;
 	}).on("close", [](websocket& ws) {
