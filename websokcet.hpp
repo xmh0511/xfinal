@@ -175,7 +175,7 @@ namespace xfinal {
 			auto frame = std::move(write_frame_queue_.front());
 			write_frame_queue_.pop();
 			asio::const_buffer buffers(frame->data(), frame->size());
-			socket_->async_write_some(buffers, [frame = std::move(frame),handler = this->shared_from_this()](std::error_code const& ec,std::size_t size) {
+			asio::async_write(*socket_,buffers, [frame = std::move(frame),handler = this->shared_from_this()](std::error_code const& ec,std::size_t size) {
 				if (ec) {
 					return;
 				}

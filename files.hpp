@@ -98,7 +98,7 @@ namespace xfinal {
 			}
 			return b;
 		}
-		std::uint64_t read(std::uint64_t start,char* buffer,std::int64_t size) {
+		std::uint64_t read(std::int64_t start,char* buffer,std::int64_t size) {
 			if (file_handle_) {
 				if (start != -1) {
 					file_handle_->seekg(start, std::ios::beg);

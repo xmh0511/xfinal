@@ -459,7 +459,7 @@ namespace xfinal {
 		}
 		void forward_write(bool is_websokcet = false) {  //Ö±½ÓÐ´ ·Çchunked
 			if (!socket_close_) {
-				socket_->async_write_some(res_.to_buffers(), [handler = this->shared_from_this(), is_websokcet](std::error_code const& ec, std::size_t write_size) {
+				asio::async_write(*socket_,res_.to_buffers(), [handler = this->shared_from_this(), is_websokcet](std::error_code const& ec, std::size_t write_size) {
 					if (!is_websokcet) {
 						handler->close();
 					}
@@ -469,7 +469,7 @@ namespace xfinal {
 
 		void chunked_write() {
 			if (!socket_close_) {
-				socket_->async_write_some(res_.header_to_buffer(), [handler = this->shared_from_this(), startpos = res_.init_start_pos_](std::error_code const& ec, std::size_t write_size) {
+				asio::async_write(*socket_,res_.header_to_buffer(), [handler = this->shared_from_this(), startpos = res_.init_start_pos_](std::error_code const& ec, std::size_t write_size) {
 					if (ec) {
 						return;
 					}
@@ -481,7 +481,7 @@ namespace xfinal {
 		void write_body_chunked(std::int64_t startpos) {
 			auto tp = res_.chunked_body(startpos);
 			if (!socket_close_) {
-				socket_->async_write_some(std::get<1>(tp), [handler = this->shared_from_this(), pos = std::get<2>(tp), eof = std::get<0>(tp)](std::error_code const& ec, std::size_t write_size) {
+				asio::async_write(*socket_, std::get<1>(tp), [handler = this->shared_from_this(), pos = std::get<2>(tp), eof = std::get<0>(tp)](std::error_code const& ec, std::size_t write_size) {
 					if (ec) {
 						return;
 					}
@@ -497,12 +497,12 @@ namespace xfinal {
 
 		void write_end_chunked() {
 			std::vector<asio::const_buffer> buffers;
-			res_.chunked_write_size_ = "0";
+			res_.chunked_write_size_ = to_hex(0);
 			buffers.emplace_back(asio::buffer(res_.chunked_write_size_));
 			buffers.emplace_back(asio::buffer(crlf.data(), crlf.size()));
 			buffers.emplace_back(asio::buffer(crlf.data(), crlf.size()));
 			if (!socket_close_) {
-				socket_->async_write_some(buffers, [handler = this->shared_from_this()](std::error_code const& ec, std::size_t write_size) {
+				asio::async_write(*socket_, buffers, [handler = this->shared_from_this()](std::error_code const& ec, std::size_t write_size) {
 					handler->close();
 				});
 			}
