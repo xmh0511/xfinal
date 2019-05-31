@@ -411,7 +411,10 @@ int main()
 		ws.write_string(message);  //发送消息 ws.write_binary("xxx")用来写二进制类型的数据 ||  ws.write("xxx",opcode);
 	}).on("open", [](websocket& ws) {
 		std::cout << "open" << std::endl;
+	}).on("close",[](){
+	   //balabala
 	});
+	server.router("/ws", event);  //定义webscoket 路由
 }
 ````
 
