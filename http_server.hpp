@@ -22,7 +22,7 @@ namespace xfinal {
 		http_server(std::size_t thread_size):ioservice_pool_handler_(std::unique_ptr<ioservice_pool>(new ioservice_pool(thread_size))), acceptor_(ioservice_pool_handler_->get_io()){
 			static_url_ = std::string("/")+ get_root_director(static_path_)+ "/*";
 			upload_path_ = static_path_ + "/upload";
-			register_static_router(); //ע�ᾲ̬�ļ������߼�
+			register_static_router(); //注册静态文件处理逻辑
 			set_session_storager();
 		}
 	public:
@@ -38,7 +38,7 @@ namespace xfinal {
 			ioservice_pool_handler_->run();
 		}
 	public:
-		///ֻ������Ϊ��Ե�ǰ��������Ŀ¼��·��  "./xxx/xxx"
+		///只能设置为相对当前程序允许目录的路径  "./xxx/xxx"
 		void set_static_path(std::string const& path) {
 			static_path_ = path;
 			upload_path_ = static_path_ + "/upload";
@@ -58,7 +58,7 @@ namespace xfinal {
 			return chunked_size_;
 		}
 
-		///������ͼ�Ĵ�������
+		///添加视图的处理方法
 		void add_view_method(std::string const& name,std::size_t args_number, inja::CallbackFunction const& callback) {
 			http_router_.view_method_map_.insert(std::make_pair(name, std::make_pair(args_number,callback)));
 		}
@@ -75,7 +75,7 @@ namespace xfinal {
 		void set_session_storager() {
 			static_assert(std::is_base_of<session_storage, T>::value, "set storage is not base on session_storage!");
 			session_manager::get().set_storage(std::make_unique<T>());
-			session_manager::get().get_storage().init();  //��ʼ�� 
+			session_manager::get().get_storage().init();  //初始化 
 		}
 
 		void set_check_session_rate(std::time_t seconds) {
@@ -131,16 +131,16 @@ namespace xfinal {
 		}
 	private:
 		void register_static_router() {
-			router<GET>(nonstd::string_view{ static_url_.data(),static_url_.size() }, [this](request& req,response& res) {  //��̬�ļ�����
+			router<GET>(nonstd::string_view{ static_url_.data(),static_url_.size() }, [this](request& req,response& res) {  //静态文件处理
 				auto url = req.url();
 				auto p = fs::path("."+view2str(url));
 				auto content_type = get_content_type(p.extension());
 				auto ab = fs::absolute(p);
-				if (ab.parent_path() == fs::current_path()) {  //Ŀ¼���˳����ļ���Ŀ¼ ��Ϊ���Ϸ�����
+				if (ab.parent_path() == fs::current_path()) { //目录到了程序文件的目录 视为不合法请求
 					res.write_string("", false, http_status::bad_request, view2str(content_type));
 				}
 				else {
-					res.write_file(p.string(), true);  //Ĭ��ʹ��chunked��ʽ�����ļ�����
+					res.write_file(p.string(), true); //默认使用chunked方式返回文件数据
 				}
 			});
 		}

@@ -286,7 +286,7 @@ namespace xfinal {
 		response& res_;
 		std::shared_ptr<class session> session_;
 	};
-	///��Ӧ
+	///响应
 	class response:private nocopyable {
 		friend class connection;
 		friend class http_router;
@@ -299,8 +299,8 @@ namespace xfinal {
 		};
 	public:
 		response(request& req) :req_(req), view_env_(std::make_unique<inja::Environment>()){
-			add_header("server", "xfinal");//���ӷ�������ʶ
-			//��ʼ��view ����
+			add_header("server", "xfinal");//增加服务器标识
+			//初始化view 配置
 			view_env_->set_expression("@{", "}");  
 			view_env_->set_element_notation(inja::ElementNotation::Dot);
 		}
@@ -441,32 +441,32 @@ namespace xfinal {
 	private:
 		std::vector<asio::const_buffer> header_to_buffer() noexcept {
 			std::vector<asio::const_buffer> buffers_;
-			http_version_ = view2str(req_.http_version()) + ' ';//д���Ӧ״̬�� 
+			http_version_ = view2str(req_.http_version()) + ' ';//写入回应状态行 
 			buffers_.emplace_back(asio::buffer(http_version_));
 			buffers_.emplace_back(http_state_to_buffer(state_));
-			if ((req_.session_ !=nullptr) && !(req_.session_->empty())) {  //�Ƿ���session
+			if ((req_.session_ !=nullptr) && !(req_.session_->empty())) {  //是否有session
 				if (req_.session_->cookie_update()) {
 					add_header("Set-Cookie", req_.session_->cookie_str());
 				}
 				if (req_.session_->cookie_update() || req_.session_->data_update()) {
-					req_.session_->save(session_manager::get().get_storage());  //���浽�洢����
+					req_.session_->save(session_manager::get().get_storage()); //保存到存储介质
 					req_.session_->set_data_update(false);
 				}
 				req_.session_->set_cookie_update(false);
 			}
-			for (auto& iter : header_map_) {  //��д��Ӧͷ��
+			for (auto& iter : header_map_) {  //回写响应头部
 				buffers_.emplace_back(asio::buffer(iter.first));
 				buffers_.emplace_back(asio::buffer(name_value_separator.data(), name_value_separator.size()));
 				buffers_.emplace_back(asio::buffer(iter.second));
 				buffers_.emplace_back(asio::buffer(crlf.data(), crlf.size()));
 			}
-			buffers_.emplace_back(asio::buffer(crlf.data(), crlf.size())); //ͷ������
+			buffers_.emplace_back(asio::buffer(crlf.data(), crlf.size()));  //头部结束
 			return buffers_;
 		}
-		std::vector<asio::const_buffer> to_buffers() noexcept {  //��chunked ģʽ ֱ�ӷ�����������
+		std::vector<asio::const_buffer> to_buffers() noexcept {  //非chunked 模式 直接返回所有数据
 			auto  buffers_ = header_to_buffer();
-			//д��body
-			if (write_type_ != write_type::no_body) {  //��no_body���� 
+			//写入body
+			if (write_type_ != write_type::no_body) {  //非no_body类型 
 				buffers_.emplace_back(asio::buffer(body_.data(), body_.size()));
 			}
 			return buffers_;
@@ -475,7 +475,7 @@ namespace xfinal {
 		std::tuple<bool, std::vector<asio::const_buffer>,std::int64_t> chunked_body(std::int64_t startpos) noexcept {
 			std::vector<asio::const_buffer> buffers;
 			switch (write_type_) {
-			case write_type::string:  //������ı�����
+			case write_type::string: //如果是文本数据
 			{
 				if ((body_.size()- (std::size_t)startpos) <= chunked_size_) {
 					auto size = body_.size() - startpos;
@@ -486,7 +486,7 @@ namespace xfinal {
 					buffers.emplace_back(asio::buffer(crlf.data(), crlf.size()));
 					return { true, buffers,0};
 				}
-				else {  //���г���ÿ��chunked��������ݴ�С
+				else {  //还有超过每次chunked传输的数据大小
 					auto nstart = startpos + chunked_size_;
 					chunked_write_size_ = to_hex(chunked_size_);
 					buffers.emplace_back(asio::buffer(chunked_write_size_));
@@ -497,7 +497,7 @@ namespace xfinal {
 				}
 			}
 			break;
-			case write_type::file:  //������ļ�����
+			case write_type::file:  //如果是文件数据
 			{
 				auto read_size = file_.read(startpos, &(body_[0]), chunked_size_);
 				chunked_write_size_ = to_hex(read_size);
