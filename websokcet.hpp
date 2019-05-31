@@ -101,6 +101,9 @@ namespace xfinal {
 		nonstd::string_view messages() const {
 			return message_;
 		}
+		unsigned char message_code() const {
+			return message_opcode;
+		}
 	public:
 		void write(std::string const& message,unsigned char opcode) {
 			auto message_size = message.size();
@@ -204,6 +207,9 @@ namespace xfinal {
 			unsigned char c = frame[0];
 			frame_info_.eof = c >> 7;
 			frame_info_.opcode = c & 15;
+			if (frame_info_.opcode) {
+				message_opcode = (unsigned char)frame_info_.opcode;
+			}
 			if (frame_info_.opcode == 8) {  //πÿ±’¡¨Ω”
 				close();
 				return;
@@ -325,6 +331,7 @@ namespace xfinal {
 		std::time_t pong_wait_time_ = 60;
 		std::unique_ptr<asio::steady_timer> wait_timer_;
 		std::unique_ptr<asio::steady_timer> ping_pong_timer_;
+		unsigned char message_opcode = 0;
 	};
 
 	template<typename T>

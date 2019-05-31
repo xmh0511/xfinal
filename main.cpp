@@ -201,6 +201,7 @@ int main()
 	websocket_event event;
 	event.on("message", [](websocket& ws) {
 		std::cout << ws.messages() << std::endl;
+		std::cout << (int)ws.message_code() << std::endl;
 		if (ws.messages() == nonstd::string_view{ "close" }) {
 			//ws.close();
 			return;
