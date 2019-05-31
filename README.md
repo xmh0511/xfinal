@@ -28,6 +28,7 @@
 sudo yum install libuuid-devel.x86_64  
 ##### ubuntu
 sudo apt-get install uuid  
+sudo apt-get install uuid-dev
 
 ## 生成编译
 mkdir build  
