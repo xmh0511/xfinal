@@ -42,6 +42,18 @@ namespace xfinal {
 			oct_steam_ = std::move(r.oct_steam_);
 			return *this;
 		}
+		void reset() {
+			method_.clear();
+			url_.clear();
+			version_.clear();
+			headers_.clear();
+			form_map_.clear();
+			body_.clear();
+			decode_body_.clear();
+			multipart_form_map_.clear();
+			multipart_files_map_.clear();
+			oct_steam_.close();
+		}
 	public:
 		std::string method_;
 		std::string url_;

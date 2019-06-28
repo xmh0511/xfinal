@@ -54,7 +54,10 @@ namespace xfinal {
 		}
 
 		void close() {
-			file_handle_->close();
+			if (file_handle_) {
+				file_handle_->close();
+				file_handle_.release();
+			}
 		}
 	private:
 		std::unique_ptr<std::ofstream> file_handle_;
@@ -97,6 +100,12 @@ namespace xfinal {
 				}
 			}
 			return b;
+		}
+		void close() {
+			if (file_handle_) {
+				file_handle_->close();
+				file_handle_.release();
+			}
 		}
 		std::uint64_t read(std::int64_t start,char* buffer,std::int64_t size) {
 			if (file_handle_) {

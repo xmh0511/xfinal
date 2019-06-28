@@ -189,6 +189,23 @@ namespace xfinal {
 			pos = std::atoll(posv.data());
 			return true;
 		}
+		bool is_keep_alive() {
+			auto c = header("connection");
+			using namespace nonstd::string_view_literals;
+			if (c.empty()) {
+				if (http_version() == "HTTP/1.1"_sv) {
+					return true;
+				}
+				return false;
+			}
+			if (c == "close"_sv) {
+				return false;
+			}
+			if (c == "keep-alive"_sv) {
+				return true;
+			}
+			return false;
+		}
 	public:
 		 class session& create_session() {
 			 return create_session("XFINAL");
@@ -267,6 +284,25 @@ namespace xfinal {
 			}
 		}
 	private:
+		void reset() {
+			method_ = "";
+			url_ = "";
+			version_ = "";
+			headers_ = nullptr;
+			header_length_ = 0;
+			form_map_.clear();
+			body_ = "";
+			gbk_decode_form_map_.clear();
+			decode_url_params_.clear();
+			url_params_.clear();
+			gbk_decode_params_.clear();
+			boundary_key_ = "";
+			multipart_form_map_ = nullptr;
+			multipart_files_map_ = nullptr;
+			oct_steam_ = nullptr;
+			session_.reset();
+		}
+	private:
 		nonstd::string_view method_;
 		nonstd::string_view url_;
 		nonstd::string_view version_;
@@ -282,7 +318,7 @@ namespace xfinal {
 		nonstd::string_view boundary_key_;
 		std::map<std::string, std::string> const* multipart_form_map_ = nullptr;
 		std::map<std::string, xfinal::filewriter> const* multipart_files_map_ = nullptr;
-		xfinal::filewriter* oct_steam_;
+		xfinal::filewriter* oct_steam_= nullptr;
 		response& res_;
 		std::shared_ptr<class session> session_;
 	};
@@ -512,6 +548,17 @@ namespace xfinal {
 				return { true,buffers ,0 };
 				break;
 			}
+		}
+	private:
+		void reset() {
+			header_map_.clear();
+			body_.clear();
+			is_chunked_ = false;
+			http_version_.clear();
+			write_type_ = write_type::string;
+			chunked_write_size_.clear();
+			file_.close();
+			view_data_.clear();
 		}
 	private:
 		request& req_;

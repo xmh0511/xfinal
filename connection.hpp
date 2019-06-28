@@ -508,11 +508,28 @@ namespace xfinal {
 			}
 		}
 	public:
-		void close() {
+		void close() {  //回应完成 准备关闭连接
+			if (req_.is_keep_alive()) {
+				reset();
+				read_header();
+				return;
+			}
 			std::error_code ec;
 			socket_->shutdown(asio::ip::tcp::socket::shutdown_both, ec);
 			socket_->close();
 			socket_close_ = true;
+		}
+	private:
+		void reset() {
+			req_.reset();
+			res_.reset();
+			request_info.reset();
+			buffers_.clear();
+			expand_buffer_size = 1024;
+			left_buffer_size_ = 1024;
+			current_use_pos_ = 0;
+			start_read_pos_ = 0;
+			buffers_.resize(expand_buffer_size);
 		}
 	public:
 		void set_chunked_size(std::uint64_t size) {
@@ -530,7 +547,7 @@ namespace xfinal {
 		std::unique_ptr<asio::ip::tcp::socket> socket_;
 		asio::io_service& io_service_;
 		std::size_t expand_buffer_size = 1024;
-		std::size_t max_buffer_size_ = 3 * 1024 * 1024;
+		const std::size_t max_buffer_size_ = 3 * 1024 * 1024;
 		std::vector<char> buffers_;
 		std::size_t current_use_pos_ = 0;
 		std::size_t left_buffer_size_;
