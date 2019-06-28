@@ -125,6 +125,7 @@ namespace xfinal {
 				if (ec) {
 					return;
 				}
+				//connector->get_socket().set_option(asio::socket_base::linger(true, 30));
 				connector->read_header();
 				start_acceptor();
 			});
