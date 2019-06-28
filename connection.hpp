@@ -509,6 +509,8 @@ namespace xfinal {
 		}
 	public:
 		void close() {
+			std::error_code ec;
+			socket_->shutdown(asio::ip::tcp::socket::shutdown_both, ec);
 			socket_->close();
 			socket_close_ = true;
 		}
@@ -519,6 +521,8 @@ namespace xfinal {
 	public:
 		~connection() {
 			if (!socket_close_) {
+				std::error_code ec;
+				socket_->shutdown(asio::ip::tcp::socket::shutdown_both, ec);
 				socket_->close();
 			}
 		}

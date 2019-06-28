@@ -305,6 +305,8 @@ namespace xfinal {
 		}
 	public:
 			void close() {
+				std::error_code ec;
+				socket_->shutdown(asio::ip::tcp::socket::shutdown_both, ec);
 				socket_->close();
 				wait_timer_->cancel();
 				ping_pong_timer_->cancel();
@@ -312,6 +314,8 @@ namespace xfinal {
 				websocket_event_manager.websockets_.erase(nonstd::string_view(socket_uid_.data(), socket_uid_.size()));
 			}
 			void null_close() {  //无路由的空连接需要关闭
+				std::error_code ec;
+				socket_->shutdown(asio::ip::tcp::socket::shutdown_both,ec);
 				socket_->close();
 				wait_timer_->cancel();
 				ping_pong_timer_->cancel();
