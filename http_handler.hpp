@@ -190,7 +190,7 @@ namespace xfinal {
 			return true;
 		}
 		bool is_keep_alive() {
-			auto c = header("connection");
+			auto c = to_lower(view2str(header("connection")));
 			using namespace nonstd::string_view_literals;
 			if (c.empty()) {
 				if (http_version() == "HTTP/1.1"_sv) {
@@ -198,10 +198,10 @@ namespace xfinal {
 				}
 				return false;
 			}
-			if (c == "close"_sv) {
+			if (c == "close") {
 				return false;
 			}
-			if (c == "keep-alive"_sv) {
+			if (c == "keep-alive") {
 				return true;
 			}
 			return false;
