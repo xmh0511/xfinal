@@ -6,9 +6,7 @@ SET(ENABLE_CLIENT_SSL OFF)
 #SET(CMAKE_CXX_FLAGS_RELEASE "$ENV{CXXFLAGS} -O3 -Wall")
 if (MSVC)
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /std:c++latest")
-	add_definitions(-D_SILENCE_CXX17_ALLOCATOR_VOID_DEPRECATION_WARNING)
 	add_definitions(-D_CRT_SECURE_NO_WARNINGS)
-	add_definitions(-D_SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING)
 else ()
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -pthread -std=c++14")
 endif ()
@@ -23,11 +21,11 @@ if(ENABLE_CLIENT_SSL)
 	add_definitions(-DXFINAL_ENABLE_CLIENT_SSL)
 endif()
 
-set(XFINAL main.cpp)
+set(XFINAL ./xfinal/xfinal.hpp main.cpp)
 
 add_executable(${project_name} ${XFINAL})
 
-include_directories(${CMAKE_SOURCE_DIR}/asio ${CMAKE_SOURCE_DIR}/ghc)
+include_directories(${CMAKE_SOURCE_DIR}/xfinal ${CMAKE_SOURCE_DIR}/xfinal/asio ${CMAKE_SOURCE_DIR}/xfinal/ghc )
 
 
 target_link_libraries(${project_name} uuid)

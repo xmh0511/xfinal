@@ -1,6 +1,5 @@
 #include <iostream>
-#include "http_server.hpp"
-#include "client.hpp"
+#include <xfinal.hpp>
 using namespace xfinal;
 class Test {
 public:
