@@ -41,7 +41,7 @@ cmake ..
 
 ## GET请求 服务器返回Hello,world
 ````
-#include "http_server.hpp"
+#include <xfinal.hpp>
 using namespace xfinal;
 int main()
 {
@@ -55,7 +55,7 @@ int main()
 ````
 ## GET请求 url参数获取
 ````
-#include "http_server.hpp"
+#include <xfinal.hpp>
 using namespace xfinal;
 int main()
 {
@@ -71,7 +71,7 @@ int main()
 
 ## GBK的支持
 ````
-#include "http_server.hpp"
+#include <xfinal.hpp>
 using namespace xfinal;
 int main()
 {
@@ -87,7 +87,7 @@ int main()
 ````
 ## URL 重定向
 ````
-#include "http_server.hpp"
+#include <xfinal.hpp>
 using namespace xfinal;
 int main()
 {
@@ -102,7 +102,7 @@ int main()
 
 ## url form 表单请求
 ````
-#include "http_server.hpp"
+#include <xfinal.hpp>
 using namespace xfinal;
 int main()
 {
@@ -117,7 +117,7 @@ int main()
 ````
 ## multipart form 表单请求
 ````
-#include "http_server.hpp"
+#include <xfinal.hpp>
 using namespace xfinal;
 int main()
 {
@@ -134,7 +134,7 @@ int main()
 ## octet-stream 请求处理
 
 ````
-#include "http_server.hpp"
+#include <xfinal.hpp>
 using namespace xfinal;
 int main()
 {
@@ -150,7 +150,7 @@ int main()
 ## 返回json
 #### 使用了第三方json库 更多用法参考 [nlohmann/json](https://github.com/nlohmann/json)
 ````
-#include "http_server.hpp"
+#include <xfinal.hpp>
 using namespace xfinal;
 int main()
 {
@@ -189,7 +189,7 @@ int main()
 </html>
 ///test.html
 
-#include "http_server.hpp"
+#include <xfinal.hpp>
 using namespace xfinal;
 int main()
 {
@@ -210,7 +210,7 @@ int main()
 
 ## 文件请求
 ````
-#include "http_server.hpp"
+#include <xfinal.hpp>
 using namespace xfinal;
 int main()
 {
@@ -232,7 +232,7 @@ int main()
 ````
 ## xfinal 框架内置了静态文件处理
 ````
-#include "http_server.hpp"
+#include <xfinal.hpp>
 using namespace xfinal;
 int main()
 {
@@ -246,7 +246,7 @@ int main()
 ````
 ## xfinal session/cookie 支持
 ````
-#include "http_server.hpp"
+#include <xfinal.hpp>
 using namespace xfinal;
 int main()
 {
@@ -269,7 +269,7 @@ int main()
 ````
 ### 用户可以自定义持久化介质
 ````
-#include "http_server.hpp"
+#include <xfinal.hpp>
 using namespace xfinal;
 class sql_storage:public session_storage{
    public:
@@ -293,7 +293,7 @@ int main()
 ````
 ## xfinal 为你的接口提供拦截器
 ````
-#include "http_server.hpp"
+#include <xfinal.hpp>
 using namespace xfinal;
 struct http_interceptor{
    bool before(request& req,response& res){  //这里的返回值用来告诉框架是否还继续执行用户接下来的拦截器以及注册的路由逻辑
@@ -322,7 +322,7 @@ int main()
 ````
 ## xfinal 异常错误信息获取
 ````
-#include "http_server.hpp"
+#include <xfinal.hpp>
 using namespace xfinal;
 int main(){
   http_server serve(4) //线程数
@@ -338,7 +338,7 @@ int main(){
 ````
 ////Test.hpp
 #pragma once
-#include "http_server.hpp"
+#include <xfinal.hpp>
 class Test{
   public:
     void shop(request& req,response& res){
@@ -366,7 +366,7 @@ int main()
 ````
 ///shop.hpp
 #pragma once
-#include "http_server.hpp"
+#include <xfinal.hpp>
 class Shop:public Controller{
   public:
     void go(){
@@ -395,7 +395,7 @@ int main()
 
 # 好用的webscoket
 ````
-#include "http_server.hpp"
+#include <xfinal.hpp>
 int main()
 {
     http_server serve(4) //线程数
@@ -424,8 +424,7 @@ int main()
 ## GET请求
 ### client 同步
 ````
-#include "http_server.hpp"
-#include "client.hpp"
+#include <xfinal.hpp>
 using namespace xfinal;
 int main(){
    http_server serve(4) //线程数
@@ -443,8 +442,7 @@ int main(){
 ````
 ### client 异步
 ````
-#include "http_server.hpp"
-#include "client.hpp"
+#include <xfinal.hpp>
 using namespace xfinal;
 int main(){
       http_server serve(4) //线程数
@@ -468,8 +466,7 @@ int main(){
 ````
 ## POST请求
 ````
-#include "http_server.hpp"
-#include "client.hpp"
+#include <xfinal.hpp>
 using namespace xfinal;
 int main(){
       http_server serve(4) //线程数
@@ -493,8 +490,7 @@ int main(){
 ````
 ## POST multipart form
 ````
-#include "http_server.hpp"
-#include "client.hpp"
+#include <xfinal.hpp>
 using namespace xfinal;
 int main(){
       http_server serve(4) //线程数
