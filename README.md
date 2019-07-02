@@ -39,7 +39,7 @@ cmake ..
 
 # 快速示例
 
-## Get请求 服务器返回Hello,world
+## GET请求 服务器返回Hello,world
 ````
 #include "http_server.hpp"
 using namespace xfinal;
