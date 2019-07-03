@@ -273,10 +273,10 @@ namespace xfinal {
 
 		void process_multipart_data(std::map<std::string, std::string> const& head, http_multipart_parser const& parser) {
 			auto dpr = parser.is_complete_part_data(buffers_.data()+start_read_pos_, current_use_pos_ - start_read_pos_);
-			if (dpr.first) { //如果已经是完整的数据了
+			if (dpr.first) { //如果已经是完整的数据了("\r\n--boundary_char")
 				record_mutlipart_data(head, nonstd::string_view(buffers_.data()+ start_read_pos_, dpr.second), parser, true);
 			}
-			else {  //此处肯定没有完整boundary记号  这里可能有点问题 没有处理 boundary 边界问题
+			else {  //此处应该没有完整boundary记号(这里可能有点问题 没有处理 boundary 边界问题,比如说['\r\n--boundary_char']不完整,目前使用没有出现问题)
 				record_mutlipart_data(head, nonstd::string_view(buffers_.data()+ start_read_pos_, current_use_pos_ - start_read_pos_), parser, false);
 			}
 		}
