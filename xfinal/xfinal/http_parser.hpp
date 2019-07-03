@@ -235,7 +235,7 @@ namespace xfinal {
 		std::string::iterator end_;
 	};
 
-	class http_multipart_parser {
+	class http_multipart_parser final {
 	public:
 		http_multipart_parser(std::string const & boundary_start_key_, std::string const & boundary_end_key_):boundary_start_key_(boundary_start_key_), boundary_end_key_(boundary_end_key_){
 
