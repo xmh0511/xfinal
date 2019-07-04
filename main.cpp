@@ -55,7 +55,7 @@ int main()
 	http_server server(4);
 	server.listen("0.0.0.0", "8080");
 
-	server.on_error([](std::exception const& ec) {  //鎻愪緵鐢ㄦ埛璁板綍閿欒鏃ュ織
+	server.on_error([](std::exception const& ec) {  //提供用户记录错误日志
 		std::cout << ec.what() << std::endl;
 	});
 
@@ -73,8 +73,11 @@ int main()
 		res.write_string(std::string("hello world"),false);
 	});
 
-	server.router<POST>("/json", [](request& req, response& res) {
+	server.router<GET,POST>("/json", [](request& req, response& res) {
 		std::cout << "body: " << req.body()<<std::endl;
+		json root;
+		root["hello"] = u8"你好，中文";
+		res.write_json(root);
 	});
 
 	server.router<GET>("/params", [](request& req, response& res) {
