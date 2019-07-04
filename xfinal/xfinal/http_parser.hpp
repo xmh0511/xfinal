@@ -305,11 +305,11 @@ namespace xfinal {
 			std::map<std::string, std::string> headers;
 			auto start_ = start;
 			while (start != stop) {
-				auto c = *start;
+				//auto c = *start;
 				if ((start + 1) >= stop) {
 					break;
 				}
-				auto c_next = *(start + 1);
+				//auto c_next = *(start + 1);
 				if (((*start) == '\r') && ((*(start + 1)) == '\n')) {  //maybe a header = > key:value
 					auto old_start = start_;
 					while (start_ != start) {
