@@ -36,8 +36,8 @@ namespace xfinal {
 					if (buffers_.size() < expand_buffer_size) {
 						buffers_.resize(max_buffer_size_);
 					}
-					left_buffer_size_ = max_buffer_size_;
-					current_use_pos_ = 0;
+					left_buffer_size_ = max_buffer_size_ - current_use_pos_;
+					//current_use_pos_ = 0;
 					return true;
 				}
 			}
@@ -206,17 +206,13 @@ namespace xfinal {
 		void pre_process_multipart_body(content_type type) { //预处理content_type 位multipart_form 类型的body
 			auto header_size = req_.header_length_;
 			if (current_use_pos_ > header_size) {  //是不是读request头的时候 把body也读取进来了 
-				//forward_contain_data(buffers_, header_size, current_use_pos_);
 				start_read_pos_ = header_size;
-				//current_use_pos_ -= header_size;
 				left_buffer_size_ = buffers_.size() - current_use_pos_;
 			}
 			else {
 				left_buffer_size_ = buffers_.size();
-				//buffers_.clear();
 				current_use_pos_ = 0;
 				start_read_pos_ = 0;
-				//left_buffer_size_ = buffers_.size() - current_use_pos_;
 			}
 			process_multipart_body(type);
 		}
@@ -251,9 +247,7 @@ namespace xfinal {
 		void pre_process_multipart_data(std::pair<std::size_t, std::map<std::string, std::string>> const& pr, http_multipart_parser const& parser) { //是否需要过滤掉mutipart head
 			if (pr.first != 0) {
 				if (current_use_pos_ > pr.first) {  //读取multipart head的时候 也读取了部分数据 处理数据的时候 把之前的头给移除了
-					//forward_contain_data(buffers_, pr.first, current_use_pos_);//移除掉head部分 因为已经解析过了
 					start_read_pos_ += pr.first;
-					//current_use_pos_ -= pr.first;
 					left_buffer_size_ = buffers_.size() - current_use_pos_;
 					process_multipart_data(pr.second, parser);
 				}
@@ -330,13 +324,6 @@ namespace xfinal {
 			else {  //buffers中所有的数据都是mulitpart 的数据 （不包含multipart头）所以可以清除
 				buffers_.clear();
 				start_read_pos_ = 0;
-				//if (expand_buffer_size >= max_buffer_size_) {
-				//	buffers_.resize(1024);
-				//	left_buffer_size_ = 1024;
-				//}
-				//else {
-				//	left_buffer_size_ = expand_buffer_size;
-				//}
 				current_use_pos_ = 0;
 				continue_read_data([handler = this->shared_from_this(), head, parser]() {
 					handler->process_multipart_data(head, parser);
@@ -399,14 +386,6 @@ namespace xfinal {
 			if (is_expand) {
 				bool b = expand_size(is_multipart);
 				if (!b) {
-					//if (!is_multipart) {
-					//	return; //超过最大可接受字节数 等待处理;
-					//}
-					//else {  //对于multipart 这种可能需要获取大量数据的 需要特殊处理
-					//	buffers_.clear();
-					//	current_use_pos_ = 0;
-					//	left_buffer_size_ = max_buffer_size_;
-					//}
 					return;
 				}
 			}
@@ -429,9 +408,6 @@ namespace xfinal {
 				http_parser_header parser{ buffer.begin(),buffer.end() };
 				if (parser.is_complete_header().first == parse_state::valid) {
 					if (parser.is_complete_header().second) {
-						//std::cout << "Method " << parser.get_method().second << std::endl;
-						//std::cout << "Url " << parser.get_url().second << std::endl;
-						//std::cout << "Version " << parser.get_version().second << std::endl;
 						handler->parse_header(parser);
 					}
 					else {
@@ -514,9 +490,12 @@ namespace xfinal {
 				read_header();
 				return;
 			}
-			std::error_code ec;
-			socket_->shutdown(asio::ip::tcp::socket::shutdown_both, ec);
-			socket_->close();
+			std::error_code ignore_write_ec;
+			socket_->write_some(asio::buffer("\0\0"), ignore_write_ec);  //solve time_wait problem
+			std::error_code ignore_shutdown_ec;
+			socket_->shutdown(asio::ip::tcp::socket::shutdown_both, ignore_shutdown_ec);
+			std::error_code ignore_close_ec;
+			socket_->close(ignore_close_ec);
 			socket_close_ = true;
 		}
 	private:
@@ -538,9 +517,12 @@ namespace xfinal {
 	public:
 		~connection() {
 			if (!socket_close_) {
-				std::error_code ec;
-				socket_->shutdown(asio::ip::tcp::socket::shutdown_both, ec);
-				socket_->close();
+				std::error_code ignore_write_ec;
+				socket_->write_some(asio::buffer("\0\0"), ignore_write_ec);  //solve time_wait problem
+				std::error_code ignore_shutdown_ec;
+				socket_->shutdown(asio::ip::tcp::socket::shutdown_both, ignore_shutdown_ec);
+				std::error_code ignore_close_ec;
+				socket_->close(ignore_close_ec);
 			}
 		}
 	private:
