@@ -266,16 +266,19 @@ namespace xfinal {
 		}
 
 		void process_multipart_data(std::map<std::string, std::string> const& head, http_multipart_parser const& parser) {
-			auto dpr = parser.is_complete_part_data(buffers_.data()+start_read_pos_, current_use_pos_ - start_read_pos_);
-			if (dpr.first) { //如果已经是完整的数据了("\r\n--boundary_char")
-				record_mutlipart_data(head, nonstd::string_view(buffers_.data()+ start_read_pos_, dpr.second), parser, true);
+			auto dpr = parser.is_end_part_data(buffers_.data()+start_read_pos_, current_use_pos_ - start_read_pos_);
+			if (dpr.first== multipart_data_state::is_end) { //如果已经是完整的数据了("\r\n--boundary_char")
+				record_mutlipart_data(head, nonstd::string_view(buffers_.data()+ start_read_pos_, dpr.second), parser, dpr.first);
 			}
-			else {  //此处应该没有完整boundary记号(这里可能有点问题 没有处理 boundary 边界问题,比如说['\r\n--boundary_char']不完整,目前使用没有出现问题)
-				record_mutlipart_data(head, nonstd::string_view(buffers_.data()+ start_read_pos_, current_use_pos_ - start_read_pos_), parser, false);
+			else if (dpr.first == multipart_data_state::maybe_end) {  //或许是数据部分结束了 可能标识符\r
+				record_mutlipart_data(head, nonstd::string_view(buffers_.data() + start_read_pos_, dpr.second), parser, dpr.first);
+			}
+			else if (dpr.first == multipart_data_state::all_part_data) { //buffer中都是数据部分
+				record_mutlipart_data(head, nonstd::string_view(buffers_.data() + start_read_pos_, current_use_pos_ - start_read_pos_), parser, dpr.first);
 			}
 		}
 
-		void record_mutlipart_data(std::map<std::string, std::string> const& head, nonstd::string_view data, http_multipart_parser const& parser, bool is_complete) {
+		void record_mutlipart_data(std::map<std::string, std::string> const& head, nonstd::string_view data, http_multipart_parser const& parser, multipart_data_state data_state) {
 			auto value = head.at("content-disposition");
 			auto pos_name = value.find("name") + sizeof("name") + 1;
 			auto name = value.substr(pos_name, value.find('\"', pos_name) - pos_name);
@@ -301,7 +304,7 @@ namespace xfinal {
 			else {  //是文本类型
 				request_info.multipart_form_map_[name] += view2str(data);
 			}
-			if (is_complete) {
+			if (data_state== multipart_data_state::is_end) {
 				if (type != std::string::npos) {  //如果是文件 读取完了 就可以关闭文件指针了
 					request_info.multipart_files_map_[name].close();
 				}
@@ -321,7 +324,17 @@ namespace xfinal {
 				}
 				process_mutipart_head(parser, content_type::multipart_form);
 			}
-			else {  //buffers中所有的数据都是mulitpart 的数据 （不包含multipart头）所以可以清除
+			else if (data_state == multipart_data_state::maybe_end) {
+				start_read_pos_ += data.size();
+				forward_contain_data(buffers_, start_read_pos_, current_use_pos_);
+				current_use_pos_ -= start_read_pos_;
+				start_read_pos_ = 0;
+				left_buffer_size_ = buffers_.size() - current_use_pos_;
+				continue_read_data([handler = this->shared_from_this(), head, parser]() {
+					handler->process_multipart_data(head, parser);
+				}, true, true);
+			}
+			else if(data_state== multipart_data_state::all_part_data) {  //buffers中所有的数据都是mulitpart 的数据 （不包含multipart头）所以可以清除
 				buffers_.clear();
 				start_read_pos_ = 0;
 				current_use_pos_ = 0;

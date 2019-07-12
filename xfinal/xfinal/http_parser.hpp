@@ -16,17 +16,23 @@ namespace xfinal {
 		unknow
 	};
 
-	class request_meta:private nocopyable {
+	enum class multipart_data_state :std::uint8_t {
+		is_end,
+		all_part_data,
+		maybe_end
+	};
+
+	class request_meta :private nocopyable {
 	public:
 		request_meta() = default;
 		//request_meta(request_meta const&) = default;
 		//request_meta(request_meta &&) = default;
 		//request_meta& operator=(request_meta const&) = default;
 		//request_meta& operator=(request_meta &&) = default;
-		request_meta(std::string&& method, std::string&& url,std::string&& version, std::map<std::string, std::string>&& headers):method_(std::move(method)), url_(std::move(url)), version_(std::move(version)), headers_(std::move(headers)){
+		request_meta(std::string&& method, std::string&& url, std::string&& version, std::map<std::string, std::string>&& headers) :method_(std::move(method)), url_(std::move(url)), version_(std::move(version)), headers_(std::move(headers)) {
 
 		}
-		request_meta(request_meta&& r):method_(std::move(r.method_)), url_(std::move(r.url_)), version_(std::move(r.version_)), headers_(std::move(r.headers_)), form_map_(std::move(r.form_map_)), body_(std::move(r.body_)), decode_body_(std::move(r.decode_body_)), multipart_form_map_(std::move(r.multipart_form_map_)), multipart_files_map_(std::move(r.multipart_files_map_)), oct_steam_(std::move(r.oct_steam_)){
+		request_meta(request_meta&& r) :method_(std::move(r.method_)), url_(std::move(r.url_)), version_(std::move(r.version_)), headers_(std::move(r.headers_)), form_map_(std::move(r.form_map_)), body_(std::move(r.body_)), decode_body_(std::move(r.decode_body_)), multipart_form_map_(std::move(r.multipart_form_map_)), multipart_files_map_(std::move(r.multipart_files_map_)), oct_steam_(std::move(r.oct_steam_)) {
 
 		}
 		request_meta& operator=(request_meta&& r) {
@@ -77,24 +83,24 @@ namespace xfinal {
 			header_begin_ = begin_;
 			while (current != end_) {
 				if (*current == '\r' && *(current + 1) == '\n' && *(current + 2) == '\r' && *(current + 3) == '\n') {
-					header_end_ = current +4;
+					header_end_ = current + 4;
 					return { parse_state::valid,true };
 				}
 				++current;
 			}
-			return { parse_state::invalid,false};
+			return { parse_state::invalid,false };
 		}
 		std::pair < parse_state, std::string> get_method() {
 			auto start = begin_;
 			while (begin_ != end_) {
 				//auto c = *begin_;
 				//auto c_next = *(begin_ + 1);
-				if ((*begin_) == ' ' && (*(begin_ + 1)) !=' ') {
+				if ((*begin_) == ' ' && (*(begin_ + 1)) != ' ') {
 					return { parse_state::valid,std::string(start, begin_++) };
 				}
 				++begin_;
 			}
-			return { parse_state::invalid,""};
+			return { parse_state::invalid,"" };
 		}
 		std::pair < parse_state, std::string> get_url() {
 			auto start = begin_;
@@ -111,7 +117,7 @@ namespace xfinal {
 			while (begin_ != end_) {
 				if ((*begin_) == '\r' && (*(begin_ + 1)) == '\n') {
 					begin_ += 2;
-					return { parse_state::valid ,std::string(start,begin_-2) };
+					return { parse_state::valid ,std::string(start,begin_ - 2) };
 				}
 				++begin_;
 			}
@@ -166,7 +172,7 @@ namespace xfinal {
 					if (version.first == parse_state::valid) {
 						auto headers = get_header();
 						if (headers.first == parse_state::valid) {
-							return std::pair<bool, request_meta>( true, request_meta{std::move(method.second),std::move(url.second),std::move(version.second),std::move(headers.second)} );
+							return std::pair<bool, request_meta>(true, request_meta{ std::move(method.second),std::move(url.second),std::move(version.second),std::move(headers.second) });
 						}
 						else {
 							return { false,request_meta() };
@@ -196,7 +202,7 @@ namespace xfinal {
 
 	class http_urlform_parser final {
 	public:
-		http_urlform_parser(std::string& body,bool need_url_decode = true){
+		http_urlform_parser(std::string& body, bool need_url_decode = true) {
 			if (need_url_decode) {
 				body = xfinal::get_string_by_urldecode(body);
 			}
@@ -224,11 +230,11 @@ namespace xfinal {
 			auto start = old;
 			while (old != begin_) {
 				if ((*old) == '=') {
-					auto key = nonstd::string_view(&(*start), old -start);
-					form.insert(std::make_pair(key, nonstd::string_view(&(*(old + 1)), begin_-1 - old)));
+					auto key = nonstd::string_view(&(*start), old - start);
+					form.insert(std::make_pair(key, nonstd::string_view(&(*(old + 1)), begin_ - 1 - old)));
 				}
 				++old;
-			 }
+			}
 		}
 	private:
 		std::string::iterator begin_;
@@ -237,7 +243,7 @@ namespace xfinal {
 
 	class http_multipart_parser final {
 	public:
-		http_multipart_parser(std::string const & boundary_start_key_, std::string const & boundary_end_key_):boundary_start_key_(boundary_start_key_), boundary_end_key_(boundary_end_key_){
+		http_multipart_parser(std::string const & boundary_start_key_, std::string const & boundary_end_key_) :boundary_start_key_(boundary_start_key_), boundary_end_key_(boundary_end_key_) {
 
 		}
 	public:
@@ -257,27 +263,38 @@ namespace xfinal {
 				return false;
 			}
 		}
-		std::pair<bool,std::size_t> is_complete_part_data(char const* buffers,std::size_t size) const {
+		std::pair<multipart_data_state, std::size_t> is_end_part_data(char const* buffers, std::size_t size) const {
 			nonstd::string_view buffer{ buffers ,size };
 			auto it = buffer.find(boundary_start_key_);
 			if (it != nonstd::string_view::npos) {
 				//std::cout << buffer.substr( it ,boundary_start_key_.size() ) << std::endl;
-				return { true, it-2 };
+				return { multipart_data_state::is_end, it - 2 };
 			}
 			else {
 				auto it2 = buffer.find(boundary_end_key_);
-				if (it2!= nonstd::string_view::npos) {
-					return { true ,it2 -2};
+				if (it2 != nonstd::string_view::npos) {
+					return { multipart_data_state::is_end ,it2 - 2 };
 				}
-				return { false,0 };
+				else {
+					auto it3 = buffer.rfind("\r");
+					if (it3 != nonstd::string_view::npos) {
+						auto padding_start = it3 + boundary_start_key_.size() + 1;
+						auto padding_end = it3 + boundary_end_key_.size() + 1;
+						if ((padding_start <= size) || (padding_end <= size)) {
+							return { multipart_data_state::all_part_data,0 };
+						}
+						return { multipart_data_state::maybe_end ,it3 };
+					}
+					return { multipart_data_state::all_part_data,0 };
+				}
 			}
 		}
-		
-		std::pair<std::size_t ,std::map<std::string, std::string>> parser_part_head(std::vector<char>::iterator begin_, std::vector<char>::iterator end_) const {
+
+		std::pair<std::size_t, std::map<std::string, std::string>> parser_part_head(std::vector<char>::iterator begin_, std::vector<char>::iterator end_) const {
 			nonstd::string_view buffer{ &(*begin_) ,std::size_t(end_ - begin_) };
 			auto it = buffer.find(boundary_start_key_);
 			if (it != nonstd::string_view::npos) {
-				auto parse_begin = it + boundary_start_key_.size()+2;
+				auto parse_begin = it + boundary_start_key_.size() + 2;
 				auto parse_end = buffer.find("\r\n\r\n", parse_begin);
 				if (parse_end != nonstd::string_view::npos) {
 					auto head_size = parse_end + 4;
