@@ -88,7 +88,7 @@ namespace xfinal {
 				}
 				++current;
 			}
-			return { parse_state::invalid,false };
+			return { parse_state::valid,false };
 		}
 		std::pair < parse_state, std::string> get_method() {
 			auto start = begin_;
