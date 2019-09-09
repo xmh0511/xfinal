@@ -108,7 +108,7 @@ namespace xfinal {
 		void write(std::string const& message,unsigned char opcode) {
 			auto message_size = message.size();
 			auto offset = 0;
-			if (message_size < 126) {
+			if (message_size <= 126) {
 				unsigned char frame_head = 128;
 				frame_head = frame_head | opcode;
 				unsigned char c2 = 0;
