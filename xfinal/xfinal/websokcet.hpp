@@ -119,7 +119,7 @@ namespace xfinal {
 				a_frame.append(message);
 				write_frame_queue_.emplace(std::make_unique<std::string>(std::move(a_frame)));
 			}
-			else if (message_size > 126 ) {
+			else if (message_size >= 126 ) {
 				auto counts = message_size / frame_data_size_;
 				if ((message_size % frame_data_size_) != 0) {
 					counts++;
