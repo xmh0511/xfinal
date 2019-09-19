@@ -175,13 +175,15 @@ namespace xfinal {
 			auto frame = std::move(write_frame_queue_.front());
 			write_frame_queue_.pop();
 			asio::const_buffer buffers(frame->data(), frame->size());
-			asio::async_write(*socket_,buffers, [frame = std::move(frame),handler = this->shared_from_this()](std::error_code const& ec,std::size_t size) {
-				if (ec) {
-					return;
-				}
-				handler->write_frame();
-			});
-			//write_frame();
+			// asio::async_write(*socket_,buffers, [frame = std::move(frame),handler = this->shared_from_this()](std::error_code const& ec,std::size_t size) {
+			// 	if (ec) {
+			// 		return;
+			// 	}
+			// 	handler->write_frame();
+			// });
+			std::error_code ingore_ec;
+			asio::write(*socket_, buffers, ingore_ec);
+			write_frame();
 		}
 	public:
 			void reset_time() {
@@ -333,7 +335,7 @@ namespace xfinal {
 		std::string message_;
 		std::string const url_;
 		std::queue<std::unique_ptr<std::string>> write_frame_queue_;
-		std::size_t frame_data_size_ = 256;
+		std::size_t frame_data_size_ = 65535;//256
 		std::time_t ping_pong_time_= 30 * 60 * 60;
 		std::time_t pong_wait_time_ = 60;
 		std::unique_ptr<asio::steady_timer> wait_timer_;
