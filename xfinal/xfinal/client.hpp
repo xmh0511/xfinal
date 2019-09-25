@@ -1,6 +1,6 @@
 #ifndef CLIENT_HTTP_HPP
 #define CLIENT_HTTP_HPP
-#pragma warning(suppress : 4996)
+#pragma warning(disable : 4996)
 #include <limits>
 #include <mutex>
 #include <random>

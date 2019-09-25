@@ -85,6 +85,12 @@ namespace xfinal {
 		std::time_t check_session_rate() {
 			return http_router_.check_session_time_;
 		}
+		void set_url_redirect(bool flag) {
+			http_router_.url_redirect_ = flag;
+		}
+		bool url_redirect() {
+			return http_router_.url_redirect_;
+		}
 	private:
 		bool listen(asio::ip::tcp::resolver::query& query) {
 			bool result = false;

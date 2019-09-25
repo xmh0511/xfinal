@@ -217,14 +217,19 @@ namespace xfinal {
 					back++;
 				}
 				if (back > 0) {  //如果url不是规范的url 则重定向跳转
-					auto url_str = view2str(url.substr(0, url.size() - back));
-					auto params = req.params();
-					if (!params.empty()) {
-						url_str += "?";
+					if (url_redirect_) {
+						auto url_str = view2str(url.substr(0, url.size() - back));
+						auto params = req.params();
+						if (!params.empty()) {
+							url_str += "?";
+						}
+						url_str += view2str(params);
+						res.redirect(url_str);
+						return;
 					}
-					url_str += view2str(params);
-					res.redirect(url_str);
-					return;
+					else {
+						url = url.substr(0, url.size() - back);
+					}
 				}
 			}
 			//auto cookies = cookies_map(req.header("Cookie"));
@@ -291,5 +296,6 @@ namespace xfinal {
 		std::unique_ptr<std::thread> thread_;
 		std::time_t check_session_time_ = 10;
 		class websockets websockets_;
+		bool url_redirect_ = true;
 	};
 }

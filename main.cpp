@@ -53,6 +53,7 @@ private:
 int main()
 {
 	http_server server(4);
+	server.set_url_redirect(true);
 	server.listen("0.0.0.0", "8080");
 
 	server.on_error([](std::exception const& ec) {  //提供用户记录错误日志
@@ -67,6 +68,7 @@ int main()
 	server.router<GET,POST>("/abc", [](request& req,response& res) {
 		std::cout << req.query("id") << std::endl;
 		std::cout << "hahaha "<<req.url() <<" text :"<<req.query<GBK>("text")<< std::endl;
+		res.write_string("OK");
 	}, Test{}, Base{}, Test2{});
 
 	server.router<GET, POST>("/", [](request& req, response& res) {
