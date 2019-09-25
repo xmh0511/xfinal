@@ -53,7 +53,6 @@ private:
 int main()
 {
 	http_server server(4);
-	server.set_url_redirect(true);
 	server.listen("0.0.0.0", "8080");
 
 	server.on_error([](std::exception const& ec) {  //提供用户记录错误日志
