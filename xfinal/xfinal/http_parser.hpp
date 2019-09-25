@@ -124,7 +124,7 @@ namespace xfinal {
 			return { parse_state::invalid,"" };
 		}
 		std::pair < parse_state, std::map<std::string, std::string>> get_header() {
-			if ((*begin_) == '\r' && (*(begin_ + 1)) == '\n') {  //没有键值对
+			if ((*begin_) == '\r' && (*(begin_ + 1)) == '\n') {  //娌℃湁閿�煎
 				return { parse_state::valid ,{} };
 			}
 			std::map<std::string, std::string> headers;
