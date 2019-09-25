@@ -124,14 +124,14 @@ namespace xfinal {
 			return { parse_state::invalid,"" };
 		}
 		std::pair < parse_state, std::map<std::string, std::string>> get_header() {
+			if ((*begin_) == '\r' && (*(begin_ + 1)) == '\n') {  //没有键值对
+				return { parse_state::valid ,{} };
+			}
 			std::map<std::string, std::string> headers;
-			//std::cout << std::string(begin_, end_) << std::endl;
 			char r = ' ';
 			char n = ' ';
 			auto start = begin_;
 			while (begin_ != end_) {
-				auto c = *begin_;
-				auto c_next = *(begin_ + 1);
 				if ((*begin_) == '\r' && (*(begin_ + 1)) == '\n') {  //maybe a header = > key:value
 					if ((end_ - begin_) >= 4) {
 						r = *(begin_ + 2);
