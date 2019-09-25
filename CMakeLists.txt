@@ -23,13 +23,25 @@ if(ENABLE_CLIENT_SSL)
 	add_definitions(-DXFINAL_ENABLE_CLIENT_SSL)
 endif()
 
+if (ENABLE_CLIENT_SSL)
+                find_package(OpenSSL REQUIRED)
+endif()
+
 set(XFINAL ./xfinal/xfinal.hpp main.cpp)
 
 add_executable(${project_name} ${XFINAL})
 
+if(ENABLE_CLIENT_SSL)
+include_directories(${CMAKE_SOURCE_DIR}/xfinal ${CMAKE_SOURCE_DIR}/xfinal/asio ${CMAKE_SOURCE_DIR}/xfinal/ghc ${OPENSSL_INCLUDE_DIR})
+else()
 include_directories(${CMAKE_SOURCE_DIR}/xfinal ${CMAKE_SOURCE_DIR}/xfinal/asio ${CMAKE_SOURCE_DIR}/xfinal/ghc )
+endif()
 
 
+if(ENABLE_CLIENT_SSL)
+target_link_libraries(${project_name} uuid ${OPENSSL_LIBRARIES})
+else()
 target_link_libraries(${project_name} uuid)
+endif()
 
 install(TARGETS ${project_name} DESTINATION include)
