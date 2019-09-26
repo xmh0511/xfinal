@@ -342,7 +342,7 @@ namespace xfinal {
 		}
 	public:
 		void add_header(std::string const& k, std::string const& v) noexcept {
-			header_map_[k] = v;
+			header_map_.insert(std::make_pair(k, v));
 		}
 	protected:
 		template<typename T, typename U = typename std::enable_if<std::is_same<typename std::remove_reference<T>::type, std::string>::value>::type>
@@ -350,12 +350,12 @@ namespace xfinal {
 			state_ = state;
 			body_ = std::move(body);
 			if (!is_chunked) {
-				header_map_["Content-Length"] = std::to_string(body_.size());
+				add_header("Content-Length", std::to_string(body_.size()));
 			}
 			else {
-				header_map_["Transfer-Encoding"] = "chunked";
+				add_header("Transfer-Encoding", "chunked");
 			}
-			header_map_["Content-Type"] = conent_type;
+			add_header("Content-Type", conent_type);
 			is_chunked_ = is_chunked;
 		}
 	public:
@@ -379,7 +379,7 @@ namespace xfinal {
 					write_string("", false, http_status::bad_request);
 				}
 				else {
-					header_map_["Content-Type"] = view2str(file_.content_type());
+					add_header("Content-Type", view2str(file_.content_type()));
 					write_type_ = write_type::file;
 					is_chunked_ = is_chunked;
 					if (!is_chunked) {
@@ -388,14 +388,15 @@ namespace xfinal {
 						init_start_pos_ = -1;
 					}
 					else {
-						header_map_["Transfer-Encoding"] = "chunked";
+						add_header("Transfer-Encoding", "chunked");
 						body_.resize((std::size_t)chunked_size_);
 						std::uint64_t pos = 0;
 						if (req_.accept_range(pos)) {
 							state_ = http_status::partial_content;
 							init_start_pos_ = pos;
 							auto filesize = file_.size();
-							header_map_["Content-Range"] = std::string("bytes ") + std::to_string(init_start_pos_) + std::string("-") + std::to_string(filesize - 1) + "/" + std::to_string(filesize);
+							auto rang_value = std::string("bytes ") + std::to_string(init_start_pos_) + std::string("-") + std::to_string(filesize - 1) + "/" + std::to_string(filesize);
+							add_header("Content-Range", rang_value);
 						}
 						else {
 							state_ = http_status::ok;
@@ -448,7 +449,7 @@ namespace xfinal {
 
 		void redirect(nonstd::string_view url, bool is_temporary = true) noexcept {
 			write_type_ = write_type::no_body;
-			header_map_["Location"] = view2str(url);
+			add_header("Location", view2str(url));
 			if (is_temporary) {
 				state_ = http_status::moved_temporarily;
 			}
@@ -562,7 +563,7 @@ namespace xfinal {
 		}
 	private:
 		request& req_;
-		std::unordered_map<std::string, std::string> header_map_;
+		std::unordered_multimap<std::string, std::string> header_map_;
 		std::string body_;
 		http_status state_;
 		bool is_chunked_ = false;
