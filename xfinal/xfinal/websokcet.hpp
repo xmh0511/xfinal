@@ -30,8 +30,8 @@ namespace xfinal {
 		websocket_event() = default;
 	public:
 		template<typename Function, typename...Args>
-		websocket_event& on(std::string const& event_name, Function&& function, Args&&...args) {
-			event_call_back_.insert(std::make_pair(event_name, on_help<(sizeof...(Args))>(0,std::forward<Function>(function), std::forward<Args>(args)...)));
+		websocket_event& on(std::string const& event_name, Function&& function, Args&& ...args) {
+			event_call_back_.insert(std::make_pair(event_name, on_help<(sizeof...(Args))>(0, std::forward<Function>(function), std::forward<Args>(args)...)));
 			return *this;
 		}
 		void trigger(std::string const& event_name, websocket& ws) {
@@ -41,13 +41,13 @@ namespace xfinal {
 			}
 		}
 	private:
-		template<std::size_t N,typename Function,typename...Args,typename U = std::enable_if_t<std::is_same<number_content<N>, number_content<0>>::value>>
-		auto on_help(int,Function&& function, Args&&...args) {
+		template<std::size_t N, typename Function, typename...Args, typename U = std::enable_if_t<std::is_same<number_content<N>, number_content<0>>::value>>
+		auto on_help(int, Function && function, Args && ...args) {
 			return std::bind(std::forward<Function>(function), std::placeholders::_1);
 		}
 
 		template<std::size_t N, typename Function, typename...Args, typename U = std::enable_if_t<!std::is_same<number_content<N>, number_content<0>>::value>>
-		auto on_help(long,Function&& function, Args&&...args) {
+		auto on_help(long, Function && function, Args && ...args) {
 			return std::bind(std::forward<Function>(function), std::forward<Args>(args)..., std::placeholders::_1);
 		}
 	private:
@@ -70,9 +70,9 @@ namespace xfinal {
 		std::unordered_map<std::string, websocket_event> events_;
 		std::unordered_map<nonstd::string_view, std::shared_ptr<websocket>> websockets_;
 	};
-	class websocket final:public std::enable_shared_from_this<websocket>{
+	class websocket final :public std::enable_shared_from_this<websocket> {
 	public:
-		websocket(websocket_event_map& web, std::string const& url) :websocket_event_manager(web), socket_uid_(uuids::uuid_system_generator{}().to_short_str()), url_(url){
+		websocket(websocket_event_map& web, std::string const& url) :websocket_event_manager(web), socket_uid_(uuids::uuid_system_generator{}().to_short_str()), url_(url) {
 
 		}
 	public:
@@ -84,7 +84,7 @@ namespace xfinal {
 			socket_ = std::move(socket);
 			wait_timer_ = std::make_unique<asio::steady_timer>(socket_->get_io_service());
 			ping_pong_timer_ = std::make_unique<asio::steady_timer>(socket_->get_io_service());
-			ping();
+			//ping();
 			websocket_event_manager.trigger(url_, "open", *this);
 			start_read();
 		}
@@ -93,8 +93,9 @@ namespace xfinal {
 			read_pos_ = 0;
 			std::memset(frame, 0, sizeof(frame));
 			std::memset(&frame_info_, 0, sizeof(frame_info_));
-			socket_->async_read_some(asio::buffer(&frame[read_pos_],2), [handler = this->shared_from_this()](std::error_code const& ec,std::size_t read_size) {
+			socket_->async_read_some(asio::buffer(&frame[read_pos_], 2), [handler = this->shared_from_this()](std::error_code const& ec, std::size_t read_size) {
 				handler->frame_parser();
+				handler->reset_time();
 			});
 		}
 	public:
@@ -105,7 +106,7 @@ namespace xfinal {
 			return message_opcode;
 		}
 	public:
-		void write(std::string const& message,unsigned char opcode) {
+		void write(std::string const& message, unsigned char opcode) {
 			auto message_size = message.size();
 			auto offset = 0;
 			if (message_size < 126) {
@@ -119,7 +120,7 @@ namespace xfinal {
 				a_frame.append(message);
 				write_frame_queue_.emplace(std::make_unique<std::string>(std::move(a_frame)));
 			}
-			else if (message_size >= 126 ) {
+			else if (message_size >= 126) {
 				auto counts = message_size / frame_data_size_;
 				if ((message_size % frame_data_size_) != 0) {
 					counts++;
@@ -159,6 +160,7 @@ namespace xfinal {
 				}
 			}
 			write_frame();
+			reset_time();
 		}
 	public:
 		void write_string(std::string const& message) {
@@ -186,26 +188,26 @@ namespace xfinal {
 			write_frame();
 		}
 	public:
-			void reset_time() {
-				wait_timer_->expires_from_now(std::chrono::seconds(pong_wait_time_));
-				wait_timer_->async_wait([handler = this->shared_from_this()](std::error_code const& ec) {
-					if (ec) {
-						return;
-					}
-					handler->close();
-				});
-			}
-			void ping() {
-				ping_pong_timer_->expires_from_now(std::chrono::seconds(ping_pong_time_));
-				ping_pong_timer_->async_wait([handler = this->shared_from_this()](std::error_code const& ec) {
-					if (ec) {
-						return;
-					}
-					handler->write("", 9);
-					handler->reset_time();
-					handler->ping();
-				});
-			}
+		void reset_time() {
+			wait_timer_->expires_from_now(std::chrono::seconds(pong_wait_time_));
+			wait_timer_->async_wait([handler = this->shared_from_this()](std::error_code const& ec) {
+				if (ec) {
+					return;
+				}
+				handler->close();
+			});
+		}
+		void ping() {
+			ping_pong_timer_->expires_from_now(std::chrono::seconds(ping_pong_time_));
+			ping_pong_timer_->async_wait([handler = this->shared_from_this()](std::error_code const& ec) {
+				if (ec) {
+					return;
+				}
+				handler->write("", 9);
+				handler->reset_time();
+				handler->ping();
+			});
+		}
 	private:
 		void frame_parser() {
 			read_pos_ += 2;
@@ -224,7 +226,7 @@ namespace xfinal {
 				return;
 			}
 			if (frame_info_.opcode == 10) {  //pong
-				wait_timer_->cancel();
+				reset_time();
 				return;
 			}
 			unsigned char c2 = frame[1];
@@ -238,12 +240,12 @@ namespace xfinal {
 				frame_info_.payload_length = c2;
 				handle_payload_length(0);
 			}
-			else if(c2 == 126){ //后续2个字节 unsigned
+			else if (c2 == 126) { //后续2个字节 unsigned
 				socket_->async_read_some(asio::buffer(&frame[read_pos_], 2), [handler = this->shared_from_this()](std::error_code const& ec, std::size_t read_size) {
 					handler->handle_payload_length(2);
 				});
 			}
-			else if(c2 == 127){  //后续8个字节 unsigned
+			else if (c2 == 127) {  //后续8个字节 unsigned
 				socket_->async_read_some(asio::buffer(&frame[read_pos_], 8), [handler = this->shared_from_this()](std::error_code const& ec, std::size_t read_size) {
 					handler->handle_payload_length(8);
 				});
@@ -255,7 +257,7 @@ namespace xfinal {
 				netendian_to_l(tmp, &(frame[read_pos_]));
 				frame_info_.payload_length = tmp;
 			}
-			else if(read_size==8){
+			else if (read_size == 8) {
 				std::uint64_t tmp = 0;
 				netendian_to_l(tmp, &(frame[read_pos_]));
 				frame_info_.payload_length = tmp;
@@ -276,7 +278,7 @@ namespace xfinal {
 
 		void decode_data(std::size_t use_size) {
 			unsigned char* iter = &(buffers_[data_current_pos_ - use_size]);
-			for (std::size_t i = 0; i < use_size;++i) {
+			for (std::size_t i = 0; i < use_size; ++i) {
 				auto j = i % 4;
 				auto mask_key = frame_info_.mask_key[j];
 				*iter = (*iter) ^ mask_key;
@@ -284,7 +286,7 @@ namespace xfinal {
 			}
 
 			if (frame_info_.eof) {
-				message_ = std::string(buffers_.begin(), buffers_.begin()+ data_current_pos_);
+				message_ = std::string(buffers_.begin(), buffers_.begin() + data_current_pos_);
 				buffers_.resize(0);
 				data_current_pos_ = 0;
 				//数据帧都处理完整 回调
@@ -306,23 +308,23 @@ namespace xfinal {
 			}
 		}
 	public:
-			void close() {
-				std::error_code ec;
-				socket_->shutdown(asio::ip::tcp::socket::shutdown_both, ec);
-				socket_->close();
-				wait_timer_->cancel();
-				ping_pong_timer_->cancel();
-				websocket_event_manager.trigger(url_, "close", *this);  //关闭事件
-				websocket_event_manager.websockets_.erase(nonstd::string_view(socket_uid_.data(), socket_uid_.size()));
-			}
-			void null_close() {  //无路由的空连接需要关闭
-				std::error_code ec;
-				socket_->shutdown(asio::ip::tcp::socket::shutdown_both,ec);
-				socket_->close();
-				wait_timer_->cancel();
-				ping_pong_timer_->cancel();
-				websocket_event_manager.websockets_.erase(nonstd::string_view(socket_uid_.data(), socket_uid_.size()));
-			}
+		void close() {
+			std::error_code ec;
+			socket_->shutdown(asio::ip::tcp::socket::shutdown_both, ec);
+			socket_->close();
+			wait_timer_->cancel();
+			ping_pong_timer_->cancel();
+			websocket_event_manager.trigger(url_, "close", *this);  //关闭事件
+			websocket_event_manager.websockets_.erase(nonstd::string_view(socket_uid_.data(), socket_uid_.size()));
+		}
+		void null_close() {  //无路由的空连接需要关闭
+			std::error_code ec;
+			socket_->shutdown(asio::ip::tcp::socket::shutdown_both, ec);
+			socket_->close();
+			wait_timer_->cancel();
+			ping_pong_timer_->cancel();
+			websocket_event_manager.websockets_.erase(nonstd::string_view(socket_uid_.data(), socket_uid_.size()));
+		}
 	private:
 		std::unique_ptr<asio::ip::tcp::socket> socket_;
 		websocket_event_map& websocket_event_manager;
@@ -336,8 +338,8 @@ namespace xfinal {
 		std::string const url_;
 		std::queue<std::unique_ptr<std::string>> write_frame_queue_;
 		std::size_t frame_data_size_ = 65535;//256
-		std::time_t ping_pong_time_= 30 * 60 * 60;
-		std::time_t pong_wait_time_ = 60;
+		std::time_t ping_pong_time_ = 30 * 60 * 60;
+		std::time_t pong_wait_time_ = 30 * 60;
 		std::unique_ptr<asio::steady_timer> wait_timer_;
 		std::unique_ptr<asio::steady_timer> ping_pong_timer_;
 		unsigned char message_opcode = 0;
@@ -350,7 +352,7 @@ namespace xfinal {
 	}
 
 
-	class websockets final:private nocopyable
+	class websockets final :private nocopyable
 	{
 		friend class connection;
 	public:
