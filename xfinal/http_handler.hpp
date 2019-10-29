@@ -335,7 +335,6 @@ namespace xfinal {
 		};
 	public:
 		response(request& req) :req_(req), view_env_(std::make_unique<inja::Environment>()){
-			add_header("server", "xfinal");//增加服务器标识
 			//初始化view 配置
 			view_env_->set_expression("@{", "}");  
 			view_env_->set_element_notation(inja::ElementNotation::Dot);
@@ -478,6 +477,7 @@ namespace xfinal {
 	private:
 		std::vector<asio::const_buffer> header_to_buffer() noexcept {
 			std::vector<asio::const_buffer> buffers_;
+			add_header("server", "xfinal");//增加服务器标识
 			http_version_ = view2str(req_.http_version()) + ' ';//写入回应状态行 
 			buffers_.emplace_back(asio::buffer(http_version_));
 			buffers_.emplace_back(http_state_to_buffer(state_));
