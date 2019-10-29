@@ -14,6 +14,7 @@
 #include <random>
 namespace xfinal {
 	struct frame_info {
+		frame_info() = default;
 		bool eof;
 		int opcode;
 		int mask;
@@ -72,7 +73,7 @@ namespace xfinal {
 	};
 	class websocket final :public std::enable_shared_from_this<websocket> {
 	public:
-		websocket(websocket_event_map& web, std::string const& url) :websocket_event_manager(web), socket_uid_(uuids::uuid_system_generator{}().to_short_str()), url_(url) {
+		websocket(websocket_event_map& web, std::string const& url) :websocket_event_manager(web), socket_uid_(uuids::uuid_system_generator{}().to_short_str()), url_(url){
 
 		}
 	public:
@@ -127,7 +128,7 @@ namespace xfinal {
 				}
 				std::size_t read_pos = 0;
 				for (std::size_t i = 0; i < counts; ++i) {
-					int left_size = message_size - frame_data_size_;
+					std::int64_t left_size = std::int64_t(message_size) - std::int64_t(frame_data_size_);
 					unsigned short write_data_size = (unsigned short)frame_data_size_;
 					unsigned char frame_head = 0;
 					std::string a_frame;
@@ -330,7 +331,7 @@ namespace xfinal {
 		websocket_event_map& websocket_event_manager;
 		std::string socket_uid_;
 		std::vector<unsigned char> buffers_;
-		unsigned char frame[10];
+		unsigned char frame[10] = {0};
 		frame_info frame_info_;
 		std::size_t read_pos_ = 0;
 		std::size_t data_current_pos_ = 0;

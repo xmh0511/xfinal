@@ -263,7 +263,7 @@ namespace xfinal {
 		void set_view_method(response& res) {
 			if (!view_method_map_.empty()) {
 				for (auto& iter : view_method_map_) {
-					res.view_env_->add_callback(iter.first, iter.second.first,iter.second.second);
+					res.view_env_->add_callback(iter.first, (unsigned int)iter.second.first,iter.second.second);
 				}
 			}
 		}

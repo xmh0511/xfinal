@@ -347,7 +347,7 @@ namespace xfinal {
 
 		////处理content_type 为oct-stream 的body数据  --start
 		void pre_process_oct_stream() {
-			auto body_size = std::atoll(req_.header("content-length").data());
+			std::uint64_t body_size = std::atoll(req_.header("content-length").data());
 			auto header_size = req_.header_length_;
 			if (current_use_pos_ > header_size) {  //是不是读request头的时候 把body也读取进来了 
 				request_info.oct_steam_.open(upload_path_ + "/" + uuids::uuid_system_generator{}().to_short_str());
