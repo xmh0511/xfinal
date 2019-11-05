@@ -524,3 +524,8 @@ int main(){
 # 联系方式
 QQ&ensp;:&ensp;970252187  
 Mail&ensp;:&ensp;970252187@qq.com  
+
+# Donation
+
+### alipay:  
+![image](https://github.com/xmh0511/donation/blob/master/alipay.png)
