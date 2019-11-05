@@ -525,8 +525,8 @@ int main(){
 QQ&ensp;:&ensp;970252187  
 Mail&ensp;:&ensp;970252187@qq.com  
 
-# Donation
-
+# Donation  
+如果项目对你有所帮助，请给作者一点鼓励和支持  
 ### alipay:  
 ![image](https://github.com/xmh0511/donation/blob/master/alipay.png)  
 ### wechat:  
