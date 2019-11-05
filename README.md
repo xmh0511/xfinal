@@ -528,4 +528,6 @@ Mail&ensp;:&ensp;970252187@qq.com
 # Donation
 
 ### alipay:  
-![image](https://github.com/xmh0511/donation/blob/master/alipay.png)
+![image](https://github.com/xmh0511/donation/blob/master/alipay.png)  
+### wechat:  
+![image](https://github.com/xmh0511/donation/blob/master/wechat.png)  
