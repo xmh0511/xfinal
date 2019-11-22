@@ -12,7 +12,7 @@ namespace xfinal {
 	constexpr http_method HEAD = http_method::HEAD;
 	constexpr http_method PUT = http_method::PUT;
 	constexpr http_method OPTIONS = http_method::OPTIONS;
-	constexpr http_method TRACE = http_method::TRACE;
+	constexpr http_method TRACE_ = http_method::TRACE_;
 	constexpr http_method DEL = http_method::DEL;
 	constexpr http_method MKCOL = http_method::MKCOL;
 	constexpr http_method MOVE = http_method::MOVE;

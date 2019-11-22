@@ -26,7 +26,7 @@ namespace xfinal {
 		nocopyable& operator=(nocopyable const&) = delete;
 	};
 
-	std::string to_lower(std::string str) {
+	inline std::string to_lower(std::string str) {
 		std::for_each(str.begin(), str.end(), [](char& c) {
 			c = std::tolower(c);
 		});
@@ -40,12 +40,12 @@ namespace xfinal {
 		HEAD,
 		PUT,
 		OPTIONS,
-		TRACE,
+		TRACE_,  //与windows宏重名
 		DEL,
 		MKCOL,
 		MOVE
 	};
-	std::string http_method_to_name(http_method m) {
+	inline std::string http_method_to_name(http_method m) {
 		switch (m) {
 		case http_method::GET:
 		{
@@ -72,7 +72,7 @@ namespace xfinal {
 			return "OPTIONS";
 		}
 		break;
-		case http_method::TRACE:
+		case http_method::TRACE_:
 		{
 			return "TRACE";
 		}
@@ -241,7 +241,7 @@ namespace xfinal {
 		//}
 	}
 
-	std::string get_root_director(fs::path path) {
+	inline std::string get_root_director(fs::path path) {
 		auto c = path.parent_path();
 		while (c.stem().string() != ".") {
 			path = c;
@@ -299,7 +299,7 @@ namespace xfinal {
 		return buff;
 	}
 
-	std::unordered_map<nonstd::string_view, nonstd::string_view> cookies_map(nonstd::string_view cookies) {
+	inline std::unordered_map<nonstd::string_view, nonstd::string_view> cookies_map(nonstd::string_view cookies) {
 		auto v = split(cookies, "; ");
 		std::unordered_map<nonstd::string_view, nonstd::string_view> out;
 		for (auto iter : v) {
@@ -366,7 +366,7 @@ namespace xfinal {
 		return std::string(buff, size);
 	}
 
-	bool is_bigendian(){
+	inline bool is_bigendian(){
 	  int a = 1;
 	  unsigned char& c = (unsigned char&)a;
 	  if (c == '\0') {
