@@ -115,7 +115,7 @@ public:
             /* Pad out to 56 mod 64. */
             index = (bit32)((count[0] >> 3) & 0x3f);
             padLen = (index < 56) ? (56 - index) : (120 - index);
-            init(PADDING, padLen);
+            init(GET_PADDING(), padLen);
 
             /* Append length (before padding) */
             init(bits, 8);
@@ -140,8 +140,8 @@ public:
             int t = digest_[i];
             int a = t / 16;
             int b = t % 16;
-            str.append(1, HEX_NUMBERS[a]);
-            str.append(1, HEX_NUMBERS[b]);
+            str.append(1, GET_HEX_NUMBERS()[a]);
+            str.append(1, GET_HEX_NUMBERS()[b]);
         }
         return str;
     }
@@ -306,20 +306,23 @@ private:
     /* message digest. */
     byte digest[16];
 
-    /* padding for calculate. */
-    static const byte PADDING[64];
-
-    /* Hex numbers. */
-    static const char HEX_NUMBERS[16];
+private:
+	    /* padding for calculate. */
+		static byte const* GET_PADDING() {
+			static const byte PADDING[64] = { 0x80 };
+			return PADDING;
+		}
+		/* Hex numbers. */
+		static char const* GET_HEX_NUMBERS() {
+			static char const HEX_NUMBERS[16] = {
+				'0', '1', '2', '3',
+				'4', '5', '6', '7',
+				'8', '9', 'a', 'b',
+				'c', 'd', 'e', 'f'
+			};
+			return HEX_NUMBERS;
+		}
 };
 
-/* Define the static member of MD5. */
-const byte MD5::PADDING[64] = { 0x80 };
-const char MD5::HEX_NUMBERS[16] = {
-        '0', '1', '2', '3',
-        '4', '5', '6', '7',
-        '8', '9', 'a', 'b',
-        'c', 'd', 'e', 'f'
-};
 
 #endif // MD5_H
