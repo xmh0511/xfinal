@@ -478,6 +478,9 @@ namespace xfinal {
 		std::vector<asio::const_buffer> header_to_buffer() noexcept {
 			std::vector<asio::const_buffer> buffers_;
 			add_header("server", "xfinal");//增加服务器标识
+			if (write_type_ == write_type::no_body) {//对于没有body的响应需要明确指定Content-Length=0,否则对于某些客户端会当作chunked处理导致客户端处理出错
+				add_header("Content-Length", "0");
+			}
 			http_version_ = view2str(req_.http_version()) + ' ';//写入回应状态行 
 			buffers_.emplace_back(asio::buffer(http_version_));
 			buffers_.emplace_back(http_state_to_buffer(state_));
