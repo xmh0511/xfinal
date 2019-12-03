@@ -231,7 +231,13 @@ namespace xfinal {
 			while (old != begin_) {
 				if ((*old) == '=') {
 					auto key = nonstd::string_view(&(*start), old - start);
-					form.insert(std::make_pair(key, nonstd::string_view(&(*(old + 1)), begin_ - 1 - old)));
+					if ((old + 1) != end_) {
+						form.insert(std::make_pair(key, nonstd::string_view(&(*(old + 1)), begin_ - 1 - old)));
+					}
+					else {
+						form.insert(std::make_pair(key, ""));
+					}
+					break;
 				}
 				++old;
 			}
