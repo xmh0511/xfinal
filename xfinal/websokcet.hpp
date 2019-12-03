@@ -87,6 +87,7 @@ namespace xfinal {
 			ping_pong_timer_ = std::make_unique<asio::steady_timer>(socket_->get_io_service());
 			//ping();
 			websocket_event_manager.trigger(url_, "open", *this);
+			reset_time(); //开始开启空连接超时 从当前时间算起
 			start_read();
 		}
 	private:
