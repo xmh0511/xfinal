@@ -96,8 +96,8 @@ namespace xfinal {
 			std::memset(frame, 0, sizeof(frame));
 			std::memset(&frame_info_, 0, sizeof(frame_info_));
 			socket_->async_read_some(asio::buffer(&frame[read_pos_], 2), [handler = this->shared_from_this()](std::error_code const& ec, std::size_t read_size) {
-				handler->frame_parser();
 				handler->reset_time();
+				handler->frame_parser();
 			});
 		}
 	public:
@@ -244,11 +244,13 @@ namespace xfinal {
 			}
 			else if (c2 == 126) { //后续2个字节 unsigned
 				asio::async_read(*socket_, asio::buffer(&frame[read_pos_], 2), [handler = this->shared_from_this()](std::error_code const& ec, std::size_t read_size) {
+					handler->reset_time();
 					handler->handle_payload_length(2);
 				});
 			}
 			else if (c2 == 127) {  //后续8个字节 unsigned
 				asio::async_read(*socket_, asio::buffer(&frame[read_pos_], 8), [handler = this->shared_from_this()](std::error_code const& ec, std::size_t read_size) {
+					handler->reset_time();
 					handler->handle_payload_length(8);
 				});
 			}
@@ -266,6 +268,7 @@ namespace xfinal {
 			}
 			if (frame_info_.mask == 1) {  //应该必须等于1
 				asio::async_read(*socket_, asio::buffer(&frame_info_.mask_key[0], 4), [handler = this->shared_from_this()](std::error_code const& ec, std::size_t read_size) {
+					handler->reset_time();
 					handler->read_data();
 				});
 			}
@@ -273,6 +276,7 @@ namespace xfinal {
 		void read_data() {
 			expand_buffer(frame_info_.payload_length);
 			asio::async_read(*socket_, asio::buffer(&buffers_[data_current_pos_], (std::size_t)frame_info_.payload_length), [handler = this->shared_from_this()](std::error_code const& ec, std::size_t read_size) {
+				handler->reset_time();
 				handler->set_current_pos(read_size);
 				handler->decode_data(read_size);
 			});
