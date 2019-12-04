@@ -272,7 +272,7 @@ namespace xfinal {
 		}
 		void read_data() {
 			expand_buffer(frame_info_.payload_length);
-			socket_->async_read_some(asio::buffer(&buffers_[data_current_pos_], (std::size_t)frame_info_.payload_length), [handler = this->shared_from_this()](std::error_code const& ec, std::size_t read_size) {
+			asio::async_read(*socket_, asio::buffer(&buffers_[data_current_pos_], (std::size_t)frame_info_.payload_length), [handler = this->shared_from_this()](std::error_code const& ec, std::size_t read_size) {
 				handler->set_current_pos(read_size);
 				handler->decode_data(read_size);
 			});
