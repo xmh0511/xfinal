@@ -176,18 +176,19 @@ namespace xfinal {
 			if (write_frame_queue_.empty()) {
 				return;
 			}
-			auto frame = std::move(write_frame_queue_.front());
-			write_frame_queue_.pop();
-			asio::const_buffer buffers(frame->data(), frame->size());
+			while (!write_frame_queue_.empty()) {
+				auto frame = std::move(write_frame_queue_.front());
+				write_frame_queue_.pop();
+				asio::const_buffer buffers(frame->data(), frame->size());
+				std::error_code ingore_ec;
+				asio::write(*socket_, buffers, ingore_ec);
+			}
 			// asio::async_write(*socket_,buffers, [frame = std::move(frame),handler = this->shared_from_this()](std::error_code const& ec,std::size_t size) {
 			// 	if (ec) {
 			// 		return;
 			// 	}
 			// 	handler->write_frame();
 			// });
-			std::error_code ingore_ec;
-			asio::write(*socket_, buffers, ingore_ec);
-			write_frame();
 		}
 	public:
 		void reset_time() {
