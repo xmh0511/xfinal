@@ -182,6 +182,11 @@ namespace xfinal {
 				asio::const_buffer buffers(frame->data(), frame->size());
 				std::error_code ingore_ec;
 				asio::write(*socket_, buffers, ingore_ec);
+				if (ingore_ec) {
+					auto clear = std::queue<std::unique_ptr<std::string>>{};
+					write_frame_queue_.swap(clear);
+					break;
+				}
 			}
 			// asio::async_write(*socket_,buffers, [frame = std::move(frame),handler = this->shared_from_this()](std::error_code const& ec,std::size_t size) {
 			// 	if (ec) {
