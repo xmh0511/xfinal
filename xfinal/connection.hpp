@@ -450,9 +450,9 @@ namespace xfinal {
 						handler->close();
 					}
 					else {
-						socket_close_ = true; //对于connection来说 sokcet 进行逻辑关闭 http部分处理结束 转交给websocket处理
-						auto ws = router_.websokcets().start_webscoket(view2str(req_.url()));
-						ws->move_socket(std::move(socket_));
+						handler->socket_close_ = true; //对于connection来说 sokcet 进行逻辑关闭 http部分处理结束 转交给websocket处理
+						auto ws = handler->router_.websokcets().start_webscoket(view2str(handler->req_.url()));
+						ws->move_socket(std::move(handler->socket_));
 					}
 				});
 			}
