@@ -31,7 +31,7 @@ namespace xfinal {
 					left_buffer_size_ = 0;
 					return false;
 				}
-				else { //¶ÔÓÚmultipart ÕâÖÖ¿ÉÄÜĞèÒª»ñÈ¡´óÁ¿Êı¾İµÄ ĞèÒªÌØÊâ´¦Àí ÒòÎªÕâÀïÒ»¶¨ÊÇ´¦ÀímutltipartµÄÊı¾İ²¿·ÖµÄ Ö®Ç°Êı¾İÒÑ¾­±»¼ÇÂ¼ÁË ËùÒÔÓÃÍêÁË¿ÉÒÔÇå³ı
+				else { //å¯¹äºmultipart è¿™ç§å¯èƒ½éœ€è¦è·å–å¤§é‡æ•°æ®çš„ éœ€è¦ç‰¹æ®Šå¤„ç† å› ä¸ºè¿™é‡Œä¸€å®šæ˜¯å¤„ç†mutltipartçš„æ•°æ®éƒ¨åˆ†çš„ ä¹‹å‰æ•°æ®å·²ç»è¢«è®°å½•äº† æ‰€ä»¥ç”¨å®Œäº†å¯ä»¥æ¸…é™¤
 					expand_buffer_size = max_buffer_size_;
 					if (buffers_.size() < expand_buffer_size) {
 						buffers_.resize(max_buffer_size_);
@@ -50,9 +50,9 @@ namespace xfinal {
 		}
 		void post_router() {
 			router_.post_router(req_, res_);
-			write();  //»ØÓ¦ÇëÇó
+			write();  //å›åº”è¯·æ±‚
 		}
-		void parse_header(http_parser_header& parser) {  //½âÎöÇëÇóÍ·
+		void parse_header(http_parser_header& parser) {  //è§£æè¯·æ±‚å¤´
 			auto request = parser.parse_request_header();
 			if (request.first) {
 				request_info = std::move(request.second);
@@ -70,7 +70,7 @@ namespace xfinal {
 			request_error("bad request,request header error");
 			//http request error;
 		}
-		void handle_read() {  //¶ÁÈ¡ÇëÇóÍ·Íê±Ïºó ¿ªÊ¼ÏÂÒ»²½´¦Àí
+		void handle_read() {  //è¯»å–è¯·æ±‚å¤´å®Œæ¯•å å¼€å§‹ä¸‹ä¸€æ­¥å¤„ç†
 			req_.init_content_type();
 			if (req_.has_body()) {  //has request body
 				auto type = req_.content_type();
@@ -105,18 +105,18 @@ namespace xfinal {
 				break;
 				}
 			}
-			else {  //Èç¹ûÃ»ÓĞbody²¿·Ö Ò²ÓĞ¿ÉÄÜÊÇwebsocket
+			else {  //å¦‚æœæ²¡æœ‰bodyéƒ¨åˆ† ä¹Ÿæœ‰å¯èƒ½æ˜¯websocket
 				auto& wss = router_.websokcets();
-				if (wss.is_websocket(req_)) {  //ÊÇwebsokcetÇëÇó
-					handle_websocket();  //È¥´¦Àíwebsocket
+				if (wss.is_websocket(req_)) {  //æ˜¯websokcetè¯·æ±‚
+					handle_websocket();  //å»å¤„ç†websocket
 				}
-				else {  //ÆÕÍ¨httpÇëÇó
+				else {  //æ™®é€šhttpè¯·æ±‚
 					post_router();  
 				}
 			}
 		}
 
-		void handle_body(content_type type, std::size_t body_length) {  //¶ÁÈ¡ÍêÕûµÄbodyºó ¸ü¾ßcontent_type ½øĞĞ´¦Àí
+		void handle_body(content_type type, std::size_t body_length) {  //è¯»å–å®Œæ•´çš„bodyå æ›´å…·content_type è¿›è¡Œå¤„ç†
 			switch (type)
 			{
 			case content_type::url_encode_form:
@@ -143,26 +143,26 @@ namespace xfinal {
 				break;
 			}
 		}
-		/// ´¦ÀíÓĞcontent-lengthµÄbody  ¶ÁÈ¡ÍêÕûbody²¿·Ö  ---start
-		void pre_process_body(content_type type) {  //¶Ábody µÄÔ¤´¦Àí
+		/// å¤„ç†æœ‰content-lengthçš„body  è¯»å–å®Œæ•´bodyéƒ¨åˆ†  ---start
+		void pre_process_body(content_type type) {  //è¯»body çš„é¢„å¤„ç†
 			auto header_size = req_.header_length_;
-			if (current_use_pos_ > header_size) {  //ÊÇ²»ÊÇ¶ÁÍ·µÄÊ±ºò °ÑbodyÒ²¶ÁÈ¡½øÀ´ÁË 
+			if (current_use_pos_ > header_size) {  //æ˜¯ä¸æ˜¯è¯»å¤´çš„æ—¶å€™ æŠŠbodyä¹Ÿè¯»å–è¿›æ¥äº† 
 				forward_contain_data(buffers_, header_size, current_use_pos_);
 				current_use_pos_ -= header_size;
 				left_buffer_size_ = buffers_.size() - current_use_pos_;
 				auto body_length = req_.body_length();
-				if (body_length > current_use_pos_) {    //bodyÃ»ÓĞ¶ÁÍêÕû
+				if (body_length > current_use_pos_) {    //bodyæ²¡æœ‰è¯»å®Œæ•´
 					continue_read_data([handler = this->shared_from_this(), type]() {
 						handler->process_body(type);
 					});
 				}
-				else {  //¿ªÊ¼¸ü¾ßcontent_type ½âÎöÊı¾İ ²¢Ö´ĞĞÂ·ÓÉ
+				else {  //å¼€å§‹æ›´å…·content_type è§£ææ•°æ® å¹¶æ‰§è¡Œè·¯ç”±
 					request_info.body_ = std::string(buffers_.data(), body_length);
 					handle_body(type, body_length);
-					post_router();  //´¦ÀíÍê±Ï Ö´ĞĞÂ·ÓÉ
+					post_router();  //å¤„ç†å®Œæ¯• æ‰§è¡Œè·¯ç”±
 				}
 			}
-			else {  //Èç¹û¸ÕºÃÈİÆ÷µÄ´óĞ¡¶ÁÈ¡ÁËÍêÕûµÄheadÍ·
+			else {  //å¦‚æœåˆšå¥½å®¹å™¨çš„å¤§å°è¯»å–äº†å®Œæ•´çš„headå¤´
 				buffers_.clear();
 				buffers_.resize(1024);
 				current_use_pos_ = 0;
@@ -172,22 +172,22 @@ namespace xfinal {
 				}, false);
 			}
 		}
-		void process_body(content_type type) {  //Èç¹ûÔ¤¶ÁÈ¡bodyµÄÊ±ºòÃ»ÓĞ¶ÁÍêÕûbody 
+		void process_body(content_type type) {  //å¦‚æœé¢„è¯»å–bodyçš„æ—¶å€™æ²¡æœ‰è¯»å®Œæ•´body 
 			auto body_length = req_.body_length();
-			if (body_length > current_use_pos_) {  //bodyÃ»ÓĞ¶ÁÍêÕû
+			if (body_length > current_use_pos_) {  //bodyæ²¡æœ‰è¯»å®Œæ•´
 				continue_read_data([handler = this->shared_from_this(), type]() {
 					handler->process_body(type);
 				});
 			}
-			else { //¿ªÊ¼¸ü¾ßcontent_type ½âÎöÊı¾İ ²¢Ö´ĞĞÂ·ÓÉ
+			else { //å¼€å§‹æ›´å…·content_type è§£ææ•°æ® å¹¶æ‰§è¡Œè·¯ç”±
 				request_info.body_ = std::string(buffers_.data(), body_length);
 				handle_body(type, body_length);
-				post_router(); //´¦ÀíÍê±Ï Ö´ĞĞÂ·ÓÉ
+				post_router(); //å¤„ç†å®Œæ¯• æ‰§è¡Œè·¯ç”±
 			}
 		}
-		/// ´¦ÀíÓĞcontent-lengthµÄbody  ¶ÁÈ¡ÍêÕûbody²¿·Ö ---end
+		/// å¤„ç†æœ‰content-lengthçš„body  è¯»å–å®Œæ•´bodyéƒ¨åˆ† ---end
 
-		void process_url_form(std::size_t body_length) { // ´¦Àíapplication/x-www-form-urlencoded ÀàĞÍÇëÇó
+		void process_url_form(std::size_t body_length) { // å¤„ç†application/x-www-form-urlencoded ç±»å‹è¯·æ±‚
 			request_info.decode_body_ = request_info.body_;
 			req_.body_ = request_info.body_;
 			http_urlform_parser parser{ request_info.decode_body_ };
@@ -195,17 +195,17 @@ namespace xfinal {
 			req_.form_map_ = request_info.form_map_;
 		}
 
-		void process_string() {  //´¦ÀíÖîÈç json text µÈ´¿ÎÄ±¾ÀàĞÍµÄbody
+		void process_string() {  //å¤„ç†è¯¸å¦‚ json text ç­‰çº¯æ–‡æœ¬ç±»å‹çš„body
 			req_.body_ = nonstd::string_view(request_info.body_);
 		}
 
 		void process_multipart_form() {
 			post_router();
 		}
-		////´¦Àícontent_type Îªmultipart_form µÄbodyÊı¾İ  --start
-		void pre_process_multipart_body(content_type type) { //Ô¤´¦Àícontent_type Î»multipart_form ÀàĞÍµÄbody
+		////å¤„ç†content_type ä¸ºmultipart_form çš„bodyæ•°æ®  --start
+		void pre_process_multipart_body(content_type type) { //é¢„å¤„ç†content_type ä½multipart_form ç±»å‹çš„body
 			auto header_size = req_.header_length_;
-			if (current_use_pos_ > header_size) {  //ÊÇ²»ÊÇ¶ÁrequestÍ·µÄÊ±ºò °ÑbodyÒ²¶ÁÈ¡½øÀ´ÁË 
+			if (current_use_pos_ > header_size) {  //æ˜¯ä¸æ˜¯è¯»requestå¤´çš„æ—¶å€™ æŠŠbodyä¹Ÿè¯»å–è¿›æ¥äº† 
 				start_read_pos_ = header_size;
 				left_buffer_size_ = buffers_.size() - current_use_pos_;
 			}
@@ -219,13 +219,13 @@ namespace xfinal {
 
 		void process_multipart_body(content_type type) {
 			std::string boundary_start = view2str(req_.boundary_key_);
-			if (!boundary_start.empty()) {  //ÓĞboundary 
+			if (!boundary_start.empty()) {  //æœ‰boundary 
 				auto boundary_start_ = "--" + boundary_start;
 				auto boundary_end_ = boundary_start_ + std::string("--");
 				http_multipart_parser parser{ boundary_start_,boundary_end_ };
 				process_mutipart_head(parser, type);
 			}
-			else {  //Èç¹ûcontent_typeÃ»ÓĞboundary ¾ÍÊÇ´íÎó
+			else {  //å¦‚æœcontent_typeæ²¡æœ‰boundary å°±æ˜¯é”™è¯¯
 				request_error("bad request,multipart form error");
 			}
 		}
@@ -233,25 +233,25 @@ namespace xfinal {
 		void process_mutipart_head(http_multipart_parser const& parser, content_type type) {
 			auto end = buffers_.begin() + current_use_pos_;
 			//std::cout << nonstd::string_view{ buffers_.data() + start_read_pos_, current_use_pos_ - start_read_pos_ } << std::endl;
-			if (parser.is_complete_part_header(buffers_.begin()+ start_read_pos_, end)) {  //Èç¹ûµ±Ç°bufferÖĞÓĞÍêÕûµÄ²¿·ÖmultipartÍ·
-				auto pr = parser.parser_part_head(buffers_.begin()+ start_read_pos_, end);//½âÎömultipart partÍ·²¿ 
-				pre_process_multipart_data(pr, parser); //´¦ÀíÊı¾İ²¿·Ö
+			if (parser.is_complete_part_header(buffers_.begin()+ start_read_pos_, end)) {  //å¦‚æœå½“å‰bufferä¸­æœ‰å®Œæ•´çš„éƒ¨åˆ†multipartå¤´
+				auto pr = parser.parser_part_head(buffers_.begin()+ start_read_pos_, end);//è§£æmultipart partå¤´éƒ¨ 
+				pre_process_multipart_data(pr, parser); //å¤„ç†æ•°æ®éƒ¨åˆ†
 			}
 			else {
 				continue_read_data([type, parser, handler = this->shared_from_this()]() {
 					handler->process_mutipart_head(parser, type);
-				}, true, false);  //Ö»ÊÇ¶ÁmultipartµÄÍ· ²»ĞèÒª¶ÔbuffferµÄÈİÁ¿ÌØÊâ´¦Àí ³¬¹ı¾Í½áÊøÁË
+				}, true, false);  //åªæ˜¯è¯»multipartçš„å¤´ ä¸éœ€è¦å¯¹buffferçš„å®¹é‡ç‰¹æ®Šå¤„ç† è¶…è¿‡å°±ç»“æŸäº†
 			}
 		}
 
-		void pre_process_multipart_data(std::pair<std::size_t, std::map<std::string, std::string>> const& pr, http_multipart_parser const& parser) { //ÊÇ·ñĞèÒª¹ıÂËµômutipart head
+		void pre_process_multipart_data(std::pair<std::size_t, std::map<std::string, std::string>> const& pr, http_multipart_parser const& parser) { //æ˜¯å¦éœ€è¦è¿‡æ»¤æ‰mutipart head
 			if (pr.first != 0) {
-				if (current_use_pos_ > pr.first) {  //¶ÁÈ¡multipart headµÄÊ±ºò Ò²¶ÁÈ¡ÁË²¿·ÖÊı¾İ ´¦ÀíÊı¾İµÄÊ±ºò °ÑÖ®Ç°µÄÍ·¸øÒÆ³ıÁË
+				if (current_use_pos_ > pr.first) {  //è¯»å–multipart headçš„æ—¶å€™ ä¹Ÿè¯»å–äº†éƒ¨åˆ†æ•°æ® å¤„ç†æ•°æ®çš„æ—¶å€™ æŠŠä¹‹å‰çš„å¤´ç»™ç§»é™¤äº†
 					start_read_pos_ += pr.first;
 					left_buffer_size_ = buffers_.size() - current_use_pos_;
 					process_multipart_data(pr.second, parser);
 				}
-				else {  //¶Ámultipart headµÄÊ±ºòÃ»ÓĞ¶ÁÈ¡µ½multipartµÄdata²¿·Ö ¾Í¿ÉÒÔÇå³ıÁË ÒòÎªÖ®Ç°µÄÍ·ÒÑ¾­½âÎö¹ıÁË
+				else {  //è¯»multipart headçš„æ—¶å€™æ²¡æœ‰è¯»å–åˆ°multipartçš„dataéƒ¨åˆ† å°±å¯ä»¥æ¸…é™¤äº† å› ä¸ºä¹‹å‰çš„å¤´å·²ç»è§£æè¿‡äº†
 					buffers_.clear();
 					buffers_.resize(1024);
 					current_use_pos_ = 0;
@@ -267,13 +267,13 @@ namespace xfinal {
 
 		void process_multipart_data(std::map<std::string, std::string> const& head, http_multipart_parser const& parser) {
 			auto dpr = parser.is_end_part_data(buffers_.data()+start_read_pos_, current_use_pos_ - start_read_pos_);
-			if (dpr.first== multipart_data_state::is_end) { //Èç¹ûÒÑ¾­ÊÇÍêÕûµÄÊı¾İÁË("\r\n--boundary_char")
+			if (dpr.first== multipart_data_state::is_end) { //å¦‚æœå·²ç»æ˜¯å®Œæ•´çš„æ•°æ®äº†("\r\n--boundary_char")
 				record_mutlipart_data(head, nonstd::string_view(buffers_.data()+ start_read_pos_, dpr.second), parser, dpr.first);
 			}
-			else if (dpr.first == multipart_data_state::maybe_end) {  //»òĞíÊÇÊı¾İ²¿·Ö½áÊøÁË ¿ÉÄÜ±êÊ¶·û\r
+			else if (dpr.first == multipart_data_state::maybe_end) {  //æˆ–è®¸æ˜¯æ•°æ®éƒ¨åˆ†ç»“æŸäº† å¯èƒ½æ ‡è¯†ç¬¦\r
 				record_mutlipart_data(head, nonstd::string_view(buffers_.data() + start_read_pos_, dpr.second), parser, dpr.first);
 			}
-			else if (dpr.first == multipart_data_state::all_part_data) { //bufferÖĞ¶¼ÊÇÊı¾İ²¿·Ö
+			else if (dpr.first == multipart_data_state::all_part_data) { //bufferä¸­éƒ½æ˜¯æ•°æ®éƒ¨åˆ†
 				record_mutlipart_data(head, nonstd::string_view(buffers_.data() + start_read_pos_, current_use_pos_ - start_read_pos_), parser, dpr.first);
 			}
 		}
@@ -283,7 +283,7 @@ namespace xfinal {
 			auto pos_name = value.find("name") + sizeof("name") + 1;
 			auto name = value.substr(pos_name, value.find('\"', pos_name) - pos_name);
 			auto type = value.find("filename");
-			if (type != std::string::npos) {  //ÊÇÎÄ¼şÀàĞÍ
+			if (type != std::string::npos) {  //æ˜¯æ–‡ä»¶ç±»å‹
 				auto file = request_info.multipart_files_map_.find(name);
 				if (file != request_info.multipart_files_map_.end()) {
 					file->second.add_data(data);
@@ -301,22 +301,22 @@ namespace xfinal {
 					fileo.add_data(data);
 				}
 			}
-			else {  //ÊÇÎÄ±¾ÀàĞÍ
+			else {  //æ˜¯æ–‡æœ¬ç±»å‹
 				request_info.multipart_form_map_[name] += view2str(data);
 			}
 			if (data_state== multipart_data_state::is_end) {
-				if (type != std::string::npos) {  //Èç¹ûÊÇÎÄ¼ş ¶ÁÈ¡ÍêÁË ¾Í¿ÉÒÔ¹Ø±ÕÎÄ¼şÖ¸ÕëÁË
+				if (type != std::string::npos) {  //å¦‚æœæ˜¯æ–‡ä»¶ è¯»å–å®Œäº† å°±å¯ä»¥å…³é—­æ–‡ä»¶æŒ‡é’ˆäº†
 					request_info.multipart_files_map_[name].close();
 				}
-				if (parser.is_end((buffers_.begin()+ start_read_pos_ + data.size() + 2), buffers_.begin() + current_use_pos_)) { //ÅĞ¶ÏÊÇ·ñÈ«²¿½ÓÊÜÍê±Ï »Øµ÷multipart Â·ÓÉ
+				if (parser.is_end((buffers_.begin()+ start_read_pos_ + data.size() + 2), buffers_.begin() + current_use_pos_)) { //åˆ¤æ–­æ˜¯å¦å…¨éƒ¨æ¥å—å®Œæ¯• å›è°ƒmultipart è·¯ç”±
 					handle_body(content_type::multipart_form, 0);
 					return;
 				}
-				//forward_contain_data(buffers_, data.size(), current_use_pos_);  //°ÑÏÂÒ»ÌõµÄÍ·²¿Êı¾İÒÆ¶¯µ½bufferµÄÇ°ÃæÀ´
+				//forward_contain_data(buffers_, data.size(), current_use_pos_);  //æŠŠä¸‹ä¸€æ¡çš„å¤´éƒ¨æ•°æ®ç§»åŠ¨åˆ°bufferçš„å‰é¢æ¥
 				start_read_pos_ += data.size();
 				//current_use_pos_ -= data.size();
 				left_buffer_size_ = buffers_.size() - current_use_pos_;
-				if (left_buffer_size_ == 0) {  //buffersÒÑ¾­Ã»ÓĞ¿Õ¼äÁË ĞèÒª°ÑÒÑ¾­´¦ÀíµÄÊı¾İ¸øÇåÁË£¬ÌÚ³ö¿Õ¼ä
+				if (left_buffer_size_ == 0) {  //bufferså·²ç»æ²¡æœ‰ç©ºé—´äº† éœ€è¦æŠŠå·²ç»å¤„ç†çš„æ•°æ®ç»™æ¸…äº†ï¼Œè…¾å‡ºç©ºé—´
 					forward_contain_data(buffers_, start_read_pos_, current_use_pos_);
 					current_use_pos_ -= start_read_pos_;
 					start_read_pos_ = 0;
@@ -334,7 +334,7 @@ namespace xfinal {
 					handler->process_multipart_data(head, parser);
 				}, true, true);
 			}
-			else if(data_state== multipart_data_state::all_part_data) {  //buffersÖĞËùÓĞµÄÊı¾İ¶¼ÊÇmulitpart µÄÊı¾İ £¨²»°üº¬multipartÍ·£©ËùÒÔ¿ÉÒÔÇå³ı
+			else if(data_state== multipart_data_state::all_part_data) {  //buffersä¸­æ‰€æœ‰çš„æ•°æ®éƒ½æ˜¯mulitpart çš„æ•°æ® ï¼ˆä¸åŒ…å«multipartå¤´ï¼‰æ‰€ä»¥å¯ä»¥æ¸…é™¤
 				buffers_.clear();
 				start_read_pos_ = 0;
 				current_use_pos_ = 0;
@@ -343,16 +343,16 @@ namespace xfinal {
 				}, true, true);
 			}
 		}
-		////´¦Àícontent_type Îªmultipart_form µÄbodyÊı¾İ  --end
+		////å¤„ç†content_type ä¸ºmultipart_form çš„bodyæ•°æ®  --end
 
-		////´¦Àícontent_type Îªoct-stream µÄbodyÊı¾İ  --start
+		////å¤„ç†content_type ä¸ºoct-stream çš„bodyæ•°æ®  --start
 		void pre_process_oct_stream() {
 			std::uint64_t body_size = std::atoll(req_.header("content-length").data());
 			auto header_size = req_.header_length_;
-			if (current_use_pos_ > header_size) {  //ÊÇ²»ÊÇ¶ÁrequestÍ·µÄÊ±ºò °ÑbodyÒ²¶ÁÈ¡½øÀ´ÁË 
+			if (current_use_pos_ > header_size) {  //æ˜¯ä¸æ˜¯è¯»requestå¤´çš„æ—¶å€™ æŠŠbodyä¹Ÿè¯»å–è¿›æ¥äº† 
 				request_info.oct_steam_.open(upload_path_ + "/" + uuids::uuid_system_generator{}().to_short_str());
 				request_info.oct_steam_.add_data(nonstd::string_view{ &(buffers_[header_size]),current_use_pos_ - header_size });
-				if ((current_use_pos_ - header_size) > body_size) {  //Èç¹ûÒÑ¾­¶ÁÍêÁËËùÓĞÊı¾İ
+				if ((current_use_pos_ - header_size) > body_size) {  //å¦‚æœå·²ç»è¯»å®Œäº†æ‰€æœ‰æ•°æ®
 					handle_body(content_type::octet_stream, (std::size_t)body_size);
 					return;
 				}
@@ -383,19 +383,16 @@ namespace xfinal {
 		void process_oct() {
 			post_router();
 		}
-		////´¦Àícontent_type Îªoct-stream µÄbodyÊı¾İ  --end
+		////å¤„ç†content_type ä¸ºoct-stream çš„bodyæ•°æ®  --end
 
-		void handle_websocket() {
+		void handle_websocket() { ///websocket å¤„ç†
 			router_.websokcets().update_to_websocket(res_);
 			forward_write(true);
-			socket_close_ = true; //¶ÔÓÚconnectionÀ´Ëµ sokcet Âß¼­¹Ø±ÕÁË ×ª½»¸øwebsocket´¦Àí
-			auto ws = router_.websokcets().start_webscoket(view2str(req_.url()));
-			ws->move_socket(std::move(socket_));
 		}
 
 	public:
 		template<typename Function>
-		void continue_read_data(Function&& callback, bool is_expand = true, bool is_multipart = false) { //ÓÃÀ´¼ÌĞø¶ÁÈ¡bodyÊ£ÓàÊı¾İµÄ
+		void continue_read_data(Function&& callback, bool is_expand = true, bool is_multipart = false) { //ç”¨æ¥ç»§ç»­è¯»å–bodyå‰©ä½™æ•°æ®çš„
 			if (is_expand) {
 				bool b = expand_size(is_multipart);
 				if (!b) {
@@ -410,7 +407,7 @@ namespace xfinal {
 				function();
 			});
 		}
-		void read_header() {  //ÓĞÁ¬½ÓÇëÇóºó ¿ªÊ¼¶ÁÈ¡ÇëÇóÍ·
+		void read_header() {  //æœ‰è¿æ¥è¯·æ±‚å å¼€å§‹è¯»å–è¯·æ±‚å¤´
 			socket_->async_read_some(asio::buffer(&buffers_[current_use_pos_], left_buffer_size_), [handler = this->shared_from_this()](std::error_code const& ec, std::size_t read_size){
 				if (ec) {
 					return;
@@ -439,18 +436,23 @@ namespace xfinal {
 
 		void write() {
 			auto is_chunked = res_.is_chunked_;
-			if (!is_chunked) {  //·Çchunked·½Ê½·µ»ØÊı¾İ
+			if (!is_chunked) {  //échunkedæ–¹å¼è¿”å›æ•°æ®
 				forward_write();
 			}
 			else {
 				chunked_write();
 			}
 		}
-		void forward_write(bool is_websokcet = false) {  //Ö±½ÓĞ´ ·Çchunked
+		void forward_write(bool is_websokcet = false) {  //ç›´æ¥å†™ échunked
 			if (!socket_close_) {
 				asio::async_write(*socket_,res_.to_buffers(), [handler = this->shared_from_this(), is_websokcet](std::error_code const& ec, std::size_t write_size) {
 					if (!is_websokcet) {
 						handler->close();
+					}
+					else {
+						socket_close_ = true; //å¯¹äºconnectionæ¥è¯´ sokcet è¿›è¡Œé€»è¾‘å…³é—­ httpéƒ¨åˆ†å¤„ç†ç»“æŸ è½¬äº¤ç»™websocketå¤„ç†
+						auto ws = router_.websokcets().start_webscoket(view2str(req_.url()));
+						ws->move_socket(std::move(socket_));
 					}
 				});
 			}
@@ -497,7 +499,7 @@ namespace xfinal {
 			}
 		}
 	public:
-		void close() {  //»ØÓ¦Íê³É ×¼±¸¹Ø±ÕÁ¬½Ó
+		void close() {  //å›åº”å®Œæˆ å‡†å¤‡å…³é—­è¿æ¥
 			if (req_.is_keep_alive()) {
 				reset();
 				read_header();
