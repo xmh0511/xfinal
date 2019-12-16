@@ -416,8 +416,9 @@ namespace xfinal {
 				auto& buffer = handler->get_buffers();
 				//std::cout << handler->get_buffers().data() << std::endl;
 				http_parser_header parser{ buffer.begin(),buffer.end() };
-				if (parser.is_complete_header().first == parse_state::valid) {
-					if (parser.is_complete_header().second) {
+				auto parse_r = parser.is_complete_header();
+				if (parse_r.first == parse_state::valid) {
+					if (parse_r.second) {
 						handler->parse_header(parser);
 					}
 					else {
