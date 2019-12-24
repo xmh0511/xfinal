@@ -3,6 +3,7 @@
 .idea
 cmake-build-debug
 build
+lbuild
 .vscode
 # Compiled Object files
 *.slo

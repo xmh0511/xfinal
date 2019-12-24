@@ -52,7 +52,8 @@ private:
 
 int main()
 {
-	http_server server(4);
+	auto const thread_number = std::thread::hardware_concurrency();
+	http_server server(thread_number);
 	server.listen("0.0.0.0", "8080");
 
 	server.on_error([](std::exception const& ec) {  //提供用户记录错误日志
@@ -72,6 +73,12 @@ int main()
 
 	server.router<GET, POST>("/", [](request& req, response& res) {
 		res.write_string(std::string("hello world"),false);
+	});
+
+	server.router<GET, POST>("/ip", [](request& req, response& res) {
+		auto ip = res.connection().remote_endpoint();
+		auto locip = res.connection().local_endpoint();
+		res.write_string(std::move(ip+" "+ locip));
 	});
 
 	server.router<GET,POST>("/json", [](request& req, response& res) {

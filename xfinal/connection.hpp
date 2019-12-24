@@ -11,14 +11,30 @@
 #include "uuid.hpp"
 
 namespace xfinal {
-	class connection final:public std::enable_shared_from_this<connection> {
+	class connection final :public std::enable_shared_from_this<connection> {
 	public:
-		connection(asio::io_service& io, http_router& router, std::string const& static_path, std::string const& upload_path) :socket_(std::unique_ptr<asio::ip::tcp::socket>(new asio::ip::tcp::socket(io))), io_service_(io), buffers_(expand_buffer_size), router_(router), static_path_(static_path), req_(res_), res_(req_), upload_path_(upload_path) {
+		connection(asio::io_service& io, http_router& router, std::string const& static_path, std::string const& upload_path) :socket_(std::unique_ptr<asio::ip::tcp::socket>(new asio::ip::tcp::socket(io))), io_service_(io), buffers_(expand_buffer_size), router_(router), static_path_(static_path), req_(res_, this), res_(req_, this), upload_path_(upload_path) {
 			left_buffer_size_ = buffers_.size();
 		}
 	public:
 		asio::ip::tcp::socket& get_socket() {
 			return *socket_;
+		}
+		std::string local_endpoint() {
+			if (socket_close_) {
+				return "";
+			}
+			std::stringstream ss;
+			ss << socket_->local_endpoint();
+			return ss.str();
+		}
+		std::string remote_endpoint() {
+			if (socket_close_) {
+				return "";
+			}
+			std::stringstream ss;
+			ss << socket_->remote_endpoint();
+			return ss.str();
 		}
 	public:
 		std::vector<char>& get_buffers() {
@@ -111,7 +127,7 @@ namespace xfinal {
 					handle_websocket();  //去处理websocket
 				}
 				else {  //普通http请求
-					post_router();  
+					post_router();
 				}
 			}
 		}
@@ -133,7 +149,7 @@ namespace xfinal {
 			{
 				process_oct();
 			}
-				break;
+			break;
 			case content_type::string:
 			{
 				process_string();
@@ -233,8 +249,8 @@ namespace xfinal {
 		void process_mutipart_head(http_multipart_parser const& parser, content_type type) {
 			auto end = buffers_.begin() + current_use_pos_;
 			//std::cout << nonstd::string_view{ buffers_.data() + start_read_pos_, current_use_pos_ - start_read_pos_ } << std::endl;
-			if (parser.is_complete_part_header(buffers_.begin()+ start_read_pos_, end)) {  //如果当前buffer中有完整的部分multipart头
-				auto pr = parser.parser_part_head(buffers_.begin()+ start_read_pos_, end);//解析multipart part头部 
+			if (parser.is_complete_part_header(buffers_.begin() + start_read_pos_, end)) {  //如果当前buffer中有完整的部分multipart头
+				auto pr = parser.parser_part_head(buffers_.begin() + start_read_pos_, end);//解析multipart part头部 
 				pre_process_multipart_data(pr, parser); //处理数据部分
 			}
 			else {
@@ -266,9 +282,9 @@ namespace xfinal {
 		}
 
 		void process_multipart_data(std::map<std::string, std::string> const& head, http_multipart_parser const& parser) {
-			auto dpr = parser.is_end_part_data(buffers_.data()+start_read_pos_, current_use_pos_ - start_read_pos_);
-			if (dpr.first== multipart_data_state::is_end) { //如果已经是完整的数据了("\r\n--boundary_char")
-				record_mutlipart_data(head, nonstd::string_view(buffers_.data()+ start_read_pos_, dpr.second), parser, dpr.first);
+			auto dpr = parser.is_end_part_data(buffers_.data() + start_read_pos_, current_use_pos_ - start_read_pos_);
+			if (dpr.first == multipart_data_state::is_end) { //如果已经是完整的数据了("\r\n--boundary_char")
+				record_mutlipart_data(head, nonstd::string_view(buffers_.data() + start_read_pos_, dpr.second), parser, dpr.first);
 			}
 			else if (dpr.first == multipart_data_state::maybe_end) {  //或许是数据部分结束了 可能标识符\r
 				record_mutlipart_data(head, nonstd::string_view(buffers_.data() + start_read_pos_, dpr.second), parser, dpr.first);
@@ -304,11 +320,11 @@ namespace xfinal {
 			else {  //是文本类型
 				request_info.multipart_form_map_[name] += view2str(data);
 			}
-			if (data_state== multipart_data_state::is_end) {
+			if (data_state == multipart_data_state::is_end) {
 				if (type != std::string::npos) {  //如果是文件 读取完了 就可以关闭文件指针了
 					request_info.multipart_files_map_[name].close();
 				}
-				if (parser.is_end((buffers_.begin()+ start_read_pos_ + data.size() + 2), buffers_.begin() + current_use_pos_)) { //判断是否全部接受完毕 回调multipart 路由
+				if (parser.is_end((buffers_.begin() + start_read_pos_ + data.size() + 2), buffers_.begin() + current_use_pos_)) { //判断是否全部接受完毕 回调multipart 路由
 					handle_body(content_type::multipart_form, 0);
 					return;
 				}
@@ -334,7 +350,7 @@ namespace xfinal {
 					handler->process_multipart_data(head, parser);
 				}, true, true);
 			}
-			else if(data_state== multipart_data_state::all_part_data) {  //buffers中所有的数据都是mulitpart 的数据 （不包含multipart头）所以可以清除
+			else if (data_state == multipart_data_state::all_part_data) {  //buffers中所有的数据都是mulitpart 的数据 （不包含multipart头）所以可以清除
 				buffers_.clear();
 				start_read_pos_ = 0;
 				current_use_pos_ = 0;
@@ -446,7 +462,7 @@ namespace xfinal {
 		}
 		void forward_write(bool is_websokcet = false) {  //直接写 非chunked
 			if (!socket_close_) {
-				asio::async_write(*socket_,res_.to_buffers(), [handler = this->shared_from_this(), is_websokcet](std::error_code const& ec, std::size_t write_size) {
+				asio::async_write(*socket_, res_.to_buffers(), [handler = this->shared_from_this(), is_websokcet](std::error_code const& ec, std::size_t write_size) {
 					if (!is_websokcet) {
 						handler->close();
 					}
@@ -461,7 +477,7 @@ namespace xfinal {
 
 		void chunked_write() {
 			if (!socket_close_) {
-				asio::async_write(*socket_,res_.header_to_buffer(), [handler = this->shared_from_this(), startpos = res_.init_start_pos_](std::error_code const& ec, std::size_t write_size) {
+				asio::async_write(*socket_, res_.header_to_buffer(), [handler = this->shared_from_this(), startpos = res_.init_start_pos_](std::error_code const& ec, std::size_t write_size) {
 					if (ec) {
 						return;
 					}

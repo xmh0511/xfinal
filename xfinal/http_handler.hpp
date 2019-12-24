@@ -13,14 +13,14 @@
 #include "session.hpp"
 namespace xfinal {
 
-
+	class connection;
 	class request;
 	class response;
-	class request:private nocopyable {
+	class request :private nocopyable {
 		friend class connection;
 		friend class response;
 	public:
-		request(response& res) :res_(res) {
+		request(response& res, class connection* connect_) :connecter_(connect_), res_(res) {
 
 		}
 	public:
@@ -32,6 +32,9 @@ namespace xfinal {
 				}
 			}
 			return "";
+		}
+		class connection& connection() {
+			return *connecter_;
 		}
 	public:
 		bool has_body() const noexcept {
@@ -185,7 +188,7 @@ namespace xfinal {
 			if (range.empty()) {
 				return false;
 			}
-			auto posv = range.substr(range.find('=')+1);
+			auto posv = range.substr(range.find('=') + 1);
 			pos = std::atoll(posv.data());
 			return true;
 		}
@@ -207,40 +210,40 @@ namespace xfinal {
 			return false;
 		}
 	public:
-		 class session& create_session() {
-			 return create_session("XFINAL");
-		 }
-		 class session& create_session(std::string const& name) {
-			 session_ = std::make_shared<class session>(false);
-			 session_->set_id(uuids::uuid_system_generator{}().to_short_str());
-			 //session_->set_expires(600);
-			 session_->get_cookie().set_name(name);
-			 session_manager::get().add_session(session_->get_id(), session_);
-			 return *session_;
-		 }
-		 class session& session(std::string const& name) {
-			 auto cookies_value = header("cookie");
-			 auto name_view = nonstd::string_view{ name.data(),name.size() };
-			 auto it = cookies_value.find(name_view);
-			 if (it == nonstd::string_view::npos) {
-				 session_ = session_manager::get().empty_session();
-			 }
-			 else {
-				 auto pos = it + name.size() + 1;
-				 auto id = cookies_value.substr(it + name.size() + 1, cookies_value.find('\"', pos) - pos);
-				 if (id.empty()) {
-					 session_ = session_manager::get().empty_session();
-				 }
-				 else {
-					 session_manager::get().validata(view2str(id));
-					 session_ =  session_manager::get().get_session(view2str(id));
-				 }
-			 }
-			 return *session_;
-		 }
-		 class session& session() {
-			 return session("XFINAL");
-		 }
+		class session& create_session() {
+			return create_session("XFINAL");
+		}
+		class session& create_session(std::string const& name) {
+			session_ = std::make_shared<class session>(false);
+			session_->set_id(uuids::uuid_system_generator{}().to_short_str());
+			//session_->set_expires(600);
+			session_->get_cookie().set_name(name);
+			session_manager::get().add_session(session_->get_id(), session_);
+			return *session_;
+		}
+		class session& session(std::string const& name) {
+			auto cookies_value = header("cookie");
+			auto name_view = nonstd::string_view{ name.data(),name.size() };
+			auto it = cookies_value.find(name_view);
+			if (it == nonstd::string_view::npos) {
+				session_ = session_manager::get().empty_session();
+			}
+			else {
+				auto pos = it + name.size() + 1;
+				auto id = cookies_value.substr(it + name.size() + 1, cookies_value.find('\"', pos) - pos);
+				if (id.empty()) {
+					session_ = session_manager::get().empty_session();
+				}
+				else {
+					session_manager::get().validata(view2str(id));
+					session_ = session_manager::get().get_session(view2str(id));
+				}
+			}
+			return *session_;
+		}
+		class session& session() {
+			return session("XFINAL");
+		}
 	protected:
 		void init_content_type() noexcept {
 			auto it = headers_->find("content-type");
@@ -272,7 +275,7 @@ namespace xfinal {
 				content_type_ = content_type::unknow;
 			}
 			if (content_type_ == content_type::multipart_form) {
-				auto const & v = it->second;
+				auto const& v = it->second;
 				auto f = v.find("boundary");
 				if (f != std::string::npos) {
 					auto pos = f + sizeof("boundary");
@@ -318,12 +321,13 @@ namespace xfinal {
 		nonstd::string_view boundary_key_;
 		std::map<std::string, std::string> const* multipart_form_map_ = nullptr;
 		std::map<std::string, xfinal::filewriter> const* multipart_files_map_ = nullptr;
-		xfinal::filewriter* oct_steam_= nullptr;
+		xfinal::filewriter* oct_steam_ = nullptr;
+		class connection* connecter_;
 		response& res_;
 		std::shared_ptr<class session> session_;
 	};
 	///响应
-	class response:private nocopyable {
+	class response :private nocopyable {
 		friend class connection;
 		friend class http_router;
 		friend class request;
@@ -334,12 +338,15 @@ namespace xfinal {
 			no_body
 		};
 	public:
-		response(request& req) :req_(req), view_env_(std::make_unique<inja::Environment>()){
+		response(request& req, class connection* connect_) :connecter_(connect_), req_(req), view_env_(std::make_unique<inja::Environment>()) {
 			//初始化view 配置
-			view_env_->set_expression("@{", "}");  
+			view_env_->set_expression("@{", "}");
 			view_env_->set_element_notation(inja::ElementNotation::Dot);
 		}
 	public:
+		class connection& connection() {
+			return *connecter_;
+		}
 		void add_header(std::string const& k, std::string const& v) noexcept {
 			header_map_.insert(std::make_pair(k, v));
 		}
@@ -409,7 +416,7 @@ namespace xfinal {
 			}
 		}
 
-		void write_json(json const& json,bool is_chunked = false) noexcept {
+		void write_json(json const& json, bool is_chunked = false) noexcept {
 			try {
 				write_string(json.dump(), is_chunked, http_status::ok, "application/json");
 			}
@@ -427,7 +434,7 @@ namespace xfinal {
 			}
 		}
 
-		void write_view(std::string const& filename, bool is_chunked = false , http_status state = http_status::ok) noexcept {
+		void write_view(std::string const& filename, bool is_chunked = false, http_status state = http_status::ok) noexcept {
 			std::string extension = "text/plain";
 			auto path = fs::path(filename);
 			if (path.has_extension()) {
@@ -441,7 +448,7 @@ namespace xfinal {
 			}
 		}
 
-		void write_view(std::string const& filename,json const& json, bool is_chunked = false, http_status state = http_status::ok) noexcept {
+		void write_view(std::string const& filename, json const& json, bool is_chunked = false, http_status state = http_status::ok) noexcept {
 			view_data_ = json;
 			write_view(filename, is_chunked, state);
 		}
@@ -461,8 +468,8 @@ namespace xfinal {
 			return *view_env_;
 		}
 
-		template<typename T,typename U = std::enable_if_t<!std::is_same<std::decay_t<T>,char const*>::value>>
-		void set_attr(std::string const& name,T&& value) noexcept {
+		template<typename T, typename U = std::enable_if_t<!std::is_same<std::decay_t<T>, char const*>::value>>
+		void set_attr(std::string const& name, T&& value) noexcept {
 			view_data_[name] = std::forward<T>(value);
 		}
 
@@ -484,7 +491,7 @@ namespace xfinal {
 			http_version_ = view2str(req_.http_version()) + ' ';//写入回应状态行 
 			buffers_.emplace_back(asio::buffer(http_version_));
 			buffers_.emplace_back(http_state_to_buffer(state_));
-			if ((req_.session_ !=nullptr) && !(req_.session_->empty())) {  //是否有session
+			if ((req_.session_ != nullptr) && !(req_.session_->empty())) {  //是否有session
 				if (req_.session_->cookie_update()) {
 					add_header("Set-Cookie", req_.session_->cookie_str());
 				}
@@ -512,19 +519,19 @@ namespace xfinal {
 			return buffers_;
 		}
 
-		std::tuple<bool, std::vector<asio::const_buffer>,std::int64_t> chunked_body(std::int64_t startpos) noexcept {
+		std::tuple<bool, std::vector<asio::const_buffer>, std::int64_t> chunked_body(std::int64_t startpos) noexcept {
 			std::vector<asio::const_buffer> buffers;
 			switch (write_type_) {
 			case write_type::string: //如果是文本数据
 			{
-				if ((body_.size()- (std::size_t)startpos) <= chunked_size_) {
+				if ((body_.size() - (std::size_t)startpos) <= chunked_size_) {
 					auto size = body_.size() - startpos;
 					chunked_write_size_ = to_hex(size);
 					buffers.emplace_back(asio::buffer(chunked_write_size_));
 					buffers.emplace_back(asio::buffer(crlf.data(), crlf.size()));
 					buffers.emplace_back(asio::buffer(&body_[(std::size_t)startpos], (std::size_t)size));
 					buffers.emplace_back(asio::buffer(crlf.data(), crlf.size()));
-					return { true, buffers,0};
+					return { true, buffers,0 };
 				}
 				else {  //还有超过每次chunked传输的数据大小
 					auto nstart = startpos + chunked_size_;
@@ -547,7 +554,7 @@ namespace xfinal {
 				buffers.emplace_back(asio::buffer(crlf.data(), crlf.size()));
 				return { (read_size < chunked_size_),buffers, -1 };
 			}
-				break;
+			break;
 			default:
 				return { true,buffers ,0 };
 				break;
@@ -565,6 +572,7 @@ namespace xfinal {
 			view_data_.clear();
 		}
 	private:
+		class connection* connecter_;
 		request& req_;
 		std::unordered_multimap<std::string, std::string> header_map_;
 		std::string body_;
@@ -575,7 +583,7 @@ namespace xfinal {
 		std::uint64_t chunked_size_;
 		std::string chunked_write_size_;
 		filereader file_;
-		std::int64_t init_start_pos_ ;
+		std::int64_t init_start_pos_;
 		std::unique_ptr<inja::Environment> view_env_;
 		json view_data_;
 	};
