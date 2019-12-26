@@ -16,9 +16,11 @@ namespace xfinal {
 	class connection;
 	class request;
 	class response;
+	class http_router;
 	class request :private nocopyable {
 		friend class connection;
 		friend class response;
+		friend class http_router;
 	public:
 		request(response& res, class connection* connect_) :connecter_(connect_), res_(res) {
 
@@ -71,6 +73,16 @@ namespace xfinal {
 			auto vit = url_params_.find(key);
 			if (vit != url_params_.end()) {
 				return vit->second;
+			}
+			return "";
+		}
+
+		nonstd::string_view param(std::size_t index) noexcept {
+			if (is_generic_) {
+				auto pos = generic_base_path_.size();
+				auto parms = url_.substr(pos, url_.size() - pos);
+				auto vec = split(parms, "/");
+				return vec.size() > (index+1) ? vec[index+1] : "";
 			}
 			return "";
 		}
@@ -303,7 +315,13 @@ namespace xfinal {
 			multipart_form_map_ = nullptr;
 			multipart_files_map_ = nullptr;
 			oct_steam_ = nullptr;
+			is_generic_ = false;
+			generic_base_path_ = "";
 			session_.reset();
+		}
+		void set_generic_path(std::string const& path) {
+			is_generic_ = true;
+			generic_base_path_ = path;
 		}
 	private:
 		nonstd::string_view method_;
@@ -325,6 +343,8 @@ namespace xfinal {
 		class connection* connecter_;
 		response& res_;
 		std::shared_ptr<class session> session_;
+		bool is_generic_ = false;
+		std::string generic_base_path_;
 	};
 	///响应
 	class response :private nocopyable {
