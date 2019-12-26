@@ -280,7 +280,7 @@ namespace xfinal {
 		std::vector<nonstd::string_view> output;
 		std::size_t b = 0;
 		auto it = s.find(delimiter);
-		while (it != nonstd::string_view::npos) {
+		while (it != (nonstd::string_view::size_type)nonstd::string_view::npos) {
 			output.push_back(nonstd::string_view{ s.data()+b,it - b });
 			b = it + delimiter.size();
 			it = s.find(delimiter, b);
