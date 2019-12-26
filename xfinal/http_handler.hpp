@@ -55,7 +55,7 @@ namespace xfinal {
 
 		nonstd::string_view url() const noexcept {
 			auto it = url_.find('?');
-			if (it != nonstd::string_view::npos) {
+			if (it != (nonstd::string_view::size_type)nonstd::string_view::npos) {
 				return url_.substr(0, it);
 			}
 			return url_;
@@ -63,7 +63,7 @@ namespace xfinal {
 		nonstd::string_view param(nonstd::string_view key) noexcept {
 			if (decode_url_params_.empty()) {
 				auto it = url_.find('?');
-				if (it != nonstd::string_view::npos) {
+				if (it != (nonstd::string_view::size_type)nonstd::string_view::npos) {
 					decode_url_params_ = url_decode(view2str(url_.substr(it + 1, url_.size())));
 					http_urlform_parser{ decode_url_params_ }.parse_data(url_params_);
 				}
@@ -77,7 +77,7 @@ namespace xfinal {
 
 		nonstd::string_view params() const noexcept {
 			auto it = url_.find('?');
-			if (it != nonstd::string_view::npos) {
+			if (it != (nonstd::string_view::size_type)nonstd::string_view::npos) {
 				return url_.substr(it + 1, url_.size());
 			}
 			return "";
@@ -225,7 +225,7 @@ namespace xfinal {
 			auto cookies_value = header("cookie");
 			auto name_view = nonstd::string_view{ name.data(),name.size() };
 			auto it = cookies_value.find(name_view);
-			if (it == nonstd::string_view::npos) {
+			if (it == (nonstd::string_view::size_type)nonstd::string_view::npos) {
 				session_ = session_manager::get().empty_session();
 			}
 			else {
@@ -251,7 +251,7 @@ namespace xfinal {
 				auto& value = it->second;
 				auto view = nonstd::string_view(value.data(), value.size());
 				auto has_op = view.find(';');
-				if (has_op == nonstd::string_view::npos) {
+				if (has_op == (nonstd::string_view::size_type)nonstd::string_view::npos) {
 					auto key = view2str(view);
 					if (content_type_str_type_map.count(key) != 0) {
 						content_type_ = content_type_str_type_map[key];
