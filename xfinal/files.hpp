@@ -7,10 +7,10 @@
 #include "ghc/filesystem.hpp"
 namespace fs = ghc::filesystem;
 namespace xfinal {
-	class filewriter final:private nocopyable {
+	class filewriter final :private nocopyable {
 	public:
 		filewriter() = default;
-		filewriter(filewriter&& f):file_handle_(std::move(f.file_handle_)), original_name_(std::move(f.original_name_)), size_(f.size_), path_(std::move(f.path_)){
+		filewriter(filewriter&& f) :file_handle_(std::move(f.file_handle_)), original_name_(std::move(f.original_name_)), size_(f.size_), path_(std::move(f.path_)) {
 
 		}
 		filewriter& operator=(filewriter&& f) {
@@ -21,13 +21,17 @@ namespace xfinal {
 			return *this;
 		}
 	public:
-		bool open(std::string const&  path) {
+		bool open(std::string const& path) {
 			if (file_handle_ == nullptr) {
 				file_handle_ = std::move(std::unique_ptr<std::ofstream>(new std::ofstream(path, std::ios::app | std::ios::binary)));
 				path_ = path;
-				return file_handle_->is_open();
+				is_exsit_ = file_handle_->is_open();
+				return is_exsit_;
 			}
 			return false;
+		}
+		bool is_exsit() {
+			return is_exsit_;
 		}
 		void add_data(nonstd::string_view data) {
 			if (file_handle_ != nullptr) {
@@ -64,12 +68,13 @@ namespace xfinal {
 		std::string original_name_;
 		std::uint64_t size_ = 0;
 		std::string path_;
+		bool is_exsit_ = false;
 	};
 
 	class filereader final :private nocopyable {
 	public:
 		filereader() = default;
-		filereader(filereader&& f) :file_handle_(std::move(f.file_handle_)), size_(f.size_), path_(std::move(f.path_)), content_type_(f.content_type_){
+		filereader(filereader&& f) :file_handle_(std::move(f.file_handle_)), size_(f.size_), path_(std::move(f.path_)), content_type_(f.content_type_) {
 
 		}
 
@@ -85,10 +90,11 @@ namespace xfinal {
 			if (file_handle_ == nullptr) {
 				file_handle_ = std::move(std::unique_ptr<std::ifstream>(new std::ifstream(filename, std::ios::binary)));
 			}
-			bool b =  file_handle_->is_open();
+			bool b = file_handle_->is_open();
+			is_exsit_ = b;
 			if (b) {
 				auto begin = file_handle_->tellg();
-				file_handle_->seekg(0,std::ios::end);
+				file_handle_->seekg(0, std::ios::end);
 				size_ = file_handle_->tellg();
 				file_handle_->seekg(begin);
 				auto pt = fs::path(filename);
@@ -101,13 +107,16 @@ namespace xfinal {
 			}
 			return b;
 		}
+		bool is_exsit() {
+			return is_exsit_;
+		}
 		void close() {
 			if (file_handle_) {
 				file_handle_->close();
 				file_handle_.release();
 			}
 		}
-		std::uint64_t read(std::int64_t start,char* buffer,std::int64_t size) {
+		std::uint64_t read(std::int64_t start, char* buffer, std::int64_t size) {
 			if (file_handle_) {
 				if (start != -1) {
 					file_handle_->seekg(start, std::ios::beg);
@@ -138,5 +147,6 @@ namespace xfinal {
 		std::uint64_t size_ = 0;
 		std::string path_;
 		nonstd::string_view content_type_;
+		bool is_exsit_ = false;
 	};
 }
