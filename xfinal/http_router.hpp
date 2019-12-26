@@ -102,17 +102,17 @@ namespace xfinal {
 			reg_router(url, std::forward<Array>(methods), std::move(b));
 		}
 
-		template<typename Array,typename Ret,typename Class,typename...Params,typename...Args>
-		void router(nonstd::string_view url, Array&& methods, Ret(Class::*memberfunc)(Params...), Class& that, Args&&...args) {  // member function
+		template<typename Array,typename Ret,typename Class,typename...Params, typename Object, typename...Args>
+		void router(nonstd::string_view url, Array&& methods, Ret(Class::*memberfunc)(Params...), Object& that, Args&&...args) {  // member function
 			auto tp = std::tuple<Args...>(std::forward<Args>(args)...);
-			auto b = std::bind(&http_router::pre_handler_member_function<Ret(Class::*)(Params...), Class,std::tuple<Args...>>, this, std::placeholders::_1, std::placeholders::_2, memberfunc, &that, std::move(tp));
+			auto b = std::bind(&http_router::pre_handler_member_function<Ret(Class::*)(Params...), Class,std::tuple<Args...>>, this, std::placeholders::_1, std::placeholders::_2, memberfunc, static_cast<Class*>(&that), std::move(tp));
 			reg_router(url, std::forward<Array>(methods), std::move(b));
 		}
 
-		template<typename Array, typename Ret, typename Class, typename...Params, typename...Args>
-		void router(nonstd::string_view url, Array&& methods, Ret(Class::*memberfunc)(Params...), Class* that, Args&&...args) {  // member function
+		template<typename Array, typename Ret, typename Class, typename...Params, typename Object, typename...Args>
+		typename std::enable_if<std::is_pointer<typename std::remove_reference<Object>::type>::value || std::is_null_pointer<typename std::remove_reference<Object>::type>::value>::type router(nonstd::string_view url, Array&& methods, Ret(Class::*memberfunc)(Params...), Object&& that, Args&&...args) {  // member function
 			auto tp = std::tuple<Args...>(std::forward<Args>(args)...);
-			auto b = std::bind(&http_router::pre_handler_member_function<Ret(Class::*)(Params...), Class, std::tuple<Args...>>, this, std::placeholders::_1, std::placeholders::_2, memberfunc, that,std::move(tp));
+			auto b = std::bind(&http_router::pre_handler_member_function<Ret(Class::*)(Params...), Class, std::tuple<Args...>>, this, std::placeholders::_1, std::placeholders::_2, memberfunc, static_cast<Class*>(that),std::move(tp));
 			reg_router(url, std::forward<Array>(methods), std::move(b));
 		}
 

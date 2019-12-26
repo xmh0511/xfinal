@@ -130,7 +130,9 @@ int main()
 	});
 
 	Process c;
-	server.router<GET, POST>("/test",&Process::test,c);
+	server.router<GET, POST>("/test", &Process::test, c, Test{});
+
+	server.router<GET, POST>("/test0", &Process::test, nullptr, Test{});
 
 	Shop ss;
 	server.router<GET, POST>("/controller", &Shop::goshop,ss);
