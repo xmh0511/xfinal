@@ -55,6 +55,7 @@ int main()
 	auto const thread_number = std::thread::hardware_concurrency();
 	http_server server(thread_number);
 	server.listen("0.0.0.0", "8080");
+	server.set_url_redirect(false);
 
 	server.on_error([](std::exception const& ec) {  //提供用户记录错误日志
 		std::cout << ec.what() << std::endl;
@@ -89,6 +90,7 @@ int main()
 	});
 
 	server.router<GET>("/params", [](request& req, response& res) {
+		auto params = req.key_params();
 		std::cout << "id: " << req.param("id") << std::endl;
 		res.write_string("id");
 	});
@@ -122,7 +124,9 @@ int main()
 	});
 
 	server.router<GET, POST>("/pathinfo/*", [](request& req, response& res) {
+		auto raw_param = req.raw_params();
 		auto param = req.param(0);
+		auto params = req.url_params();
 		res.write_string("abc");
 	});
 

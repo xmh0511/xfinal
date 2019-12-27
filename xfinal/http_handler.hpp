@@ -80,16 +80,22 @@ namespace xfinal {
 		nonstd::string_view param(std::size_t index) noexcept {
 			if (is_generic_) {
 				auto pos = generic_base_path_.size();
+				if (url_.size() >= (pos + 1)) {
+					pos += 1;
+				}
 				auto parms = url_.substr(pos, url_.size() - pos);
 				auto vec = split(parms, "/");
-				return vec.size() > (index+1) ? vec[index+1] : "";
+				return vec.size() > index ? vec[index] : "";
 			}
 			return "";
 		}
 
-		nonstd::string_view params() const noexcept {
+		nonstd::string_view raw_params() const noexcept {
 			if (is_generic_) {
 				auto pos = generic_base_path_.size();
+				if (url_.size() >= (pos + 1)) {
+					pos += 1;
+				}
 				auto parms = url_.substr(pos, url_.size() - pos);
 				return parms;
 			}
@@ -99,6 +105,32 @@ namespace xfinal {
 			}
 			return "";
 		}
+
+		std::vector<nonstd::string_view> url_params() noexcept {
+			if (is_generic_) {
+				auto pos = generic_base_path_.size();
+				if (url_.size() >= (pos + 1)) {
+					pos += 1;
+				}
+				auto parms = url_.substr(pos, url_.size() - pos);
+				auto vec = split(parms, "/");
+				return vec;
+			}
+			return {};
+		}
+
+		std::map<nonstd::string_view, nonstd::string_view> key_params() noexcept {
+			if (decode_url_params_.empty()) {
+				auto it = url_.find('?');
+				if (it != (nonstd::string_view::size_type)nonstd::string_view::npos) {
+					decode_url_params_ = url_decode(view2str(url_.substr(it + 1, url_.size())));
+					http_urlform_parser{ decode_url_params_ }.parse_data(url_params_);
+				}
+			}
+			return url_params_;
+		}
+
+
 
 		nonstd::string_view raw_url()  const noexcept {
 			return url_;

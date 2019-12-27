@@ -219,7 +219,7 @@ namespace xfinal {
 				if (back > 0) {  //如果url不是规范的url 则重定向跳转
 					if (url_redirect_) {
 						auto url_str = view2str(url.substr(0, url.size() - back));
-						auto params = req.params();
+						auto params = req.raw_params();
 						if (!params.empty()) {
 							url_str += "?";
 						}
