@@ -88,6 +88,11 @@ namespace xfinal {
 		}
 
 		nonstd::string_view params() const noexcept {
+			if (is_generic_) {
+				auto pos = generic_base_path_.size();
+				auto parms = url_.substr(pos, url_.size() - pos);
+				return parms;
+			}
 			auto it = url_.find('?');
 			if (it != (nonstd::string_view::size_type)nonstd::string_view::npos) {
 				return url_.substr(it + 1, url_.size());

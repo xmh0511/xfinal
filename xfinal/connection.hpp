@@ -12,6 +12,7 @@
 
 namespace xfinal {
 	class connection final :public std::enable_shared_from_this<connection> {
+		friend class http_server;
 	public:
 		connection(asio::io_service& io, http_router& router, std::string const& static_path, std::string const& upload_path) :socket_(std::unique_ptr<asio::ip::tcp::socket>(new asio::ip::tcp::socket(io))), io_service_(io), buffers_(expand_buffer_size), router_(router), static_path_(static_path), req_(res_, this), res_(req_, this), upload_path_(upload_path) {
 			left_buffer_size_ = buffers_.size();
@@ -36,10 +37,11 @@ namespace xfinal {
 			ss << socket_->remote_endpoint();
 			return ss.str();
 		}
-	public:
+	private:
 		std::vector<char>& get_buffers() {
 			return buffers_;
 		}
+	private:
 		bool expand_size(bool is_multipart_data) {
 			expand_buffer_size += expand_buffer_size;
 			if (expand_buffer_size > max_buffer_size_) {
@@ -406,7 +408,7 @@ namespace xfinal {
 			forward_write(true);
 		}
 
-	public:
+	private:
 		template<typename Function>
 		void continue_read_data(Function&& callback, bool is_expand = true, bool is_multipart = false) { //用来继续读取body剩余数据的
 			if (is_expand) {
@@ -515,7 +517,7 @@ namespace xfinal {
 				});
 			}
 		}
-	public:
+	private:
 		void close() {  //回应完成 准备关闭连接
 			if (req_.is_keep_alive()) {
 				reset();
@@ -542,7 +544,7 @@ namespace xfinal {
 			start_read_pos_ = 0;
 			buffers_.resize(expand_buffer_size);
 		}
-	public:
+	private:
 		void set_chunked_size(std::uint64_t size) {
 			res_.chunked_size_ = size;
 		}
