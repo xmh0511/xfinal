@@ -170,7 +170,8 @@ namespace xfinal {
 				left_buffer_size_ = buffers_.size() - current_use_pos_;
 				auto body_length = req_.body_length();
 				if (body_length > current_use_pos_) {    //body没有读完整
-					continue_read_data([handler = this->shared_from_this(), type]() {
+					auto handler = this->shared_from_this();
+					continue_read_data([handler, type]() {
 						handler->process_body(type);
 					});
 				}
@@ -185,7 +186,8 @@ namespace xfinal {
 				buffers_.resize(1024);
 				current_use_pos_ = 0;
 				left_buffer_size_ = buffers_.size();
-				continue_read_data([handler = this->shared_from_this(), type]() {
+				auto handler = this->shared_from_this();
+				continue_read_data([handler, type]() {
 					handler->process_body(type);
 				}, false);
 			}
@@ -193,7 +195,8 @@ namespace xfinal {
 		void process_body(content_type type) {  //如果预读取body的时候没有读完整body 
 			auto body_length = req_.body_length();
 			if (body_length > current_use_pos_) {  //body没有读完整
-				continue_read_data([handler = this->shared_from_this(), type]() {
+				auto handler = this->shared_from_this();
+				continue_read_data([handler, type]() {
 					handler->process_body(type);
 				});
 			}
@@ -256,7 +259,8 @@ namespace xfinal {
 				pre_process_multipart_data(pr, parser); //处理数据部分
 			}
 			else {
-				continue_read_data([type, parser, handler = this->shared_from_this()]() {
+				auto handler = this->shared_from_this();
+				continue_read_data([type, parser, handler]() {
 					handler->process_mutipart_head(parser, type);
 				}, true, false);  //只是读multipart的头 不需要对bufffer的容量特殊处理 超过就结束了
 			}
@@ -276,7 +280,8 @@ namespace xfinal {
 					left_buffer_size_ = 1024;
 					start_read_pos_ = 0;
 					auto head = pr.second;
-					continue_read_data([parser, head, handler = this->shared_from_this()]() {
+					auto  handler = this->shared_from_this();
+					continue_read_data([parser, head, handler]() {
 						handler->process_multipart_data(head, parser);
 					}, false, true);
 				}
@@ -348,7 +353,8 @@ namespace xfinal {
 				current_use_pos_ -= start_read_pos_;
 				start_read_pos_ = 0;
 				left_buffer_size_ = buffers_.size() - current_use_pos_;
-				continue_read_data([handler = this->shared_from_this(), head, parser]() {
+				auto handler = this->shared_from_this();
+				continue_read_data([handler, head, parser]() {
 					handler->process_multipart_data(head, parser);
 				}, true, true);
 			}
@@ -356,7 +362,8 @@ namespace xfinal {
 				buffers_.clear();
 				start_read_pos_ = 0;
 				current_use_pos_ = 0;
-				continue_read_data([handler = this->shared_from_this(), head, parser]() {
+				auto handler = this->shared_from_this();
+				continue_read_data([handler, head, parser]() {
 					handler->process_multipart_data(head, parser);
 				}, true, true);
 			}
@@ -389,7 +396,8 @@ namespace xfinal {
 				return;
 			}
 			expand_size(true);
-			socket_->async_read_some(asio::buffer(&buffers_[0], buffers_.size()), [handler = this->shared_from_this(), body_size](std::error_code const& ec, std::size_t read_size) {
+			auto handler = this->shared_from_this();
+			socket_->async_read_some(asio::buffer(&buffers_[0], buffers_.size()), [handler, body_size](std::error_code const& ec, std::size_t read_size) {
 				if (ec) {
 					return;
 				}
@@ -417,7 +425,9 @@ namespace xfinal {
 					return;
 				}
 			}
-			socket_->async_read_some(asio::buffer(&buffers_[current_use_pos_], left_buffer_size_), [handler = this->shared_from_this(), function = std::move(callback)](std::error_code const& ec, std::size_t read_size) {
+			auto handler = this->shared_from_this();
+			auto function = std::move(callback);
+			socket_->async_read_some(asio::buffer(&buffers_[current_use_pos_], left_buffer_size_), [handler, function](std::error_code const& ec, std::size_t read_size) {
 				if (ec) {
 					return;
 				}
@@ -426,7 +436,8 @@ namespace xfinal {
 			});
 		}
 		void read_header() {  //有连接请求后 开始读取请求头
-			socket_->async_read_some(asio::buffer(&buffers_[current_use_pos_], left_buffer_size_), [handler = this->shared_from_this()](std::error_code const& ec, std::size_t read_size){
+			auto handler = this->shared_from_this();
+			socket_->async_read_some(asio::buffer(&buffers_[current_use_pos_], left_buffer_size_), [handler](std::error_code const& ec, std::size_t read_size){
 				if (ec) {
 					return;
 				}
@@ -464,7 +475,8 @@ namespace xfinal {
 		}
 		void forward_write(bool is_websokcet = false) {  //直接写 非chunked
 			if (!socket_close_) {
-				asio::async_write(*socket_, res_.to_buffers(), [handler = this->shared_from_this(), is_websokcet](std::error_code const& ec, std::size_t write_size) {
+				auto handler = this->shared_from_this();
+				asio::async_write(*socket_, res_.to_buffers(), [handler, is_websokcet](std::error_code const& ec, std::size_t write_size) {
 					if (!is_websokcet) {
 						handler->close();
 					}
@@ -479,7 +491,9 @@ namespace xfinal {
 
 		void chunked_write() {
 			if (!socket_close_) {
-				asio::async_write(*socket_, res_.header_to_buffer(), [handler = this->shared_from_this(), startpos = res_.init_start_pos_](std::error_code const& ec, std::size_t write_size) {
+				auto handler = this->shared_from_this();
+				auto startpos = res_.init_start_pos_;
+				asio::async_write(*socket_, res_.header_to_buffer(), [handler, startpos](std::error_code const& ec, std::size_t write_size) {
 					if (ec) {
 						return;
 					}
@@ -491,7 +505,10 @@ namespace xfinal {
 		void write_body_chunked(std::int64_t startpos) {
 			auto tp = res_.chunked_body(startpos);
 			if (!socket_close_) {
-				asio::async_write(*socket_, std::get<1>(tp), [handler = this->shared_from_this(), pos = std::get<2>(tp), eof = std::get<0>(tp)](std::error_code const& ec, std::size_t write_size) {
+				auto handler = this->shared_from_this();
+				auto eof = std::get<0>(tp);
+				auto pos = std::get<2>(tp);
+				asio::async_write(*socket_, std::get<1>(tp), [handler, pos, eof](std::error_code const& ec, std::size_t write_size) {
 					if (ec) {
 						return;
 					}
@@ -512,7 +529,8 @@ namespace xfinal {
 			buffers.emplace_back(asio::buffer(crlf.data(), crlf.size()));
 			buffers.emplace_back(asio::buffer(crlf.data(), crlf.size()));
 			if (!socket_close_) {
-				asio::async_write(*socket_, buffers, [handler = this->shared_from_this()](std::error_code const& ec, std::size_t write_size) {
+				auto handler = this->shared_from_this();
+				asio::async_write(*socket_, buffers, [handler](std::error_code const& ec, std::size_t write_size) {
 					handler->close();
 				});
 			}

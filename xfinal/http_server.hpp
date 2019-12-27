@@ -75,7 +75,7 @@ namespace xfinal {
 		template<typename T = default_session_storage>
 		void set_session_storager() {
 			static_assert(std::is_base_of<session_storage, T>::value, "set storage is not base on session_storage!");
-			session_manager::get().set_storage(std::make_unique<T>());
+			session_manager::get().set_storage(std::move(std::unique_ptr<T>(new T())));
 			session_manager::get().get_storage().init();  //初始化 
 		}
 
@@ -129,7 +129,7 @@ namespace xfinal {
 		}
 	public:
 		template<http_method...Methods,typename Function,typename...Args>
-		std::enable_if_t<!std::is_same<std::remove_reference_t<Function>,websocket_event>::value> router(nonstd::string_view url, Function&& function, Args&&...args) {
+		typename std::enable_if<!std::is_same<typename std::remove_reference<Function>::type,websocket_event>::value>::type router(nonstd::string_view url, Function&& function, Args&&...args) {
 			auto method_names = http_method_str<Methods...>::methods_to_name();
 			http_router_.router(url, std::move(method_names), std::forward<Function>(function), std::forward<Args>(args)...);
 		}

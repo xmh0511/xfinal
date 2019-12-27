@@ -395,7 +395,7 @@ namespace xfinal {
 			no_body
 		};
 	public:
-		response(request& req, class connection* connect_) :connecter_(connect_), req_(req), view_env_(std::make_unique<inja::Environment>()) {
+		response(request& req, class connection* connect_) :connecter_(connect_), req_(req), view_env_(new inja::Environment()) {
 			//初始化view 配置
 			view_env_->set_expression("@{", "}");
 			view_env_->set_element_notation(inja::ElementNotation::Dot);
@@ -525,7 +525,7 @@ namespace xfinal {
 			return *view_env_;
 		}
 
-		template<typename T, typename U = std::enable_if_t<!std::is_same<std::decay_t<T>, char const*>::value>>
+		template<typename T, typename U = typename std::enable_if<!std::is_same<typename std::decay<T>::type, char const*>::value>::type>
 		void set_attr(std::string const& name, T&& value) noexcept {
 			view_data_[name] = std::forward<T>(value);
 		}
@@ -647,6 +647,8 @@ namespace xfinal {
 
 	class Controller :private nocopyable {
 		friend class http_router;
+		template<typename...Args>
+		friend struct auto_params_lambda;
 	public:
 		Controller() = default;
 	public:

@@ -5,10 +5,12 @@ class Test {
 public:
 	bool before(request& req,response& res) {
 		std::cout << "pre process aop 1" << std::endl;
+		//res.write_string("aop1 stop");
 		return true;
 	}
 
 	bool after(request& req, response& res) {
+		std::cout << "after process aop 1" << std::endl;
 		return true;
 	}
 private:
@@ -144,7 +146,9 @@ int main()
 	server.router<GET, POST>("/test0", &Process::test, nullptr, Test{});
 
 	Shop ss;
-	server.router<GET, POST>("/controller", &Shop::goshop,ss);
+	server.router<GET, POST>("/controller", &Shop::goshop,ss, Test{});
+
+	server.router<GET, POST>("/controller0", &Shop::goshop, nullptr, Test{});
 
 	server.router<GET>("/client", [](request& req, response& res) {
 		http_client client("www.baidu.com");

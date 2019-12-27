@@ -8,7 +8,7 @@ if (MSVC)
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /std:c++14")
 	add_definitions(-D_CRT_SECURE_NO_WARNINGS)
 else ()
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -pthread -std=c++14")
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -pthread -std=c++11")
 endif ()
 
 set(CMAKE_BUILD_WITH_INSTALL_RPATH ON)

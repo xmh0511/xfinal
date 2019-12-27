@@ -104,7 +104,7 @@ namespace xfinal {
 			data_[name] = std::forward<T>(value);
 		}
 		template<typename T>
-		std::remove_reference_t<T> get_data(std::string const& name) {
+		typename std::remove_reference<T>::type get_data(std::string const& name) {
 			std::unique_lock<std::mutex> lock(mutex_);
 			if (data_[name].is_null()) {
 				return T{};
@@ -214,6 +214,11 @@ namespace xfinal {
 
 	class session_manager final :private nocopyable {
 	private:
+		std::unordered_map<std::string, std::shared_ptr<session>> session_map_;
+		std::mutex mutex_;
+		std::shared_ptr<session> empty_session_;
+		std::unique_ptr<session_storage> storage_ = nullptr;
+	private:
 		session_manager():empty_session_(std::make_shared<session>(true)){
 		}
 	public:
@@ -241,7 +246,7 @@ namespace xfinal {
 			std::unique_lock<std::mutex> lock(mutex_);
 			session_map_[id] = session.lock();
 		}
-		auto remove_session(std::string const& id) {
+		auto remove_session(std::string const& id)->decltype(session_map_.find(id)) {
 			std::unique_lock<std::mutex> lock(mutex_);
 			auto it = session_map_.find(id);
 			if (it != session_map_.end()) {
@@ -275,11 +280,6 @@ namespace xfinal {
 				}
 			}
 		}
-	private:
-		std::unordered_map<std::string, std::shared_ptr<session>> session_map_;
-		std::mutex mutex_;
-		std::shared_ptr<session> empty_session_;
-		std::unique_ptr<session_storage> storage_ = nullptr;
 	};
 
 	class default_session_storage:public session_storage {
