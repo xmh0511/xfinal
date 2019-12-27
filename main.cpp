@@ -54,11 +54,15 @@ int main()
 {
 	auto const thread_number = std::thread::hardware_concurrency();
 	http_server server(thread_number);
-	server.listen("0.0.0.0", "8080");
+	bool r = server.listen("0.0.0.0", "8080");
+	if (!r) {
+		return 0;
+	}
 	server.set_url_redirect(false);
 
-	server.on_error([](std::exception const& ec) {  //提供用户记录错误日志
-		std::cout << ec.what() << std::endl;
+	//server.set_websocket_frame_size(1024 * 1024);//设置websocket 帧数据长度
+	server.on_error([](std::string const& message) {  //提供用户记录错误日志
+		std::cout << message << std::endl;
 	});
 
 	server.add_view_method("str2int", 1, [](inja::Arguments const& args) {
@@ -219,10 +223,6 @@ int main()
 	event.on("message", [](websocket& ws) {
 		std::cout << utf8_to_gbk(view2str(ws.messages())) << std::endl;
 		std::cout << (int)ws.message_code() << std::endl;
-		if (ws.messages() == nonstd::string_view{ "close" }) {
-			//ws.close();
-			return;
-		}
 		std::string message;
 		for (auto i = 0; i <= 400; ++i) {
 			message.append(std::to_string(i));
@@ -231,7 +231,7 @@ int main()
 	}).on("open", [](websocket& ws) {
 		std::cout << "open" << std::endl;
 	}).on("close", [](websocket& ws) {
-
+		std::cout << "close" << std::endl;
 	});
 	server.router("/ws", event);
 

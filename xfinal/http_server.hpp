@@ -6,6 +6,7 @@
 #include "utils.hpp"
 #include "http_router.hpp"
 #include "session.hpp"
+#include "message_handler.hpp"
 namespace xfinal {
 	constexpr http_method GET = http_method::GET;
 	constexpr http_method POST = http_method::POST;
@@ -38,7 +39,7 @@ namespace xfinal {
 			ioservice_pool_handler_->run();
 		}
 	public:
-		///只能设置为相对当前程序允许目录的路径  "./xxx/xxx"
+		///只能设置为相对当前程序运行目录的路径  "./xxx/xxx"
 		void set_static_path(std::string const& path) {
 			static_path_ = path;
 			upload_path_ = static_path_ + "/upload";
@@ -63,12 +64,12 @@ namespace xfinal {
 			http_router_.view_method_map_.insert(std::make_pair(name, std::make_pair(args_number,callback)));
 		}
 
-		void on_error(std::function<void(std::exception const&)>&& event) {
-			http_router_.error_binder_ = std::move(event);
+		void on_error(std::function<void(std::string const&)>&& event) {
+			utils::messageCenter::get().set_handler(event);
 		}
 
 		void trigger_error(std::exception const& ec) {
-			http_router_.trigger_error(ec);
+			utils::messageCenter::get().trigger_message(ec.what());
 		}
 
 		template<typename T = default_session_storage>
@@ -91,6 +92,18 @@ namespace xfinal {
 		bool url_redirect() {
 			return http_router_.url_redirect_;
 		}
+		void set_websocket_check_alive_time(std::time_t seconds) {
+			http_router_.websokcets().set_check_alive_time(seconds);
+		}
+		std::time_t websocket_check_alive_time() {
+			return http_router_.websokcets().get_check_alive_time();
+		}
+		void set_websocket_frame_size(std::size_t size) {
+			http_router_.websokcets().set_frame_data_size(size);
+		}
+		std::size_t websocket_frame_size() {
+			return http_router_.websokcets().get_frame_data_size();
+		}
 	private:
 		bool listen(asio::ip::tcp::resolver::query& query) {
 			bool result = false;
@@ -109,7 +122,7 @@ namespace xfinal {
 				catch (std::exception const& e) {
 					result = false;
 					std::cout << e.what() << std::endl;
-					http_router_.trigger_error(xfinal_exception{ e });
+					//http_router_.trigger_error(xfinal_exception{ e });
 				}
 			}
 			return result;

@@ -7,6 +7,7 @@
 #include "session.hpp"
 #include "ioservice_pool.hpp"
 #include "websokcet.hpp"
+#include "message_handler.hpp"
 namespace xfinal {
 	struct c11_auto_lambda_aop_before{
 		c11_auto_lambda_aop_before(bool& b, request& req, response& res):result(b),req_(req),res_(res){
@@ -258,9 +259,7 @@ namespace xfinal {
 		}
 	 public:
 			void trigger_error(std::exception const& err) {
-				if (error_binder_ != nullptr) {
-					error_binder_(err);
-				}
+				utils::messageCenter::get().trigger_message(err.what());
 			}
 	private:
 		void set_view_method(response& res) {
@@ -293,7 +292,6 @@ namespace xfinal {
 		std::map<std::string, router_function> router_map_;
 		std::map<std::string, router_function> genera_router_map_;
 		std::map<std::string,std::pair<std::size_t, inja::CallbackFunction>> view_method_map_;
-		std::function<void(std::exception const&)> error_binder_;
 		asio::io_service io_;
 		asio::steady_timer timer_;
 		std::unique_ptr<std::thread> thread_;
