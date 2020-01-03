@@ -54,7 +54,7 @@ int main()
 }
 ````
 ## GET请求 url参数获取
-````
+````cpp
 #include <xfinal.hpp>
 using namespace xfinal;
 int main()
@@ -70,7 +70,7 @@ int main()
 ````
 
 ## GBK的支持
-````
+````cpp
 #include <xfinal.hpp>
 using namespace xfinal;
 int main()
@@ -86,7 +86,7 @@ int main()
 }
 ````
 ## URL 重定向
-````
+````cpp
 #include <xfinal.hpp>
 using namespace xfinal;
 int main()
@@ -101,7 +101,7 @@ int main()
 ````
 
 ## url form 表单请求
-````
+````cpp
 #include <xfinal.hpp>
 using namespace xfinal;
 int main()
@@ -116,7 +116,7 @@ int main()
 }
 ````
 ## multipart form 表单请求
-````
+````cpp
 #include <xfinal.hpp>
 using namespace xfinal;
 int main()
@@ -133,7 +133,7 @@ int main()
 ````
 ## octet-stream 请求处理
 
-````
+````cpp
 #include <xfinal.hpp>
 using namespace xfinal;
 int main()
@@ -149,7 +149,7 @@ int main()
 ````
 ## 返回json
 #### 使用了第三方json库 更多用法参考 [nlohmann/json](https://github.com/nlohmann/json)
-````
+````cpp
 #include <xfinal.hpp>
 using namespace xfinal;
 int main()
@@ -168,7 +168,7 @@ int main()
 
 ## 视图层 用于前端模板渲染
 #### 视图层更多使用方法 参考 [xmh0511/inja](https://github.com/xmh0511/inja) （在inja库的基础上修改并增添了功能）
-````
+````cpp
 ///test.html
 <!DOCTYPE html>
 
@@ -209,7 +209,7 @@ int main()
 ````
 
 ## 文件请求
-````
+````cpp
 #include <xfinal.hpp>
 using namespace xfinal;
 int main()
@@ -231,7 +231,7 @@ int main()
 }
 ````
 ## xfinal 框架内置了静态文件处理
-````
+````cpp
 #include <xfinal.hpp>
 using namespace xfinal;
 int main()
@@ -245,7 +245,7 @@ int main()
 }
 ````
 ## xfinal session/cookie 支持
-````
+````cpp
 #include <xfinal.hpp>
 using namespace xfinal;
 int main()
@@ -268,7 +268,7 @@ int main()
 }
 ````
 ### 用户可以自定义持久化介质
-````
+````cpp
 #include <xfinal.hpp>
 using namespace xfinal;
 class sql_storage:public session_storage{
@@ -292,7 +292,7 @@ int main()
 }
 ````
 ## xfinal 为你的接口提供拦截器
-````
+````cpp
 #include <xfinal.hpp>
 using namespace xfinal;
 struct http_interceptor{
@@ -321,7 +321,7 @@ int main()
 }
 ````
 ## xfinal 异常错误信息获取
-````
+````cpp
 #include <xfinal.hpp>
 using namespace xfinal;
 int main(){
@@ -335,7 +335,7 @@ int main(){
 ````
 ## xfinal 支持项目结构分层
 ### 自定义class 
-````
+````cpp
 ////Test.hpp
 #pragma once
 #include <xfinal.hpp>
@@ -363,7 +363,7 @@ int main()
 }
 ````
 ### 继承xfinal 的Controller
-````
+````cpp
 ///shop.hpp
 #pragma once
 #include <xfinal.hpp>
@@ -394,7 +394,7 @@ int main()
 ### 以上所有使用lambda注册的路由 都可以替换成成员函数或controller
 
 # 好用的webscoket
-````
+````cpp
 #include <xfinal.hpp>
 int main()
 {
@@ -423,7 +423,7 @@ int main()
 # xfinal client 使用
 ## GET请求
 ### client 同步
-````
+````cpp
 #include <xfinal.hpp>
 using namespace xfinal;
 int main(){
@@ -441,7 +441,7 @@ int main(){
 }
 ````
 ### client 异步
-````
+````cpp
 #include <xfinal.hpp>
 using namespace xfinal;
 int main(){
@@ -465,7 +465,7 @@ int main(){
 }
 ````
 ## POST请求
-````
+````cpp
 #include <xfinal.hpp>
 using namespace xfinal;
 int main(){
@@ -489,7 +489,7 @@ int main(){
 }
 ````
 ## POST multipart form
-````
+````cpp
 #include <xfinal.hpp>
 using namespace xfinal;
 int main(){
@@ -512,7 +512,7 @@ int main(){
 }
 ````
 ## POST client 异步
-````
+````cpp
 同上 request 传入回调函数
 ````
 # xfinal client 同时支持https
