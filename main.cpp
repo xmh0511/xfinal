@@ -30,6 +30,19 @@ public:
 	}
 };
 
+struct  init_session {
+	bool before(request& req, response& res) {
+		auto& session = req.session("test_session");
+		if (session.empty()) {
+			req.create_session("test_session");
+		}
+		return true;
+	}
+	bool after(request& req, response& res) {
+		return true;
+	}
+};
+
 class Base {
 private:
 	bool b;
@@ -71,6 +84,12 @@ int main()
 		auto i = std::atoi(args[0]->get<std::string>().data());
 		return std::string("transform:") + std::to_string(i);
 	});
+
+	server.router<GET>("/sessionrecord", [](request& req, response& res) {
+		auto& session = req.session("test_session0");
+		session.set_expires(3600);
+		res.write_string("OK");
+	}, init_session{});
 
 	server.router<GET,POST>("/abc", [](request& req,response& res) {
 		std::cout << req.query("id") << std::endl;
