@@ -344,7 +344,7 @@ class Test{
     void shop(request& req,response& res){
         res.write_string("shop !");
     }
-} 
+} ;
 ////Test.hpp
 #include "http_server.hpp"
 #include "Test.hpp"
