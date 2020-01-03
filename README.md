@@ -372,7 +372,7 @@ class Shop:public Controller{
     void go(){
         this->get_response().write_string("go shopping!");
     }
-}
+};
 ///shop.hpp
 
 #include "http_server.hpp"
