@@ -45,7 +45,7 @@ cmake ..
 using namespace xfinal;
 int main()
 {
-   http_server serve(4) //线程数
+   http_server serve(4); //线程数
    serve.listen("0.0.0.0","8080");
    serve.router<GET>("/hello",[](request& req,response& res){
       res.write_string("hello,world");
@@ -59,7 +59,7 @@ int main()
 using namespace xfinal;
 int main()
 {
-   http_server serve(4) //线程数
+   http_server serve(4); //线程数
    serve.listen("0.0.0.0","8080");
    serve.router<GET>("/param",[](request& req,response& res){
       auto id = req.param("id");
@@ -75,7 +75,7 @@ int main()
 using namespace xfinal;
 int main()
 {
-   http_server serve(4) //线程数
+   http_server serve(4); //线程数
    serve.listen("0.0.0.0","8080");
    serve.router<GET,POST>("/url",[](request& req,response& res){
       auto id = req.param<GBK>("id"); /*提供GBK转码的支持*/
@@ -91,7 +91,7 @@ int main()
 using namespace xfinal;
 int main()
 {
-   http_server serve(4) //线程数
+   http_server serve(4); //线程数
    serve.listen("0.0.0.0","8080");
    serve.router<GET>("/redirect",[](request& req,response& res){
        res.redirect("/abc",false); /*接口的第二个参数用来告诉框架是临时重定向 还是永久重定向 */
@@ -106,7 +106,7 @@ int main()
 using namespace xfinal;
 int main()
 {
-   http_server serve(4) //线程数
+   http_server serve(4); //线程数
    serve.listen("0.0.0.0","8080");
    serve.router<GET>("/form",[](request& req,response& res){
         auto name = req.query("name");  /*query接口用于查询 name="xxx" 的值*/ 
@@ -121,7 +121,7 @@ int main()
 using namespace xfinal;
 int main()
 {
-   http_server serve(4) //线程数
+   http_server serve(4); //线程数
    serve.listen("0.0.0.0","8080");
    serve.router<GET>("/form",[](request& req,response& res){
         auto name = req.query("name");  /*query接口用于查询 name="xxx" 的值 */ 
@@ -138,7 +138,7 @@ int main()
 using namespace xfinal;
 int main()
 {
-   http_server serve(4) //线程数
+   http_server serve(4); //线程数
    serve.listen("0.0.0.0","8080");
    serve.router<GET>("/form",[](request& req,response& res){
         auto& file = req.file();  /*octet-stream 只能提交单个二进制流数据 所以这里的file没有参数 */
@@ -154,7 +154,7 @@ int main()
 using namespace xfinal;
 int main()
 {
-   http_server serve(4) //线程数
+   http_server serve(4); //线程数
    serve.listen("0.0.0.0","8080");
    serve.router<GET>("/json",[](request& req,response& res){
       json data;
@@ -193,7 +193,7 @@ int main()
 using namespace xfinal;
 int main()
 {
-   http_server serve(4) //线程数
+   http_server serve(4); //线程数
    serve.listen("0.0.0.0","8080");
    server.add_view_method("str2int", 1, [](inja::Arguments const& args) {
 	auto i = std::atoi(args[0]->get<std::string>().data());
@@ -214,7 +214,7 @@ int main()
 using namespace xfinal;
 int main()
 {
-   http_server serve(4) //线程数
+   http_server serve(4); //线程数
    serve.listen("0.0.0.0","8080");
    server.add_view_method("str2int", 1, [](inja::Arguments const& args) {
 	auto i = std::atoi(args[0]->get<std::string>().data());
@@ -236,7 +236,7 @@ int main()
 using namespace xfinal;
 int main()
 {
-   http_server serve(4) //线程数
+   http_server serve(4); //线程数
    serve.listen("0.0.0.0","8080");
    /*可以通过serve.static_path("./static") 改变目录 同时会自动改变静态资源的url的标识*/
    /*内置处理方式默认设置了static  用户可以通过localhost:8080/static/abc.png 来访问静态资源文件*/
@@ -250,7 +250,7 @@ int main()
 using namespace xfinal;
 int main()
 {
-   http_server serve(4) //线程数
+   http_server serve(4); //线程数
    serve.listen("0.0.0.0","8080");
    serve.router<GET>("/login",[](request& req,response& res){
        req.create_session().set_data("islogin",true);  /*可以通过设置参数指定session名称 req.create_session("myname")*/
@@ -285,7 +285,7 @@ class sql_storage:public session_storage{
 };
 int main()
 {
-   http_server serve(4) //线程数
+   http_server serve(4); //线程数
    serve.listen("0.0.0.0","8080");
    serve.set_session_storager<sql_storage>(); /*设置session存储方式*/
    serve.run();
@@ -312,7 +312,7 @@ struct http_interceptor{
 };
 int main()
 {
-   http_server serve(4) //线程数
+   http_server serve(4); //线程数
    serve.listen("0.0.0.0","8080");
    serve.router<POST>("/interceptor",[](request& req,response& res){
        res.write_string("OK");
@@ -325,7 +325,7 @@ int main()
 #include <xfinal.hpp>
 using namespace xfinal;
 int main(){
-  http_server serve(4) //线程数
+  http_server serve(4); //线程数
   serve.listen("0.0.0.0","8080");
   serve.on_error([](std::exception const& ec) {  //提供用户记录错误日志
        std::cout << ec.what() << std::endl;
@@ -351,7 +351,7 @@ class Test{
 using namespace xfinal;
 int main()
 {
-   http_server serve(4) //线程数
+   http_server serve(4); //线程数
    serve.listen("0.0.0.0","8080");
    /*不保存接口状态信息*/
    serve.router<GET,POST>("/shop",&Test::shop,nullptr);
@@ -380,7 +380,7 @@ class Shop:public Controller{
 using namespace xfinal;
 int main()
 {
-   http_server serve(4) //线程数
+   http_server serve(4); //线程数
    serve.listen("0.0.0.0","8080");
    /*不保存接口状态信息*/
    serve.router<GET,POST>("/shop",&Shop::go,nullptr);
@@ -398,7 +398,7 @@ int main()
 #include <xfinal.hpp>
 int main()
 {
-    http_server serve(4) //线程数
+    http_server serve(4); //线程数
     serve.listen("0.0.0.0","8080");
     
     	websocket_event event;  //定义websocket 事件
@@ -427,7 +427,7 @@ int main()
 #include <xfinal.hpp>
 using namespace xfinal;
 int main(){
-   http_server serve(4) //线程数
+   http_server serve(4); //线程数
    serve.listen("0.0.0.0","8080");
 
    serve.router<GET>("/client",[](request& req,response& res){
@@ -445,7 +445,7 @@ int main(){
 #include <xfinal.hpp>
 using namespace xfinal;
 int main(){
-      http_server serve(4) //线程数
+      http_server serve(4); //线程数
       serve.listen("0.0.0.0","8080");
       http_client client("www.baidu.com");
 
@@ -469,7 +469,7 @@ int main(){
 #include <xfinal.hpp>
 using namespace xfinal;
 int main(){
-      http_server serve(4) //线程数
+      http_server serve(4); //线程数
       serve.listen("0.0.0.0","8080");
       server.router<GET>("/client_post", [](request& req, response& res) {
          try {
@@ -493,7 +493,7 @@ int main(){
 #include <xfinal.hpp>
 using namespace xfinal;
 int main(){
-      http_server serve(4) //线程数
+      http_server serve(4); //线程数
       serve.listen("0.0.0.0","8080");
 	   server.router<GET>("/client_multipart", [](request& req, response& res) {
          try {
