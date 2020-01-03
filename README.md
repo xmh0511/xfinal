@@ -282,7 +282,7 @@ class sql_storage:public session_storage{
       void remove(session& session){
          /*用来移除session*/
       }
-}
+};
 int main()
 {
    http_server serve(4) //线程数
@@ -309,7 +309,7 @@ struct http_interceptor{
       res.add_header("Access-Control-Allow-Origin","*");
       return true;
    }
-}
+};
 int main()
 {
    http_server serve(4) //线程数
