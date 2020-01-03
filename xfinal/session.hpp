@@ -216,10 +216,10 @@ namespace xfinal {
 	private:
 		std::unordered_map<std::string, std::shared_ptr<session>> session_map_;
 		std::mutex mutex_;
-		std::shared_ptr<session> empty_session_;
+		//std::shared_ptr<session> empty_session_;
 		std::unique_ptr<session_storage> storage_ = nullptr;
 	private:
-		session_manager():empty_session_(std::make_shared<session>(true)){
+		session_manager()/*:empty_session_(std::make_shared<session>(true))*/{
 		}
 	public:
 		static session_manager& get() {
@@ -240,7 +240,7 @@ namespace xfinal {
 			if (it != session_map_.end()) {
 				return it->second;
 			}
-			return empty_session_;
+			return std::make_shared<session>(true); //空的session
 		}
 		void add_session(std::string const& id, std::weak_ptr<session> session) {
 			std::unique_lock<std::mutex> lock(mutex_);
@@ -256,7 +256,7 @@ namespace xfinal {
 			return it;
 		}
 		std::shared_ptr<session> empty_session() {
-			return empty_session_;
+			return std::make_shared<session>(true);  //空的session
 		}
 		void validata(std::string const& id) {
 			auto session = get_session(id);

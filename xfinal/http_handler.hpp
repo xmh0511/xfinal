@@ -271,6 +271,12 @@ namespace xfinal {
 			return *session_;
 		}
 		class session& session(std::string const& name) {
+			if (session_ != nullptr && !session_->empty()) {
+				auto cookie_name = session_->get_cookie().name();
+				if (cookie_name == name) {
+					return *session_;
+				}
+			}
 			auto cookies_value = header("cookie");
 			auto name_view = nonstd::string_view{ name.data(),name.size() };
 			auto it = cookies_value.find(name_view);
@@ -354,7 +360,7 @@ namespace xfinal {
 			oct_steam_ = nullptr;
 			is_generic_ = false;
 			generic_base_path_ = "";
-			session_.reset();
+			session_ = nullptr;
 		}
 		void set_generic_path(std::string const& path) {
 			is_generic_ = true;
