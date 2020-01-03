@@ -40,7 +40,7 @@ cmake ..
 # 快速示例
 
 ## GET请求 服务器返回Hello,world
-````
+````cpp
 #include <xfinal.hpp>
 using namespace xfinal;
 int main()
