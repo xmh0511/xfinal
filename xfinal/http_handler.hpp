@@ -285,7 +285,8 @@ namespace xfinal {
 			}
 			else {
 				auto pos = it + name.size() + 1;
-				auto id = cookies_value.substr(it + name.size() + 1, cookies_value.find('\"', pos) - pos);
+				auto dot_pos = cookies_value.find(';', pos);
+				auto id = dot_pos != (nonstd::string_view::size_type)nonstd::string_view::npos ? cookies_value.substr(pos, dot_pos - pos) : cookies_value.substr(pos, cookies_value.size() - pos);
 				if (id.empty()) {
 					session_ = session_manager::get().empty_session();
 				}
