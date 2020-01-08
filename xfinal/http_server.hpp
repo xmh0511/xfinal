@@ -104,6 +104,12 @@ namespace xfinal {
 		std::size_t websocket_frame_size() {
 			return http_router_.websokcets().get_frame_data_size();
 		}
+		void set_not_found_callback(std::function<void(request&,response&)> const& callback) {
+			http_router_.not_found_callback_ = callback;
+		}
+		void remove_not_found_callback() {
+			http_router_.not_found_callback_ = nullptr;
+		}
 	private:
 		bool listen(asio::ip::tcp::resolver::query& query) {
 			bool result = false;

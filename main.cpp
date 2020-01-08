@@ -75,6 +75,10 @@ int main()
 	}
 	server.set_url_redirect(false);
 
+	//server.set_not_found_callback([](request& req,response& res) {
+	//	res.write_string("custom not found", true, http_status::bad_request);
+	//});
+
 	//server.set_websocket_frame_size(1024 * 1024);//设置websocket 帧数据长度
 	server.on_error([](std::string const& message) {  //提供用户记录错误日志
 		std::cout << message << std::endl;

@@ -113,7 +113,7 @@ namespace xfinal {
 
 	template<typename Class, typename Object>
 	struct auto_params_lambda<void(Class::*)(), Object> {
-		auto_params_lambda(request& req0, response& res0, Object* that, void(Class::*function0)()) :obj_(that), func_(function0), req_(req0), res_(res0) {
+		auto_params_lambda(request& req0, response& res0, Object* that, void(Class::* function0)()) :obj_(that), func_(function0), req_(req0), res_(res0) {
 
 		}
 		template<typename T>
@@ -287,6 +287,7 @@ namespace xfinal {
 				auto& it = router_map_.at(key);
 				set_view_method(res);
 				it(req, res);
+				return;
 			}
 			else {
 				for (auto& iter : genera_router_map_) {
@@ -299,6 +300,11 @@ namespace xfinal {
 						return;
 					}
 				}
+			}
+			if (not_found_callback_ != nullptr) {
+				not_found_callback_(req, res);
+			}
+			else {
 				res.write_string(std::string("the url \"") + view2str(req.url()) + "\" is not found", false, http_status::bad_request);
 			}
 		}
@@ -343,5 +349,6 @@ namespace xfinal {
 		std::time_t check_session_time_ = 10;
 		class websockets websockets_;
 		bool url_redirect_ = true;
+		std::function<void(request&, response&)> not_found_callback_ = nullptr;
 	};
 }
