@@ -30,7 +30,7 @@ namespace xfinal {
 			}
 			return false;
 		}
-		bool is_exsit() {
+		bool is_exsit() const {
 			return is_exsit_;
 		}
 		void add_data(nonstd::string_view data) {
