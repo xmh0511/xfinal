@@ -107,7 +107,7 @@ namespace xfinal {
 			}
 			return b;
 		}
-		bool is_exsit() {
+		bool is_exsit() const {
 			return is_exsit_;
 		}
 		void close() {
