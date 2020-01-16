@@ -504,6 +504,10 @@ namespace xfinal {
 			if (!socket_close_) {
 				auto handler = this->shared_from_this();
 				asio::async_write(*socket_, res_.to_buffers(), [handler, is_websokcet,this](std::error_code const& ec, std::size_t write_size) {
+					if (ec) {
+						disconnect();
+						return;
+					}
 					if (!is_websokcet) {
 						handler->close();
 					}
@@ -521,8 +525,9 @@ namespace xfinal {
 			if (!socket_close_) {
 				auto handler = this->shared_from_this();
 				auto startpos = res_.init_start_pos_;
-				asio::async_write(*socket_, res_.header_to_buffer(), [handler, startpos](std::error_code const& ec, std::size_t write_size) {
+				asio::async_write(*socket_, res_.header_to_buffer(), [handler, startpos,this](std::error_code const& ec, std::size_t write_size) {
 					if (ec) {
+						disconnect();
 						return;
 					}
 					handler->write_body_chunked(startpos);
@@ -536,8 +541,9 @@ namespace xfinal {
 				auto handler = this->shared_from_this();
 				auto eof = std::get<0>(tp);
 				auto pos = std::get<2>(tp);
-				asio::async_write(*socket_, std::get<1>(tp), [handler, pos, eof](std::error_code const& ec, std::size_t write_size) {
+				asio::async_write(*socket_, std::get<1>(tp), [handler, pos, eof,this](std::error_code const& ec, std::size_t write_size) {
 					if (ec) {
+						disconnect();
 						return;
 					}
 					if (!eof) {
@@ -558,7 +564,11 @@ namespace xfinal {
 			buffers.emplace_back(asio::buffer(crlf.data(), crlf.size()));
 			if (!socket_close_) {
 				auto handler = this->shared_from_this();
-				asio::async_write(*socket_, buffers, [handler](std::error_code const& ec, std::size_t write_size) {
+				asio::async_write(*socket_, buffers, [handler,this](std::error_code const& ec, std::size_t write_size) {
+					if (ec) {
+						disconnect();
+						return;
+					}
 					handler->close();
 				});
 			}
