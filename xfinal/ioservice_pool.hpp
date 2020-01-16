@@ -19,6 +19,9 @@ namespace xfinal {
 			}
 			return io_pool_[io_index_++];
 		}
+		asio::io_service& accpetor_io() {
+			return speciafied_accpetor_io_;
+		}
 	protected:
 		void run() {
 			for (auto& iter : io_pool_) {
@@ -26,6 +29,9 @@ namespace xfinal {
 					io.run();
 				}, std::ref(iter))));
 			}
+			speciafied_accpetor_thread_ = std::move(std::unique_ptr<std::thread>(new std::thread([this]() {
+				speciafied_accpetor_io_.run();
+			})));
 			for (auto&iter : thread_pool_) {
 				iter->join();
 			}
@@ -34,6 +40,8 @@ namespace xfinal {
 		std::vector<asio::io_service> io_pool_;
 		std::vector<std::unique_ptr<asio::io_service::work>> io_workers_;
 		std::vector<std::unique_ptr<std::thread>> thread_pool_;
+		asio::io_service speciafied_accpetor_io_;
+		std::unique_ptr<std::thread> speciafied_accpetor_thread_;
 		std::size_t io_index_;
 		std::size_t thread_counts;
 	};

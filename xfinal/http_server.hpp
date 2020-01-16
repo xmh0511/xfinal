@@ -20,7 +20,7 @@ namespace xfinal {
 
 	class http_server :private nocopyable {
 	public:
-		http_server(std::size_t thread_size):ioservice_pool_handler_(std::unique_ptr<ioservice_pool>(new ioservice_pool(thread_size))), acceptor_(ioservice_pool_handler_->get_io()){
+		http_server(std::size_t thread_size):ioservice_pool_handler_(std::unique_ptr<ioservice_pool>(new ioservice_pool(thread_size))), acceptor_(ioservice_pool_handler_->accpetor_io()){
 			static_url_ = std::string("/")+ get_root_director(static_path_)+ "/*";
 			upload_path_ = static_path_ + "/upload";
 			register_static_router(); //注册静态文件处理逻辑
