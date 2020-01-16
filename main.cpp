@@ -69,7 +69,7 @@ int main()
 {
 	auto const thread_number = std::thread::hardware_concurrency();
 	http_server server(2);
-	bool r = server.listen("0.0.0.0", "8080");
+	bool r = server.listen("0.0.0.0", "8090");
 	if (!r) {
 		return 0;
 	}
@@ -106,8 +106,8 @@ int main()
 	});
 
 	server.router<GET, POST>("/ip", [](request& req, response& res) {
-		auto ip = res.connection().remote_endpoint();
-		auto locip = res.connection().local_endpoint();
+		auto ip = res.connection().remote_ip();
+		auto locip = res.connection().local_ip();
 		res.write_string(std::move(ip+" "+ locip));
 	});
 

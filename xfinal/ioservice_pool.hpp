@@ -9,7 +9,7 @@ namespace xfinal {
 	class ioservice_pool final :private nocopyable, public std::enable_shared_from_this<ioservice_pool> {
 		friend class http_server;
 	public:
-		ioservice_pool(std::size_t size) :io_pool_(size), io_index_(0), thread_counts(size) {
+		ioservice_pool(std::size_t size) :io_pool_(size), speciafied_acceptor_work_(speciafied_accpetor_io_), io_index_(0), thread_counts(size) {
 			for (auto& iter : io_pool_) {
 				io_workers_.emplace_back(std::unique_ptr<asio::io_service::work>(new asio::io_service::work(iter)));
 			}
@@ -33,6 +33,7 @@ namespace xfinal {
 			speciafied_accpetor_thread_ = std::move(std::unique_ptr<std::thread>(new std::thread([this]() {
 				speciafied_accpetor_io_.run();
 			})));
+			speciafied_accpetor_thread_->join();
 			for (auto&iter : thread_pool_) {
 				iter->join();
 			}
@@ -43,6 +44,7 @@ namespace xfinal {
 		std::vector<std::unique_ptr<std::thread>> thread_pool_;
 		asio::io_service speciafied_accpetor_io_;
 		std::unique_ptr<std::thread> speciafied_accpetor_thread_;
+		asio::io_service::work speciafied_acceptor_work_;
 		std::atomic<std::size_t> io_index_;
 		std::size_t thread_counts;
 	};

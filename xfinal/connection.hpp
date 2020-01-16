@@ -14,32 +14,55 @@ namespace xfinal {
 	class connection final :public std::enable_shared_from_this<connection> {
 		friend class http_server;
 	public:
-		connection(asio::io_service& io, http_router& router, std::string const& static_path, std::string const& upload_path) :socket_(std::unique_ptr<asio::ip::tcp::socket>(new asio::ip::tcp::socket(io))), io_service_(io), buffers_(expand_buffer_size), router_(router), static_path_(static_path), req_(res_, this), res_(req_, this), upload_path_(upload_path) {
+		connection(asio::io_service& io, http_router& router, std::string const& static_path, std::string const& upload_path) :socket_(std::unique_ptr<asio::ip::tcp::socket>(new asio::ip::tcp::socket(io))), io_service_(io), buffers_(expand_buffer_size), router_(router), static_path_(static_path), req_(res_, this), res_(req_, this), upload_path_(upload_path), keep_alive_waiter_(io){
 			left_buffer_size_ = buffers_.size();
 		}
 	public:
 		asio::ip::tcp::socket& get_socket() {
 			return *socket_;
 		}
-		std::string local_endpoint() {
+		asio::ip::tcp::endpoint local_endpoint() {
+			return socket_->local_endpoint();
+		}
+		std::string local_ip() {
 			if (socket_close_) {
 				return "";
 			}
 			std::stringstream ss;
-			ss << socket_->local_endpoint();
+			ss << local_endpoint().address();
 			return ss.str();
 		}
-		std::string remote_endpoint() {
+		asio::ip::tcp::endpoint remote_endpoint() {
+			return socket_->remote_endpoint();
+		}
+		std::string remote_ip() {
 			if (socket_close_) {
 				return "";
 			}
 			std::stringstream ss;
-			ss << socket_->remote_endpoint();
+			ss << remote_endpoint().address();
 			return ss.str();
+		}
+		void set_keep_alive_wait_time(std::time_t time) {
+			keep_alive_wait_time_ = time;
+		}
+		std::time_t get_keep_alive_wait_time() {
+			return keep_alive_wait_time_;
 		}
 	private:
 		std::vector<char>& get_buffers() {
 			return buffers_;
+		}
+	private:
+		void resume_keep_timer() {
+			auto handler = this->shared_from_this();
+			keep_alive_waiter_.expires_from_now(std::chrono::seconds(keep_alive_wait_time_));
+			keep_alive_waiter_.async_wait([handler,this](std::error_code const& ec) {
+				if (ec) {
+					return;
+				}
+				disconnect();
+			});
 		}
 	private:
 		bool expand_size(bool is_multipart_data) {
@@ -442,6 +465,7 @@ namespace xfinal {
 					close();
 					return;
 				}
+				keep_alive_waiter_.cancel();
 				handler->set_current_pos(read_size);
 				auto& buffer = handler->get_buffers();
 				//std::cout << handler->get_buffers().data() << std::endl;
@@ -477,12 +501,13 @@ namespace xfinal {
 		void forward_write(bool is_websokcet = false) {  //直接写 非chunked
 			if (!socket_close_) {
 				auto handler = this->shared_from_this();
-				asio::async_write(*socket_, res_.to_buffers(), [handler, is_websokcet](std::error_code const& ec, std::size_t write_size) {
+				asio::async_write(*socket_, res_.to_buffers(), [handler, is_websokcet,this](std::error_code const& ec, std::size_t write_size) {
 					if (!is_websokcet) {
 						handler->close();
 					}
 					else {
 						handler->socket_close_ = true; //对于connection来说 sokcet 进行逻辑关闭 http部分处理结束 转交给websocket处理
+						keep_alive_waiter_.cancel();
 						auto ws = handler->router_.websokcets().start_webscoket(view2str(handler->req_.url()));
 						ws->move_socket(std::move(handler->socket_));
 					}
@@ -538,11 +563,16 @@ namespace xfinal {
 		}
 	private:
 		void close() {  //回应完成 准备关闭连接
-			if (req_.is_keep_alive()) {
+			if (req_.is_keep_alive()) {  //keep_alive
 				reset();
+				resume_keep_timer();
 				read_header();
 				return;
 			}
+			disconnect();
+		}
+	private:
+		void disconnect() {
 			std::error_code ignore_write_ec;
 			socket_->write_some(asio::buffer("\0\0"), ignore_write_ec);  //solve time_wait problem
 			std::error_code ignore_shutdown_ec;
@@ -570,13 +600,10 @@ namespace xfinal {
 	public:
 		~connection() {
 			if (!socket_close_) {
-				std::error_code ignore_write_ec;
-				socket_->write_some(asio::buffer("\0\0"), ignore_write_ec);  //solve time_wait problem
-				std::error_code ignore_shutdown_ec;
-				socket_->shutdown(asio::ip::tcp::socket::shutdown_both, ignore_shutdown_ec);
-				std::error_code ignore_close_ec;
-				socket_->close(ignore_close_ec);
+				disconnect();
 			}
+			std::cout << "connection destory" << std::endl;
+			keep_alive_waiter_.cancel();
 		}
 	private:
 		std::unique_ptr<asio::ip::tcp::socket> socket_;
@@ -594,5 +621,7 @@ namespace xfinal {
 		std::string const& static_path_;
 		std::string const& upload_path_;
 		std::size_t start_read_pos_ = 0;
+		asio::steady_timer keep_alive_waiter_;
+		std::time_t keep_alive_wait_time_ = 30;
 	};
 }
