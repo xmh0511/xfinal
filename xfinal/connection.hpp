@@ -420,8 +420,9 @@ namespace xfinal {
 			}
 			expand_size(true);
 			auto handler = this->shared_from_this();
-			socket_->async_read_some(asio::buffer(&buffers_[0], buffers_.size()), [handler, body_size](std::error_code const& ec, std::size_t read_size) {
+			socket_->async_read_some(asio::buffer(&buffers_[0], buffers_.size()), [handler, body_size,this](std::error_code const& ec, std::size_t read_size) {
 				if (ec) {
+					disconnect();
 					return;
 				}
 				handler->request_info.oct_steam_.add_data(nonstd::string_view{ &(handler->buffers_[0]) ,read_size });
@@ -450,8 +451,9 @@ namespace xfinal {
 			}
 			auto handler = this->shared_from_this();
 			auto function = std::move(callback);
-			socket_->async_read_some(asio::buffer(&buffers_[current_use_pos_], left_buffer_size_), [handler, function](std::error_code const& ec, std::size_t read_size) {
+			socket_->async_read_some(asio::buffer(&buffers_[current_use_pos_], left_buffer_size_), [handler, function,this](std::error_code const& ec, std::size_t read_size) {
 				if (ec) {
+					disconnect();
 					return;
 				}
 				handler->set_current_pos(read_size);
@@ -462,7 +464,7 @@ namespace xfinal {
 			auto handler = this->shared_from_this();
 			socket_->async_read_some(asio::buffer(&buffers_[current_use_pos_], left_buffer_size_), [handler,this](std::error_code const& ec, std::size_t read_size){
 				if (ec) {
-					close();
+					disconnect();
 					return;
 				}
 				keep_alive_waiter_.cancel();
