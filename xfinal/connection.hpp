@@ -437,8 +437,9 @@ namespace xfinal {
 		}
 		void read_header() {  //有连接请求后 开始读取请求头
 			auto handler = this->shared_from_this();
-			socket_->async_read_some(asio::buffer(&buffers_[current_use_pos_], left_buffer_size_), [handler](std::error_code const& ec, std::size_t read_size){
+			socket_->async_read_some(asio::buffer(&buffers_[current_use_pos_], left_buffer_size_), [handler,this](std::error_code const& ec, std::size_t read_size){
 				if (ec) {
+					close();
 					return;
 				}
 				handler->set_current_pos(read_size);

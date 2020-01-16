@@ -20,7 +20,7 @@ namespace xfinal {
 
 	class http_server :private nocopyable {
 	public:
-		http_server(std::size_t thread_size):ioservice_pool_handler_(std::unique_ptr<ioservice_pool>(new ioservice_pool(thread_size))), acceptor_(ioservice_pool_handler_->accpetor_io()){
+		http_server(std::size_t thread_size):ioservice_pool_handler_(thread_size), acceptor_(ioservice_pool_handler_.accpetor_io()){
 			static_url_ = std::string("/")+ get_root_director(static_path_)+ "/*";
 			upload_path_ = static_path_ + "/upload";
 			register_static_router(); //注册静态文件处理逻辑
@@ -36,7 +36,7 @@ namespace xfinal {
 			if (!fs::exists(upload_path_)) {
 				fs::create_directories(upload_path_);
 			}
-			ioservice_pool_handler_->run();
+			ioservice_pool_handler_.run();
 		}
 	public:
 		///只能设置为相对当前程序运行目录的路径  "./xxx/xxx"
@@ -113,7 +113,7 @@ namespace xfinal {
 	private:
 		bool listen(asio::ip::tcp::resolver::query& query) {
 			bool result = false;
-			asio::ip::tcp::resolver resolver(ioservice_pool_handler_->get_io());
+			asio::ip::tcp::resolver resolver(ioservice_pool_handler_.get_io());
 			auto endpoints  = resolver.resolve(query);
 			for (; endpoints != asio::ip::tcp::resolver::iterator(); ++endpoints) {
 				asio::ip::tcp::endpoint endpoint = *endpoints;
@@ -144,7 +144,7 @@ namespace xfinal {
 		}
 	private:
 		void start_acceptor() {
-			auto connector = std::make_shared<connection>(ioservice_pool_handler_->get_io(), http_router_, static_path_, upload_path_);
+			auto connector = std::make_shared<connection>(ioservice_pool_handler_.get_io(), http_router_, static_path_, upload_path_);
 			connector->set_chunked_size(chunked_size_);
 			acceptor_.async_accept(connector->get_socket(), [this,connector](std::error_code const& ec) {
 				if (ec) {
@@ -171,7 +171,7 @@ namespace xfinal {
 			});
 		}
 	private:
-		std::unique_ptr<ioservice_pool> ioservice_pool_handler_;
+		ioservice_pool ioservice_pool_handler_;
 		asio::ip::tcp::acceptor acceptor_;
 		http_router http_router_;
 		std::string static_path_ = "./static";

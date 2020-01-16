@@ -3,6 +3,7 @@
 #include <thread>
 #include <vector>
 #include <memory>
+#include <atomic>
 #include "utils.hpp"
 namespace xfinal {
 	class ioservice_pool final :private nocopyable, public std::enable_shared_from_this<ioservice_pool> {
@@ -42,7 +43,7 @@ namespace xfinal {
 		std::vector<std::unique_ptr<std::thread>> thread_pool_;
 		asio::io_service speciafied_accpetor_io_;
 		std::unique_ptr<std::thread> speciafied_accpetor_thread_;
-		std::size_t io_index_;
+		std::atomic<std::size_t> io_index_;
 		std::size_t thread_counts;
 	};
 }
