@@ -602,7 +602,7 @@ namespace xfinal {
 			if (!socket_close_) {
 				disconnect();
 			}
-			std::cout << "connection destory" << std::endl;
+			//std::cout << "connection destory" << std::endl;
 			keep_alive_waiter_.cancel();
 		}
 	private:
