@@ -154,11 +154,12 @@ namespace xfinal {
 			connector->set_chunked_size(chunked_size_);
 			connector->set_keep_alive_wait_time(keep_alive_wait_time_);
 			acceptor_.async_accept(connector->get_socket(), [this,connector](std::error_code const& ec) {
-				if (ec) {
-					return;
+				if (!ec) {
+					connector->read_header();
 				}
-				//connector->get_socket().set_option(asio::socket_base::linger(true, 30));
-				connector->read_header();
+				else {
+					utils::messageCenter::get().trigger_message(std::string("accept error: ") + ec.message());
+				}
 				start_acceptor();
 			});
 		}
