@@ -133,8 +133,7 @@ namespace xfinal {
 				}
 				catch (std::exception const& e) {
 					result = false;
-					std::cout << e.what() << std::endl;
-					//http_router_.trigger_error(xfinal_exception{ e });
+					utils::messageCenter::get().trigger_message(e.what());
 				}
 			}
 			return result;
