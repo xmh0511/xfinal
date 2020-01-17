@@ -486,7 +486,7 @@ namespace xfinal {
 		}
 
 		void request_error(std::string&& what_error) {
-			router_.trigger_error(xfinal_exception{ static_cast<std::string const&>(what_error) });
+			router_.trigger_error(what_error);
 			res_.write_string(std::move(what_error), false, http_status::bad_request);
 			write();
 		}

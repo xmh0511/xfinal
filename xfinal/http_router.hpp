@@ -309,8 +309,8 @@ namespace xfinal {
 			}
 		}
 	public:
-		void trigger_error(std::exception const& err) {
-			utils::messageCenter::get().trigger_message(err.what());
+		void trigger_error(std::string const& err) {
+			utils::messageCenter::get().trigger_message(err);
 		}
 	private:
 		void set_view_method(response& res) {

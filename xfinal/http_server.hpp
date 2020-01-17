@@ -68,8 +68,8 @@ namespace xfinal {
 			utils::messageCenter::get().set_handler(event);
 		}
 
-		void trigger_error(std::exception const& ec) {
-			utils::messageCenter::get().trigger_message(ec.what());
+		void trigger_error(std::string const& ec) {
+			utils::messageCenter::get().trigger_message(ec);
 		}
 
 		template<typename T = default_session_storage>
