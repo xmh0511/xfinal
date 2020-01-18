@@ -73,6 +73,14 @@ namespace xfinal {
 		filewriter oct_steam_;
 	};
 
+	template<typename T,typename U>
+	bool less_than(T iter0,U iter1) {
+		if (iter0 < iter1) {
+			return true;
+		}
+		return false;
+	}
+
 	class http_parser_header final {
 	public:
 		http_parser_header(std::vector<char>::iterator begin, std::vector<char>::iterator end) :begin_(begin), end_(end) {
@@ -82,7 +90,10 @@ namespace xfinal {
 			auto current = begin_;
 			header_begin_ = begin_;
 			while (current != end_) {
-				if (*current == '\r' && *(current + 1) == '\n' && *(current + 2) == '\r' && *(current + 3) == '\n') {
+				if (*current == '\0') {  //不合法的请求
+					return { parse_state::invalid,false };
+				}
+				if (less_than(current + 3, end_) && *current == '\r' && *(current + 1) == '\n' && *(current + 2) == '\r' && *(current + 3) == '\n') {
 					header_end_ = current + 4;
 					return { parse_state::valid,true };
 				}
@@ -95,7 +106,7 @@ namespace xfinal {
 			while (begin_ != end_) {
 				//auto c = *begin_;
 				//auto c_next = *(begin_ + 1);
-				if ((*begin_) == ' ' && (*(begin_ + 1)) != ' ') {
+				if (less_than(begin_ + 1, end_) && (*begin_) == ' ' && (*(begin_ + 1)) != ' ') {
 					return { parse_state::valid,std::string(start, begin_++) };
 				}
 				++begin_;
@@ -105,7 +116,7 @@ namespace xfinal {
 		std::pair < parse_state, std::string> get_url() {
 			auto start = begin_;
 			while (begin_ != end_) {
-				if ((*begin_) == ' ' && (*(begin_ + 1)) != ' ') {
+				if (less_than(begin_ + 1, end_) && (*begin_) == ' ' && (*(begin_ + 1)) != ' ') {
 					return { parse_state::valid,std::string(start, begin_++) };
 				}
 				++begin_;
@@ -115,7 +126,7 @@ namespace xfinal {
 		std::pair < parse_state, std::string> get_version() {
 			auto start = begin_;
 			while (begin_ != end_) {
-				if ((*begin_) == '\r' && (*(begin_ + 1)) == '\n') {
+				if (less_than(begin_ + 1, end_) && (*begin_) == '\r' && (*(begin_ + 1)) == '\n') {
 					begin_ += 2;
 					return { parse_state::valid ,std::string(start,begin_ - 2) };
 				}
@@ -124,7 +135,7 @@ namespace xfinal {
 			return { parse_state::invalid,"" };
 		}
 		std::pair < parse_state, std::map<std::string, std::string>> get_header() {
-			if ((*begin_) == '\r' && (*(begin_ + 1)) == '\n') {  //没有键值对
+			if (less_than(begin_ + 1, end_) && (*begin_) == '\r' && (*(begin_ + 1)) == '\n') {  //没有键值对
 				return { parse_state::valid ,{} };
 			}
 			std::map<std::string, std::string> headers;
@@ -256,9 +267,9 @@ namespace xfinal {
 		bool is_complete_part_header(std::vector<char>::iterator begin_, std::vector<char>::iterator end_) const {
 			nonstd::string_view buffer{ &(*begin_) ,std::size_t(end_ - begin_) };
 			auto it = buffer.find(boundary_start_key_);
-			if (it != nonstd::string_view::npos) {
+			if (it != (nonstd::string_view::size_type)nonstd::string_view::npos) {
 				auto it2 = buffer.find("\r\n\r\n");
-				if (it2 != nonstd::string_view::npos) {
+				if (it2 != (nonstd::string_view::size_type)nonstd::string_view::npos) {
 					return true;
 				}
 				else {
@@ -272,18 +283,18 @@ namespace xfinal {
 		std::pair<multipart_data_state, std::size_t> is_end_part_data(char const* buffers, std::size_t size) const {
 			nonstd::string_view buffer{ buffers ,size };
 			auto it = buffer.find(boundary_start_key_);
-			if (it != nonstd::string_view::npos) {
+			if (it != (nonstd::string_view::size_type)nonstd::string_view::npos) {
 				//std::cout << buffer.substr( it ,boundary_start_key_.size() ) << std::endl;
 				return { multipart_data_state::is_end, it - 2 };
 			}
 			else {
 				auto it2 = buffer.find(boundary_end_key_);
-				if (it2 != nonstd::string_view::npos) {
+				if (it2 != (nonstd::string_view::size_type)nonstd::string_view::npos) {
 					return { multipart_data_state::is_end ,it2 - 2 };
 				}
 				else {
 					auto it3 = buffer.rfind("\r");
-					if (it3 != nonstd::string_view::npos) {
+					if (it3 != (nonstd::string_view::size_type)nonstd::string_view::npos) {
 						auto padding_start = it3 + boundary_start_key_.size() + 1;
 						auto padding_end = it3 + boundary_end_key_.size() + 1;
 						if ((padding_start <= size) || (padding_end <= size)) {
@@ -299,10 +310,10 @@ namespace xfinal {
 		std::pair<std::size_t, std::map<std::string, std::string>> parser_part_head(std::vector<char>::iterator begin_, std::vector<char>::iterator end_) const {
 			nonstd::string_view buffer{ &(*begin_) ,std::size_t(end_ - begin_) };
 			auto it = buffer.find(boundary_start_key_);
-			if (it != nonstd::string_view::npos) {
+			if (it != (nonstd::string_view::size_type)nonstd::string_view::npos) {
 				auto parse_begin = it + boundary_start_key_.size() + 2;
 				auto parse_end = buffer.find("\r\n\r\n", parse_begin);
-				if (parse_end != nonstd::string_view::npos) {
+				if (parse_end != (nonstd::string_view::size_type)nonstd::string_view::npos) {
 					auto head_size = parse_end + 4;
 					auto multipart_head = get_header(buffer.begin() + parse_begin, buffer.begin() + head_size);
 					return { head_size,multipart_head };

@@ -471,7 +471,8 @@ namespace xfinal {
 				handler->set_current_pos(read_size);
 				auto& buffer = handler->get_buffers();
 				//std::cout << handler->get_buffers().data() << std::endl;
-				http_parser_header parser{ buffer.begin(),buffer.end() };
+				auto buff_begin = buffer.begin();
+				http_parser_header parser{ buff_begin,buff_begin + current_use_pos_ };
 				auto parse_r = parser.is_complete_header();
 				if (parse_r.first == parse_state::valid) {
 					if (parse_r.second) {
@@ -481,6 +482,9 @@ namespace xfinal {
 						handler->expand_size(false);
 						handler->read_header();
 					}
+				}
+				else {
+					disconnect(); //不合法的请求头就立刻关闭连接
 				}
 			});
 		}
