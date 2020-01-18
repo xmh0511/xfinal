@@ -143,7 +143,7 @@ namespace xfinal {
 			char n = ' ';
 			auto start = begin_;
 			while (begin_ != end_) {
-				if ((*begin_) == '\r' && (*(begin_ + 1)) == '\n') {  //maybe a header = > key:value
+				if (less_than(begin_ + 1, end_) && (*begin_) == '\r' && (*(begin_ + 1)) == '\n') {  //maybe a header = > key:value
 					if ((end_ - begin_) >= 4) {
 						r = *(begin_ + 2);
 						n = *(begin_ + 3);
