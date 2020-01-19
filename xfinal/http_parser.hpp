@@ -73,9 +73,9 @@ namespace xfinal {
 		filewriter oct_steam_;
 	};
 
-	template<typename T,typename U>
-	bool less_than(T iter0,U iter1) {
-		if (iter0 < iter1) {
+	template<typename T, typename U>
+	bool less_than(T iter0, U iter1, std::size_t number) {
+		if ((iter1 - iter0) >= number) {
 			return true;
 		}
 		return false;
@@ -93,7 +93,7 @@ namespace xfinal {
 				if (*current == '\0') {  //不合法的请求
 					return { parse_state::invalid,false };
 				}
-				if (less_than(current + 3, end_) && *current == '\r' && *(current + 1) == '\n' && *(current + 2) == '\r' && *(current + 3) == '\n') {
+				if (less_than(current, end_,4) && *current == '\r' && *(current + 1) == '\n' && *(current + 2) == '\r' && *(current + 3) == '\n') {
 					header_end_ = current + 4;
 					return { parse_state::valid,true };
 				}
@@ -106,7 +106,7 @@ namespace xfinal {
 			while (begin_ != end_) {
 				//auto c = *begin_;
 				//auto c_next = *(begin_ + 1);
-				if (less_than(begin_ + 1, end_) && (*begin_) == ' ' && (*(begin_ + 1)) != ' ') {
+				if (less_than(begin_ , end_,2) && (*begin_) == ' ' && (*(begin_ + 1)) != ' ') {
 					return { parse_state::valid,std::string(start, begin_++) };
 				}
 				++begin_;
@@ -116,7 +116,7 @@ namespace xfinal {
 		std::pair < parse_state, std::string> get_url() {
 			auto start = begin_;
 			while (begin_ != end_) {
-				if (less_than(begin_ + 1, end_) && (*begin_) == ' ' && (*(begin_ + 1)) != ' ') {
+				if (less_than(begin_, end_,2) && (*begin_) == ' ' && (*(begin_ + 1)) != ' ') {
 					return { parse_state::valid,std::string(start, begin_++) };
 				}
 				++begin_;
@@ -126,7 +126,7 @@ namespace xfinal {
 		std::pair < parse_state, std::string> get_version() {
 			auto start = begin_;
 			while (begin_ != end_) {
-				if (less_than(begin_ + 1, end_) && (*begin_) == '\r' && (*(begin_ + 1)) == '\n') {
+				if (less_than(begin_, end_,2) && (*begin_) == '\r' && (*(begin_ + 1)) == '\n') {
 					begin_ += 2;
 					return { parse_state::valid ,std::string(start,begin_ - 2) };
 				}
@@ -135,7 +135,7 @@ namespace xfinal {
 			return { parse_state::invalid,"" };
 		}
 		std::pair < parse_state, std::map<std::string, std::string>> get_header() {
-			if (less_than(begin_ + 1, end_) && (*begin_) == '\r' && (*(begin_ + 1)) == '\n') {  //没有键值对
+			if (less_than(begin_, end_,2) && (*begin_) == '\r' && (*(begin_ + 1)) == '\n') {  //没有键值对
 				return { parse_state::valid ,{} };
 			}
 			std::map<std::string, std::string> headers;
@@ -143,7 +143,7 @@ namespace xfinal {
 			char n = ' ';
 			auto start = begin_;
 			while (begin_ != end_) {
-				if (less_than(begin_ + 1, end_) && (*begin_) == '\r' && (*(begin_ + 1)) == '\n') {  //maybe a header = > key:value
+				if (less_than(begin_, end_,2) && (*begin_) == '\r' && (*(begin_ + 1)) == '\n') {  //maybe a header = > key:value
 					if ((end_ - begin_) >= 4) {
 						r = *(begin_ + 2);
 						n = *(begin_ + 3);
