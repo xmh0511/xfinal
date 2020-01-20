@@ -74,7 +74,9 @@ namespace xfinal {
 		void remove(nonstd::string_view uuid) {
 			std::unique_lock<std::mutex> lock(map_mutex_);
 			auto it = websockets_.find(uuid);
-			websockets_.erase(it);
+			if (it != websockets_.end()) {
+				websockets_.erase(it);
+			}
 		}
 	private:
 		std::mutex map_mutex_;
