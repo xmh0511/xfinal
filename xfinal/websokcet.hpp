@@ -98,9 +98,8 @@ namespace xfinal {
 	private:
 		void move_socket(std::unique_ptr<asio::ip::tcp::socket>&& socket) {
 			socket_ = std::move(socket);
-			wait_timer_ = std::move(std::unique_ptr<asio::steady_timer>(new asio::steady_timer(socket_->get_io_service())));
-			//ping_pong_timer_ = std::make_unique<asio::steady_timer>(socket_->get_io_service());
-			//ping();
+			auto& io = static_cast<asio::io_service&>(socket_->get_executor().context());
+			wait_timer_ = std::move(std::unique_ptr<asio::steady_timer>(new asio::steady_timer(io)));
 			websocket_event_manager.trigger(url_, "open", *this);
 			reset_time(); //开始开启空连接超时 从当前时间算起
 			start_read();

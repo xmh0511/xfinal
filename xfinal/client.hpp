@@ -507,7 +507,8 @@ namespace xfinal {
                     timer = nullptr;
                     return;
                 }
-                timer = std::unique_ptr<asio::steady_timer>(new asio::steady_timer(socket->get_io_service()));
+				auto& io = static_cast<asio::io_service&>(socket->get_executor().context());
+                timer = std::unique_ptr<asio::steady_timer>(new asio::steady_timer(io));
                 timer->expires_from_now(std::chrono::seconds(seconds));
                 auto self = this->shared_from_this();
                 timer->async_wait([self](const error_code &ec) {

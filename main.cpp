@@ -79,8 +79,8 @@ int main()
 	//	res.write_string("custom not found", true, http_status::bad_request);
 	//});
 
-	//server.set_websocket_frame_size(1024 * 1024);//ÉèÖÃwebsocket Ö¡Êı¾İ³¤¶È
-	server.on_error([](std::string const& message) {  //Ìá¹©ÓÃ»§¼ÇÂ¼´íÎóÈÕÖ¾
+	//server.set_websocket_frame_size(1024 * 1024);//è®¾ç½®websocket å¸§æ•°æ®é•¿åº¦
+	server.on_error([](std::string const& message) {  //æä¾›ç”¨æˆ·è®°å½•é”™è¯¯æ—¥å¿—
 		std::cout << message << std::endl;
 	});
 
@@ -114,7 +114,7 @@ int main()
 	server.router<GET,POST>("/json", [](request& req, response& res) {
 		std::cout << "body: " << req.body()<<std::endl;
 		json root;
-		root["hello"] = u8"ÄãºÃ£¬ÖĞÎÄ";
+		root["hello"] = u8"ä½ å¥½ï¼Œä¸­æ–‡";
 		res.write_json(root);
 	});
 
@@ -248,7 +248,7 @@ int main()
 
 	websocket_event event;
 	event.on("message", [](websocket& ws) {
-		std::cout << utf8_to_gbk(view2str(ws.messages())) << std::endl;
+		std::cout << view2str(ws.messages()) << std::endl;
 		std::cout << (int)ws.message_code() << std::endl;
 		std::string message;
 		for (auto i = 0; i <= 400; ++i) {
