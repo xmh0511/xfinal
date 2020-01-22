@@ -105,11 +105,11 @@ namespace xfinal {
 				req_.multipart_files_map_ = &(request_info.multipart_files_map_);
 				req_.oct_steam_ = &(request_info.oct_steam_);
 				req_.empty_file_ = &(request_info.empty_file_);
-				if (!router_.check_validate_request(req_, res_)) { //验证是否为有效请求 请求的url是否注册过路由
-					req_.is_validate_request_ = false;
-					write();
-					return;
-				}
+				//if (!router_.check_validate_request(req_, res_)) { //验证是否为有效请求 请求的url是否注册过路由
+				//	req_.is_validate_request_ = false;
+				//	write();
+				//	return;
+				//}
 				handle_read();
 				return;
 			}
@@ -365,7 +365,6 @@ namespace xfinal {
 				}
 				//forward_contain_data(buffers_, data.size(), current_use_pos_);  //把下一条的头部数据移动到buffer的前面来
 				start_read_pos_ += data.size();
-				//current_use_pos_ -= data.size();
 				left_buffer_size_ = buffers_.size() - current_use_pos_;
 				if (left_buffer_size_ == 0) {  //buffers已经没有空间了 需要把已经处理的数据给清了，腾出空间
 					forward_contain_data(buffers_, start_read_pos_, current_use_pos_);
@@ -497,7 +496,7 @@ namespace xfinal {
 		void request_error(std::string&& what_error) {
 			router_.trigger_error(what_error);
 			res_.write_string(std::move(what_error), false, http_status::bad_request);
-			req_.is_validate_request_ = false;
+			//req_.is_validate_request_ = false;
 			write();
 		}
 
@@ -585,10 +584,6 @@ namespace xfinal {
 		}
 	private:
 		void close() {  //回应完成 准备关闭连接
-			if (req_.is_validate_request_ == false) {  //无效的请求写完回应后直接关闭
-				disconnect();
-				return;
-			}
 			if (req_.is_keep_alive()) {  //keep_alive
 				reset();
 				resume_keep_timer();

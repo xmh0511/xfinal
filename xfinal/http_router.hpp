@@ -36,16 +36,7 @@ namespace xfinal {
 		request& req_;
 		response& res_;
 	};
-	//template<std::size_t N>
-	//struct router_caller {
-	//	template<typename Tuple>
-	//	constexpr static void apply_before(bool& b, request& req,response& res,Tuple&& tp) {
-	//		each_tuple<0, tuple_size<typename std::remove_reference<Tuple>::type>::value>{}(std::forward<Tuple>(tp), [&b,&req,&res](auto& aop) {
-	//			auto r = aop.before(req, res);
-	//			b = b && r;
-	//		});
-	//	}
-	//};
+
 	template<std::size_t N>
 	struct router_caller {
 		template<typename Function, typename Tuple>
@@ -307,41 +298,51 @@ namespace xfinal {
 				ss << "the request " << view2str(req.method()) << " \"" << view2str(req.url()) << "\" is not found";
 				res.write_string(ss.str(), false, http_status::bad_request);
 			}
+			if (req.content_type() == content_type::multipart_form) {
+				auto& files = req.files();
+				for (auto& iter : files) {
+					iter.second.remove();
+				}
+			}
+			if (req.content_type() == content_type::octet_stream) {
+				auto& file = req.file();
+				file.remove();
+			}
 		}
-		bool check_validate_request(request& req, response& res) {  //用于解析完请求头后判断请求是否是有效请求
-			auto url = req.url();
-			if (url.size() > 1) {  //确保这里不是 / 根路由
-				std::size_t back = 0;
-				while ((url.size() - back - 1) > 0 && url[url.size() - back - 1] == '/') { //去除url 最后有/的干扰 /xxx/xxx/ - > /xxx/xxx
-					back++;
-				}
-				if (back > 0) {  //如果url不是规范的url 则重定向跳转
-					url = url.substr(0, url.size() - back);
-				}
-			}
-			auto key = view2str(req.method()) + view2str(url);
-			if (router_map_.find(key) != router_map_.end()) {
-				return true;
-			}
-			else {
-				for (auto& iter : genera_router_map_) {
-					auto pos = key.find("/", iter.first.size());
-					auto gurl = key.substr(0, pos - 0);
-					if (iter.first == gurl) {
-						return true;
-					}
-				}
-			}
-			if (not_found_callback_ != nullptr) {
-				not_found_callback_(req, res);
-			}
-			else {
-				std::stringstream ss;
-				ss << "the request " << view2str(req.method()) << " \"" << view2str(req.url()) << "\" is not found";
-				res.write_string(ss.str(), false, http_status::bad_request);
-			}
-			return false;
-		}
+		//bool check_validate_request(request& req, response& res) {  //用于解析完请求头后判断请求是否是有效请求
+		//	auto url = req.url();
+		//	if (url.size() > 1) {  //确保这里不是 / 根路由
+		//		std::size_t back = 0;
+		//		while ((url.size() - back - 1) > 0 && url[url.size() - back - 1] == '/') { //去除url 最后有/的干扰 /xxx/xxx/ - > /xxx/xxx
+		//			back++;
+		//		}
+		//		if (back > 0) {  //如果url不是规范的url 则重定向跳转
+		//			url = url.substr(0, url.size() - back);
+		//		}
+		//	}
+		//	auto key = view2str(req.method()) + view2str(url);
+		//	if (router_map_.find(key) != router_map_.end()) {
+		//		return true;
+		//	}
+		//	else {
+		//		for (auto& iter : genera_router_map_) {
+		//			auto pos = key.find("/", iter.first.size());
+		//			auto gurl = key.substr(0, pos - 0);
+		//			if (iter.first == gurl) {
+		//				return true;
+		//			}
+		//		}
+		//	}
+		//	if (not_found_callback_ != nullptr) {
+		//		not_found_callback_(req, res);
+		//	}
+		//	else {
+		//		std::stringstream ss;
+		//		ss << "the request " << view2str(req.method()) << " \"" << view2str(req.url()) << "\" is not found";
+		//		res.write_string(ss.str(), false, http_status::bad_request);
+		//	}
+		//	return false;
+		//}
 	public:
 		void trigger_error(std::string const& err) {
 			utils::messageCenter::get().trigger_message(err);

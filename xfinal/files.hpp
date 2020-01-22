@@ -57,14 +57,19 @@ namespace xfinal {
 			return path_.substr(path_.find('.') + 1, path_.size());
 		}
 
-		void close() {
+		void close() const {
 			if (file_handle_) {
 				file_handle_->close();
 				file_handle_.release();
 			}
 		}
+		bool remove() const {
+			close();
+			fs::remove(path_);
+			return true;
+		}
 	private:
-		std::unique_ptr<std::ofstream> file_handle_;
+		mutable std::unique_ptr<std::ofstream> file_handle_;
 		std::string original_name_;
 		std::uint64_t size_ = 0;
 		std::string path_;
@@ -110,7 +115,7 @@ namespace xfinal {
 		bool is_exsit() const {
 			return is_exsit_;
 		}
-		void close() {
+		void close() const {
 			if (file_handle_) {
 				file_handle_->close();
 				file_handle_.release();
@@ -135,15 +140,20 @@ namespace xfinal {
 			}
 		}
 
-		nonstd::string_view content_type() {
+		nonstd::string_view content_type() const {
 			return content_type_;
 		}
 
-		std::uint64_t size() {
+		std::uint64_t size() const {
 			return size_;
 		}
+		bool remove() const {
+			close();
+			fs::remove(path_);
+			return true;
+		}
 	private:
-		std::unique_ptr<std::ifstream> file_handle_;
+		mutable std::unique_ptr<std::ifstream> file_handle_;
 		std::uint64_t size_ = 0;
 		std::string path_;
 		nonstd::string_view content_type_;

@@ -156,6 +156,10 @@ namespace xfinal {
 			}
 		}
 
+		std::map<std::string, xfinal::filewriter> const& files() const noexcept {
+			return *multipart_files_map_;
+		}
+
 		filewriter const& file(nonstd::string_view filename) const noexcept {
 			if (multipart_files_map_ != nullptr) {
 				auto it = multipart_files_map_->find(view2str(filename));
@@ -363,7 +367,6 @@ namespace xfinal {
 			is_generic_ = false;
 			generic_base_path_ = "";
 			session_ = nullptr;
-			is_validate_request_ = true;
 		}
 		void set_generic_path(std::string const& path) {
 			is_generic_ = true;
@@ -392,7 +395,6 @@ namespace xfinal {
 		std::shared_ptr<class session> session_;
 		bool is_generic_ = false;
 		std::string generic_base_path_;
-		bool is_validate_request_ = true;
 	};
 	///响应
 	class response :private nocopyable {
