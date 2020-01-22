@@ -174,6 +174,13 @@ namespace xfinal {
 			return *oct_steam_;
 		}
 
+		bool remove_all_upload_files() {
+			auto& files = *multipart_files_map_;
+			for (auto& iter : files) {
+				iter.second.remove();
+			}
+		}
+
 		nonstd::string_view method() const noexcept {
 			return method_;
 		}
