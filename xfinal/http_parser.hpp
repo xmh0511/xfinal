@@ -32,7 +32,7 @@ namespace xfinal {
 		request_meta(std::string&& method, std::string&& url, std::string&& version, std::map<std::string, std::string>&& headers) :method_(std::move(method)), url_(std::move(url)), version_(std::move(version)), headers_(std::move(headers)) {
 
 		}
-		request_meta(request_meta&& r) :method_(std::move(r.method_)), url_(std::move(r.url_)), version_(std::move(r.version_)), headers_(std::move(r.headers_)), form_map_(std::move(r.form_map_)), body_(std::move(r.body_)), decode_body_(std::move(r.decode_body_)), multipart_form_map_(std::move(r.multipart_form_map_)), multipart_files_map_(std::move(r.multipart_files_map_)), oct_steam_(std::move(r.oct_steam_)) {
+		request_meta(request_meta&& r) :method_(std::move(r.method_)), url_(std::move(r.url_)), version_(std::move(r.version_)), headers_(std::move(r.headers_)), form_map_(std::move(r.form_map_)), body_(std::move(r.body_)), decode_body_(std::move(r.decode_body_)), multipart_form_map_(std::move(r.multipart_form_map_)), multipart_files_map_(std::move(r.multipart_files_map_)), oct_steam_(std::move(r.oct_steam_)), empty_file_(std::move(r.empty_file_)){
 
 		}
 		request_meta& operator=(request_meta&& r) {
@@ -46,6 +46,7 @@ namespace xfinal {
 			multipart_form_map_ = std::move(r.multipart_form_map_);
 			multipart_files_map_ = std::move(r.multipart_files_map_);
 			oct_steam_ = std::move(r.oct_steam_);
+			empty_file_ = std::move(r.empty_file_);
 			return *this;
 		}
 		void reset() {
@@ -59,6 +60,7 @@ namespace xfinal {
 			multipart_form_map_.clear();
 			multipart_files_map_.clear();
 			oct_steam_.close();
+			empty_file_.close();
 		}
 	public:
 		std::string method_;
@@ -71,6 +73,7 @@ namespace xfinal {
 		std::map<std::string, std::string> multipart_form_map_;
 		std::map<std::string, filewriter> multipart_files_map_;
 		filewriter oct_steam_;
+		filewriter empty_file_;
 	};
 
 	template<typename T, typename U>

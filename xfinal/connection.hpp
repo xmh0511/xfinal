@@ -78,7 +78,6 @@ namespace xfinal {
 						buffers_.resize(max_buffer_size_);
 					}
 					left_buffer_size_ = max_buffer_size_ - current_use_pos_;
-					//current_use_pos_ = 0;
 					return true;
 				}
 			}
@@ -105,6 +104,12 @@ namespace xfinal {
 				req_.multipart_form_map_ = &(request_info.multipart_form_map_);
 				req_.multipart_files_map_ = &(request_info.multipart_files_map_);
 				req_.oct_steam_ = &(request_info.oct_steam_);
+				req_.empty_file_ = &(request_info.empty_file_);
+				if (!router_.check_validate_request(req_, res_)) { //验证是否为有效请求 请求的url是否注册过路由
+					req_.is_validate_request_ = false;
+					write();
+					return;
+				}
 				handle_read();
 				return;
 			}
@@ -492,6 +497,7 @@ namespace xfinal {
 		void request_error(std::string&& what_error) {
 			router_.trigger_error(what_error);
 			res_.write_string(std::move(what_error), false, http_status::bad_request);
+			req_.is_validate_request_ = false;
 			write();
 		}
 
@@ -579,6 +585,10 @@ namespace xfinal {
 		}
 	private:
 		void close() {  //回应完成 准备关闭连接
+			if (req_.is_validate_request_ == false) {  //无效的请求写完回应后直接关闭
+				disconnect();
+				return;
+			}
 			if (req_.is_keep_alive()) {  //keep_alive
 				reset();
 				resume_keep_timer();

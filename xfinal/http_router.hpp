@@ -278,11 +278,7 @@ namespace xfinal {
 					}
 				}
 			}
-			//auto cookies = cookies_map(req.header("Cookie"));
-			//for (auto& iter : cookies) {
-			//	session_manager::get().validata(view2str(iter.second));
-			//}
-			auto key = std::string(req.method()) + std::string(url);
+			auto key = view2str(req.method()) + view2str(url);
 			if (router_map_.find(key) != router_map_.end()) {
 				auto& it = router_map_.at(key);
 				set_view_method(res);
@@ -291,7 +287,9 @@ namespace xfinal {
 			}
 			else {
 				for (auto& iter : genera_router_map_) {
-					if (iter.first == (key.substr(0, iter.first.size()))) {
+					auto pos = key.find("/", iter.first.size());
+					auto gurl = key.substr(0, pos - 0);
+					if (iter.first == gurl) {
 						set_view_method(res);
 						auto& url = iter.first;
 						auto pos = url.find("/");
@@ -305,8 +303,44 @@ namespace xfinal {
 				not_found_callback_(req, res);
 			}
 			else {
-				res.write_string(std::string("the url \"") + view2str(req.url()) + "\" is not found", false, http_status::bad_request);
+				std::stringstream ss;
+				ss << "the request " << view2str(req.method()) << " \"" << view2str(req.url()) << "\" is not found";
+				res.write_string(ss.str(), false, http_status::bad_request);
 			}
+		}
+		bool check_validate_request(request& req, response& res) {  //用于解析完请求头后判断请求是否是有效请求
+			auto url = req.url();
+			if (url.size() > 1) {  //确保这里不是 / 根路由
+				std::size_t back = 0;
+				while ((url.size() - back - 1) > 0 && url[url.size() - back - 1] == '/') { //去除url 最后有/的干扰 /xxx/xxx/ - > /xxx/xxx
+					back++;
+				}
+				if (back > 0) {  //如果url不是规范的url 则重定向跳转
+					url = url.substr(0, url.size() - back);
+				}
+			}
+			auto key = view2str(req.method()) + view2str(url);
+			if (router_map_.find(key) != router_map_.end()) {
+				return true;
+			}
+			else {
+				for (auto& iter : genera_router_map_) {
+					auto pos = key.find("/", iter.first.size());
+					auto gurl = key.substr(0, pos - 0);
+					if (iter.first == gurl) {
+						return true;
+					}
+				}
+			}
+			if (not_found_callback_ != nullptr) {
+				not_found_callback_(req, res);
+			}
+			else {
+				std::stringstream ss;
+				ss << "the request " << view2str(req.method()) << " \"" << view2str(req.url()) << "\" is not found";
+				res.write_string(ss.str(), false, http_status::bad_request);
+			}
+			return false;
 		}
 	public:
 		void trigger_error(std::string const& err) {
@@ -340,9 +374,9 @@ namespace xfinal {
 			return websockets_;
 		}
 	private:
-		std::map<std::string, router_function> router_map_;
-		std::map<std::string, router_function> genera_router_map_;
-		std::map<std::string, std::pair<std::size_t, inja::CallbackFunction>> view_method_map_;
+		std::unordered_map<std::string, router_function> router_map_;
+		std::unordered_map<std::string, router_function> genera_router_map_;
+		std::unordered_map<std::string, std::pair<std::size_t, inja::CallbackFunction>> view_method_map_;
 		asio::io_service io_;
 		asio::steady_timer timer_;
 		std::unique_ptr<std::thread> thread_;

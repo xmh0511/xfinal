@@ -163,10 +163,10 @@ namespace xfinal {
 					return it->second;
 				}
 			}
-			return *oct_steam_;
+			return *empty_file_;
 		}
 
-		filewriter const& file() const noexcept {
+		filewriter const& file() const noexcept {  //获取octstrem 文件
 			return *oct_steam_;
 		}
 
@@ -359,9 +359,11 @@ namespace xfinal {
 			multipart_form_map_ = nullptr;
 			multipart_files_map_ = nullptr;
 			oct_steam_ = nullptr;
+			empty_file_ = nullptr;
 			is_generic_ = false;
 			generic_base_path_ = "";
 			session_ = nullptr;
+			is_validate_request_ = true;
 		}
 		void set_generic_path(std::string const& path) {
 			is_generic_ = true;
@@ -384,11 +386,13 @@ namespace xfinal {
 		std::map<std::string, std::string> const* multipart_form_map_ = nullptr;
 		std::map<std::string, xfinal::filewriter> const* multipart_files_map_ = nullptr;
 		xfinal::filewriter* oct_steam_ = nullptr;
+		xfinal::filewriter* empty_file_ = nullptr;
 		class connection* connecter_;
 		response& res_;
 		std::shared_ptr<class session> session_;
 		bool is_generic_ = false;
 		std::string generic_base_path_;
+		bool is_validate_request_ = true;
 	};
 	///响应
 	class response :private nocopyable {
