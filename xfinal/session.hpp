@@ -276,7 +276,7 @@ namespace xfinal {
 			std::unique_lock<std::mutex> lock(mutex_);
 			auto it = session_map_.find(id);
 			if (it != session_map_.end()) {
-				(it->second)->remove(*storage_);
+				(*storage_).remove(id);
 				it = session_map_.erase(it);
 			}
 			return it;
