@@ -19,6 +19,7 @@ namespace xfinal {
 		virtual bool init() = 0;
 		virtual void save(session& session) = 0;
 		virtual void remove(session& session) = 0;
+		virtual void remove(std::string const& uuid) = 0;
 	};
 	template<typename Session>
 	class cookie final :private nocopyable {
@@ -82,16 +83,42 @@ namespace xfinal {
 		Session& session_;
 	};
 
-	class session final:private nocopyable {  //session 模块
+	template<typename Manager>
+	void remove_from_manager(std::string const& id) {
+		Manager::get().remove_session(id);
+	}
+
+	template<typename Manager>
+	void add_to_manager(std::string const& id, std::weak_ptr<session> session) {
+		Manager::get().add_session(id, session);
+	}
+
+	template<typename Manager>
+	void replace_session_to_manager(std::string const& oldId,std::string const& newId, std::weak_ptr<session> session) {
+		Manager::get().replace_session(oldId, newId, session);
+	}
+
+	class session_manager;
+	class session final:public std::enable_shared_from_this<session> ,private nocopyable {  //session 模块
 	public:
 		session(bool is_empty = false):is_empty_(is_empty), cookie_(uuid_, expires_,*this), data_(json::object()){
 			expires_ = std::time(nullptr) + 600;
 		}
 	public:
-		void set_id(std::string const& id) {
+		void init_id(std::string const& id) {
 			std::unique_lock<std::mutex> lock(mutex_);
 			is_update_ = true;
 			uuid_ = id;
+		}
+		void set_id(std::string const& id) {
+			std::unique_lock<std::mutex> lock(mutex_);
+			auto that = this->shared_from_this();
+			auto old_id = uuid_;
+			is_update_ = true;
+			uuid_ = id;
+			if (!old_id.empty()) {
+				replace_session_to_manager<session_manager>(old_id, uuid_, that);  //修改了唯一标识 就从session_manager中删除旧的session并增加新的
+			}
 		}
 		std::string get_id() {
 			std::unique_lock<std::mutex> lock(mutex_);
@@ -216,7 +243,6 @@ namespace xfinal {
 	private:
 		std::unordered_map<std::string, std::shared_ptr<session>> session_map_;
 		std::mutex mutex_;
-		//std::shared_ptr<session> empty_session_;
 		std::unique_ptr<session_storage> storage_ = nullptr;
 	private:
 		session_manager()/*:empty_session_(std::make_shared<session>(true))*/{
@@ -240,7 +266,7 @@ namespace xfinal {
 			if (it != session_map_.end()) {
 				return it->second;
 			}
-			return std::make_shared<session>(true); //空的session
+			return empty_session(); //空的session
 		}
 		void add_session(std::string const& id, std::weak_ptr<session> session) {
 			std::unique_lock<std::mutex> lock(mutex_);
@@ -255,17 +281,28 @@ namespace xfinal {
 			}
 			return it;
 		}
+		void replace_session(std::string const& oldId, std::string const& newId, std::weak_ptr<session> session) {
+			std::unique_lock<std::mutex> lock(mutex_);
+			auto it = session_map_.find(oldId);
+			if (it != session_map_.end()) {
+				(*storage_).remove(oldId);
+				it = session_map_.erase(it);
+			}
+			session_map_[newId] = session.lock();
+		}
 		std::shared_ptr<session> empty_session() {
 			return std::make_shared<session>(true);  //空的session
 		}
-		void validata(std::string const& id) {
+		std::shared_ptr<session> validata(std::string const& id) {
 			auto session = get_session(id);
 			if (!session->empty()) {
 				auto expires = session->get_expires();
 				if (expires <= std::time(nullptr)) {
 					remove_session(id);
+					return empty_session(); //过期的session 删除后 返回空的session
 				}
 			}
+			return session;
 		}
 		void check_expires() {
 			std::unique_lock<std::mutex> lock(mutex_);
@@ -300,7 +337,7 @@ namespace xfinal {
 					auto data = json::parse(buffer);
 					auto session = std::make_shared<class session>();
 					if (!data.is_null() && !data["expires"].is_null() && !data["id"].is_null() && !data["cookie_name"].is_null() && !data["path"].is_null() && !data["domain"].is_null() && !data["http_only"].is_null()) {
-						session->set_id(data["id"].get<std::string>());
+						session->init_id(data["id"].get<std::string>());
 						session->replace_expires(data["expires"].get<std::time_t>());
 						session->get_cookie().set_name(data["cookie_name"].get<std::string>());
 						session->get_cookie().set_path(data["path"].get<std::string>());
@@ -327,6 +364,10 @@ namespace xfinal {
 		}
 		void remove(session& session) {
 			auto filepath = save_dir_ +"/" + session.get_id();
+			fs::remove(filepath);
+		}
+		void remove(std::string const& uuid) {
+			auto filepath = save_dir_ + "/" + uuid;
 			fs::remove(filepath);
 		}
 	public:

@@ -231,9 +231,18 @@ int main()
 	server.router<GET>("/session", [](request& req, response& res) {
 		auto& session = req.create_session();
 		session.set_data("time", std::to_string(std::time(nullptr)));
-		session.set_expires(15);
+		session.set_expires(30);
 		res.write_string("OK");
 	});
+
+	server.router<GET>("/changesession", [](request& req, response& res) {
+		auto& session = req.session();
+		auto t = session.get_data<std::string>("time");
+		if (!t.empty()) {
+			session.set_id("0123456");
+		}
+		res.write_string("OK");
+		});
 
 	server.router<GET>("/login", [](request& req, response& res) {
 		auto& session = req.session();

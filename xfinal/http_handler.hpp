@@ -275,9 +275,9 @@ namespace xfinal {
 		}
 		class session& create_session(std::string const& name) {
 			session_ = std::make_shared<class session>(false);
-			session_->set_id(uuids::uuid_system_generator{}().to_short_str());
-			//session_->set_expires(600);
 			session_->get_cookie().set_name(name);
+			session_->init_id(uuids::uuid_system_generator{}().to_short_str());
+			//session_->set_expires(600);
 			session_manager::get().add_session(session_->get_id(), session_);
 			return *session_;
 		}
@@ -302,8 +302,7 @@ namespace xfinal {
 					session_ = session_manager::get().empty_session();
 				}
 				else {
-					session_manager::get().validata(view2str(id));
-					session_ = session_manager::get().get_session(view2str(id));
+					session_ = session_manager::get().validata(view2str(id));//验证session的有效性并返回
 				}
 			}
 			return *session_;
