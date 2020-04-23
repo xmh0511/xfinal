@@ -516,6 +516,10 @@ namespace xfinal {
 			if (path.has_extension()) {
 				extension = view2str(get_content_type(path.extension().string()));
 			}
+			if (!fs::exists(path)) {
+				write_string("", false, http_status::bad_request);
+				return;
+			}
 			try {
 				write_string(view_env_->render_file(filename, view_data_), is_chunked, state, extension);
 			}
