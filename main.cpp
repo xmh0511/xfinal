@@ -168,10 +168,14 @@ int main()
 
 	server.router<GET, POST>("/test0", &Process::test, nullptr, Test{});
 
+	server.router<GET, POST>("/test1", &Process::test);
+
 	Shop ss;
 	server.router<GET, POST>("/controller", &Shop::goshop,ss, Test{});
 
 	server.router<GET, POST>("/controller0", &Shop::goshop, nullptr, Test{});
+
+	server.router<GET, POST>("/controller1", &Shop::goshop, Test{});
 
 	server.router<GET>("/client", [](request& req, response& res) {
 		http_client client("www.baidu.com");

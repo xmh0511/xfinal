@@ -177,28 +177,42 @@ namespace xfinal {
 		}
 
 		template<typename Array, typename Ret, typename Class, typename...Params, typename Object, typename...Args>
-		void router(nonstd::string_view url, Array&& methods, Ret(Class::* memberfunc)(Params...), Object& that, Args&& ...args) {  // member function
+		void router(nonstd::string_view url, Array&& methods, Ret(Class::* memberfunc)(Params...), Object& that, Args&& ...args) {  // member function with lvalue object argument
 			auto tp = std::tuple<Args...>(std::forward<Args>(args)...);
 			auto b = std::bind(&http_router::pre_handler_member_function<Ret(Class::*)(Params...), Class, std::tuple<Args...>>, this, std::placeholders::_1, std::placeholders::_2, memberfunc, static_cast<Class*>(&that), std::move(tp));
 			reg_router(url, std::forward<Array>(methods), std::move(b));
 		}
 
-		template<typename Array, typename Ret, typename Class, typename...Params, typename Object, typename...Args>
-		typename std::enable_if<std::is_pointer<typename std::remove_reference<Object>::type>::value || std::is_null_pointer<typename std::remove_reference<Object>::type>::value>::type router(nonstd::string_view url, Array && methods, Ret(Class:: * memberfunc)(Params...), Object && that, Args && ...args) {  // member function
+		template<typename Array, typename Ret, typename Class, typename...Params,typename...Args>
+		void router(nonstd::string_view url, Array&& methods, Ret(Class::* memberfunc)(Params...),Args&& ...args) {  // member function elision object argument
+			auto tp = std::tuple<Args...>(std::forward<Args>(args)...);
+			auto b = std::bind(&http_router::pre_handler_member_function<Ret(Class::*)(Params...), Class, std::tuple<Args...>>, this, std::placeholders::_1, std::placeholders::_2, memberfunc, nullptr, std::move(tp));
+			reg_router(url, std::forward<Array>(methods), std::move(b));
+		}
+
+		template<typename Array, typename Ret, typename Class, typename...Params, typename...Args>
+		void router(nonstd::string_view url, Array && methods, Ret(Class:: * memberfunc)(Params...), Class* that, Args && ...args) {  // member function with object pointer
 			auto tp = std::tuple<Args...>(std::forward<Args>(args)...);
 			auto b = std::bind(&http_router::pre_handler_member_function<Ret(Class::*)(Params...), Class, std::tuple<Args...>>, this, std::placeholders::_1, std::placeholders::_2, memberfunc, static_cast<Class*>(that), std::move(tp));
 			reg_router(url, std::forward<Array>(methods), std::move(b));
 		}
 
 		template<typename Array, typename Class, typename...Args>
-		void router(nonstd::string_view url, Array&& methods, void(Class::* memberfunc)(), Class& that, Args&& ...args) {  //¿ØÖÆÆ÷
+		typename std::enable_if<std::is_base_of<Controller, typename std::remove_cv<Class>::type>::value>::type router(nonstd::string_view url, Array&& methods, void(Class::* memberfunc)(), Class& that, Args&& ...args) {  //controller with lvalue object argument
 			auto tp = std::tuple<Args...>(std::forward<Args>(args)...);
 			auto b = std::bind(&http_router::pre_handler_controller<Class, std::tuple<Args...>>, this, std::placeholders::_1, std::placeholders::_2, memberfunc, &that, std::move(tp));
 			reg_router(url, std::forward<Array>(methods), std::move(b));
 		}
 
 		template<typename Array, typename Class, typename...Args>
-		void router(nonstd::string_view url, Array&& methods, void(Class::* memberfunc)(), Class* that, Args&& ...args) {  //¿ØÖÆÆ÷
+		typename std::enable_if<std::is_base_of<Controller, typename std::remove_cv<Class>::type>::value>::type router(nonstd::string_view url, Array&& methods, void(Class::* memberfunc)(), Args&& ...args) {  //controller elision object argument
+			auto tp = std::tuple<Args...>(std::forward<Args>(args)...);
+			auto b = std::bind(&http_router::pre_handler_controller<Class, std::tuple<Args...>>, this, std::placeholders::_1, std::placeholders::_2, memberfunc, nullptr, std::move(tp));
+			reg_router(url, std::forward<Array>(methods), std::move(b));
+		}
+
+		template<typename Array, typename Class, typename...Args>
+		typename std::enable_if<std::is_base_of<Controller, Class>::value>::type router(nonstd::string_view url, Array&& methods, void(Class::* memberfunc)(), Class* that, Args&& ...args) {  //controller with object pointer
 			auto tp = std::tuple<Args...>(std::forward<Args>(args)...);
 			auto b = std::bind(&http_router::pre_handler_controller<Class, std::tuple<Args...>>, this, std::placeholders::_1, std::placeholders::_2, memberfunc, that, std::move(tp));
 			reg_router(url, std::forward<Array>(methods), std::move(b));
