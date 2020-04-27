@@ -166,14 +166,20 @@ namespace xfinal {
 		void register_static_router() {
 			router<GET>(nonstd::string_view{ static_url_.data(),static_url_.size() }, [this](request& req,response& res) {  //静态文件处理
 				auto url = req.url();
-				auto p = fs::path("."+view2str(url));
+				auto decode_path = url_decode(view2str(url));
+				auto p = fs::path("."+ decode_path);
 				auto content_type = get_content_type(p.extension());
 				auto ab = fs::absolute(p);
 				if (ab.parent_path() == fs::current_path()) { //目录到了程序文件的目录 视为不合法请求
 					res.write_string("", false, http_status::bad_request, view2str(content_type));
 				}
 				else {
-					res.write_file(p.string(), true); //默认使用chunked方式返回文件数据
+#ifdef _WIN32
+					auto native_path = utf8_to_gbk(p.string());
+#else // _WIN32
+					auto native_path = p.string();
+#endif
+					res.write_file(native_path, true); //默认使用chunked方式返回文件数据
 				}
 			});
 		}

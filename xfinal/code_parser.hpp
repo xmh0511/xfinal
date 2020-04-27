@@ -64,7 +64,7 @@ namespace xfinal {
 	}
 
 	inline static  bool is_url_encode(nonstd::string_view str) {
-		return str.find("%") != nonstd::string_view::npos || str.find("+") != nonstd::string_view::npos;
+		return str.find("%") != (nonstd::string_view::size_type)nonstd::string_view::npos || str.find("+") != (nonstd::string_view::size_type)nonstd::string_view::npos;
 	}
 
 		template<class Facet>
