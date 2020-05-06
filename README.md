@@ -147,7 +147,7 @@ int main()
    serve.run();
 }
 ````
-## 支持url重载 
+## 支持泛化url重载 
 #### 越特化的url路径越匹配 { /* , /abc/* , /abc/ccc/* }
 ````cpp
 #include <xfinal.hpp>
