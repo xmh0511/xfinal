@@ -23,7 +23,6 @@ namespace xfinal {
 		http_server(std::size_t thread_size):ioservice_pool_handler_(thread_size), acceptor_(ioservice_pool_handler_.accpetor_io()){
 			static_url_ = std::string("/")+ get_root_director(static_path_)+ "/*";
 			upload_path_ = static_path_ + "/upload";
-			register_static_router(); //注册静态文件处理逻辑
 			set_session_storager();
 		}
 	public:
@@ -38,6 +37,7 @@ namespace xfinal {
 		}
 	public:
 		void run() {
+			register_static_router(); //注册静态文件处理逻辑
 			if (!fs::exists(static_path_)) {
 				fs::create_directories(static_path_);
 			}
