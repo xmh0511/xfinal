@@ -148,7 +148,7 @@ int main()
 }
 ````
 ## 支持url重载 
-#### 越特化的url路径越匹配 {/*, /abc/*, /abc/ccc/* }
+#### 越特化的url路径越匹配 { /* , /abc/* , /abc/ccc/* }
 ````cpp
 #include <xfinal.hpp>
 using namespace xfinal;
