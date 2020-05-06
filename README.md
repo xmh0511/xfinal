@@ -15,6 +15,7 @@
 # 目录
 * [如何使用](#如何使用)
 * [快速示例](#快速示例)
+* [xfinal配置](#功能配置)
 * [RoadMap](#RoadMap)
 * [联系方式](#联系方式)
 
@@ -495,6 +496,65 @@ int main()
 	//可能做聊天工具等 通过ws.shared_from_this() 保存当前会话 自行发挥 ^_^
 	server.router("/ws", event);  //定义webscoket 路由
 }
+````
+# 功能配置
+## 设置是否重定向url
+> 在url请求中,请求的地址是 http://1270.0.1:8080/abc/ 如果`server.set_url_redirect(true);`将会重新跳转，将地址设置为`http://127.0.0.1:8080/abc`
+````cpp
+server.set_url_redirect(false);
+````
+## 设置静态文件读取路径（会自动设置upload路径到当前静态路径的upload文件夹中）
+> 调用此接口后，请求的地址 http://127.0.0.1:8080/x/y/somefile.abc 就会自动到该目录下读取对应的文件
+````cpp
+server.set_static_path("./x/y");
+````
+## 单独设置上传文件保存的路径
+````cpp
+server.set_upload_path("./myupload");
+````
+## keep-alivek空闲时长
+>单位:秒
+````cpp
+server.set_keep_alive_wait_time(5);
+````
+## 设置session有效速率（每个x秒检测session是否有效）
+>单位:秒
+````cpp
+server.set_check_session_rate(10);
+````
+## 设置websocket返回数据每帧大小
+>单位：字节
+````cpp
+server.set_websocket_frame_size(1024 * 1024);
+````
+## 设置websocket空闲时长
+>单位：秒
+````cpp
+set_websocket_check_alive_time(3600)
+````
+#### 以上方法去除set_ 就能获取对应的配置数据
+
+## 设置服务器错误信息的处理
+````cpp
+server.on_error([](std::string const& message) {  //提供用户记录错误日志
+	std::cout << message << std::endl;
+});
+````
+## 设置全局404处理方法
+>可以提供用户自己处理404需要返回的内容，如404个性化页面等
+````cpp
+server.set_not_found_callback([](request& req,response& res) {
+	res.write_string("custom not found", true, http_status::bad_request);
+});
+````
+
+## 为模板引擎增加方法
+````cpp
+server.add_view_method("str2int", 1, [](inja::Arguments const& args) {
+	auto i = std::atoi(args[0]->get<std::string>().data());
+	return std::string("transform:") + std::to_string(i);
+});
+// 比如在html 中可以使用 @{str2int("1024")} 
 ````
 
 # xfinal client 使用
