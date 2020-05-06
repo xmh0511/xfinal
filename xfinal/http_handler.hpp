@@ -107,7 +107,12 @@ namespace xfinal {
 			}
 			auto it = url_.rfind('?');
 			if (it != (nonstd::string_view::size_type)nonstd::string_view::npos) {
-				return url_.substr(it + 1, url_.size());
+				std::map<nonstd::string_view, nonstd::string_view> form;
+				auto str = view2str(url_);
+				http_urlform_parser{ str ,false }.parse_data(form);
+				if (!form.empty()) {
+					return url_.substr(it + 1, url_.size());
+				}
 			}
 			return "";
 		}
