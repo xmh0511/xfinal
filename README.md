@@ -147,6 +147,83 @@ int main()
    serve.run();
 }
 ````
+## 支持url重载 
+#### 越特化的url路径越匹配 {/*, /abc/*, /abc/ccc/* }
+````cpp
+#include <xfinal.hpp>
+using namespace xfinal;
+
+int main()
+{
+	auto const thread_number = std::thread::hardware_concurrency();
+	http_server server(thread_number);
+	bool r = server.listen("0.0.0.0", "8080");
+	if (!r) {
+		return 0;
+	}
+	server.set_url_redirect(false);
+	
+	server.router<GET>("/*", [](request& req, response& res) {
+		auto url = req.raw_url();
+		json root;
+		root["router"] = "/*";
+		root["url"] = view2str(url);
+		auto params = req.url_params();
+		for (auto& iter : params) {
+			root["params"].push_back(view2str(iter));
+		}
+		root["param_size"] = req.url_params().size();
+		res.write_json(root);
+	});
+
+
+	server.router<GET>("/abc", [](request& req, response& res) {
+		res.write_string("abc");
+	});
+
+	server.router<GET>("/abc/*", [](request& req, response& res) {
+		auto url = req.raw_url();
+		json root;
+		root["router"] = "/abc/*";
+		root["url"] = view2str(url);
+		auto params = req.url_params();
+		for (auto& iter : params) {
+			root["params"].push_back(view2str(iter));
+		}
+		root["param_size"] = req.url_params().size();
+		res.write_json(root);
+	});
+
+
+	server.router<GET>("/xxx/*", [](request& req, response& res) {
+		auto url = req.raw_url();
+		json root;
+		root["router"] = "/xxx/*";
+		root["url"] = view2str(url);
+		auto params = req.url_params();
+		for (auto& iter : params) {
+			root["params"].push_back(view2str(iter));
+		}
+		root["param_size"] = req.url_params().size();
+		res.write_json(root);
+	});
+
+	server.router<GET>("/xxx/abc/*", [](request& req, response& res) {
+		auto url = req.raw_url();
+		json root;
+		root["router"] = "/xxx/abc/*";
+		root["url"] = view2str(url);
+		auto params = req.url_params();
+		for (auto& iter : params) {
+			root["params"].push_back(view2str(iter));
+		}
+		root["param_size"] = req.url_params().size();
+		res.write_json(root);
+	});
+	server.run();
+	return 0;
+}
+````
 ## 返回json
 #### 使用了第三方json库 更多用法参考 [nlohmann/json](https://github.com/nlohmann/json)
 ````cpp
