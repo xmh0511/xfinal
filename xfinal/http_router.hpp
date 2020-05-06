@@ -298,7 +298,12 @@ namespace xfinal {
 						set_view_method(res);
 						auto& url = iter.first;
 						auto pos = url.find("/");
-						req.set_generic_path(url.substr(pos, url.size() - pos));
+						if (pos == std::string::npos) {
+							req.set_generic_path("");
+						}
+						else {
+							req.set_generic_path(url.substr(pos, url.size() - pos));
+						}
 						(iter.second)(req, res);
 						return;
 					}
