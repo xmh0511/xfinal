@@ -74,7 +74,7 @@ int main()
 		return 0;
 	}
 	server.set_url_redirect(false);
-
+	server.set_upload_path("./myupload");
 	//server.set_not_found_callback([](request& req,response& res) {
 	//	res.write_string("custom not found", true, http_status::bad_request);
 	//});
@@ -132,6 +132,8 @@ int main()
 		json data;
 		data["name"] = file.original_name();
 		data["text"] = view2str(req.query("text"));
+		data["url"] = file.url_path();
+		data["file_path"] = file.path();
 		data["success"] = true;
 		res.write_json(data);
 	});

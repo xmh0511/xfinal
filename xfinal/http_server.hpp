@@ -33,6 +33,9 @@ namespace xfinal {
 		}
 	public:
 		void run() {
+			if (!fs::exists(static_path_)) {
+				fs::create_directories(static_path_);
+			}
 			if (!fs::exists(upload_path_)) {
 				fs::create_directories(upload_path_);
 			}
@@ -47,6 +50,14 @@ namespace xfinal {
 		}
 		std::string static_path() {
 			return static_path_;
+		}
+
+		void set_upload_path(std::string const& path) {
+			upload_path_ = path;
+		}
+
+		std::string upload_path() {
+			return upload_path_;
 		}
 
 		void set_chunked_size(std::uint64_t size) {
