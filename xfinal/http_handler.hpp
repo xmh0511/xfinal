@@ -86,25 +86,31 @@ namespace xfinal {
 		nonstd::string_view param(std::size_t index) noexcept {
 			if (is_generic_) {
 				auto pos = generic_base_path_.size();
-				if (url_.size() >= (pos + 1)) {
+				auto url_fix = url();
+				if (url_fix.size() >= (pos + 1)) {
 					pos += 1;
 				}
-				auto parms = url_.substr(pos, url_.size() - pos);
+				auto parms = url_fix.substr(pos, url_fix.size() - pos);
 				auto vec = split(parms, "/");
 				return vec.size() > index ? vec[index] : "";
 			}
 			return "";
 		}
 
-		nonstd::string_view raw_params() const noexcept {
+		nonstd::string_view raw_url_params() const noexcept {
 			if (is_generic_) {
 				auto pos = generic_base_path_.size();
-				if (url_.size() >= (pos + 1)) {
+				auto url_fix = url();
+				if (url_fix.size() >= (pos + 1)) {
 					pos += 1;
 				}
-				auto parms = url_.substr(pos, url_.size() - pos);
+				auto parms = url_fix.substr(pos, url_fix.size() - pos);
 				return parms;
 			}
+			return "";
+		}
+
+		nonstd::string_view raw_key_params() const noexcept {
 			auto it = url_.rfind('?');
 			if (it != (nonstd::string_view::size_type)nonstd::string_view::npos) {
 				std::map<nonstd::string_view, nonstd::string_view> form;
@@ -120,10 +126,11 @@ namespace xfinal {
 		std::vector<nonstd::string_view> url_params() noexcept {
 			if (is_generic_) {
 				auto pos = generic_base_path_.size();
-				if (url_.size() >= (pos + 1)) {
+				auto url_fix = url();
+				if (url_fix.size() >= (pos + 1)) {
 					pos += 1;
 				}
-				auto parms = url_.substr(pos, url_.size() - pos);
+				auto parms = url_fix.substr(pos, url_fix.size() - pos);
 				auto vec = split(parms, "/");
 				return vec;
 			}

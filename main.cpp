@@ -155,7 +155,7 @@ int main()
 	});
 
 	server.router<GET, POST>("/pathinfo/*", [](request& req, response& res) {
-		auto raw_param = req.raw_params();
+		auto raw_param = req.raw_url_params();
 		auto param = req.param(0);
 		auto params = req.url_params();
 		res.write_string("abc");
