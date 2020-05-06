@@ -513,7 +513,7 @@ server.set_static_path("./x/y");
 server.set_upload_path("./myupload");
 ````
 ### keep-alivek空闲时长
->单位:秒
+>单位:秒  超时自动断开
 ````cpp
 server.set_keep_alive_wait_time(5);
 ````
@@ -528,7 +528,7 @@ server.set_check_session_rate(10);
 server.set_websocket_frame_size(1024 * 1024);
 ````
 ### 设置websocket空闲时长
->单位：秒
+>单位：秒 超时自动断开
 ````cpp
 set_websocket_check_alive_time(3600)
 ````
