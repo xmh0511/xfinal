@@ -183,15 +183,15 @@ namespace xfinal {
 			reg_router(url, std::forward<Array>(methods), std::move(b));
 		}
 
-		template<typename Array, typename Ret, typename Class, typename...Params,typename...Args>
-		void router(nonstd::string_view url, Array&& methods, Ret(Class::* memberfunc)(Params...),Args&& ...args) {  // member function elision object argument
+		template<typename Array, typename Ret, typename Class, typename...Params, typename...Args>
+		void router(nonstd::string_view url, Array&& methods, Ret(Class::* memberfunc)(Params...), Args&& ...args) {  // member function elision object argument
 			auto tp = std::tuple<Args...>(std::forward<Args>(args)...);
 			auto b = std::bind(&http_router::pre_handler_member_function<Ret(Class::*)(Params...), Class, std::tuple<Args...>>, this, std::placeholders::_1, std::placeholders::_2, memberfunc, nullptr, std::move(tp));
 			reg_router(url, std::forward<Array>(methods), std::move(b));
 		}
 
 		template<typename Array, typename Ret, typename Class, typename...Params, typename...Args>
-		void router(nonstd::string_view url, Array && methods, Ret(Class:: * memberfunc)(Params...), Class* that, Args && ...args) {  // member function with object pointer
+		void router(nonstd::string_view url, Array&& methods, Ret(Class::* memberfunc)(Params...), Class* that, Args&& ...args) {  // member function with object pointer
 			auto tp = std::tuple<Args...>(std::forward<Args>(args)...);
 			auto b = std::bind(&http_router::pre_handler_member_function<Ret(Class::*)(Params...), Class, std::tuple<Args...>>, this, std::placeholders::_1, std::placeholders::_2, memberfunc, static_cast<Class*>(that), std::move(tp));
 			reg_router(url, std::forward<Array>(methods), std::move(b));
@@ -262,12 +262,12 @@ namespace xfinal {
 	public:
 		void post_router(request& req, response& res) {
 			auto url = req.url();
-			if (url.size() > 1) {  //È·±£ÕâÀï²»ÊÇ / ¸ùÂ·ÓÉ
+			if (url.size() > 1) {  //ç¡®ä¿è¿™é‡Œä¸æ˜¯ / æ ¹è·¯ç”±
 				std::size_t back = 0;
-				while ((url.size() - back - 1) > 0 && url[url.size() - back - 1] == '/') { //È¥³ıurl ×îºóÓĞ/µÄ¸ÉÈÅ /xxx/xxx/ - > /xxx/xxx
+				while ((url.size() - back - 1) > 0 && url[url.size() - back - 1] == '/') { //å»é™¤url æœ€åæœ‰/çš„å¹²æ‰° /xxx/xxx/ - > /xxx/xxx
 					back++;
 				}
-				if (back > 0) {  //Èç¹ûurl²»ÊÇ¹æ·¶µÄurl ÔòÖØ¶¨ÏòÌø×ª
+				if (back > 0) {  //å¦‚æœurlä¸æ˜¯è§„èŒƒçš„url åˆ™é‡å®šå‘è·³è½¬
 					if (url_redirect_) {
 						auto url_str = view2str(url.substr(0, url.size() - back));
 						auto params = req.raw_params();
@@ -291,22 +291,40 @@ namespace xfinal {
 				return;
 			}
 			else {
+				using value_type = std::pair<std::string, router_function>;
+				std::map<std::size_t, value_type> overload_set;
 				for (auto& iter : genera_router_map_) {
 					auto pos = key.find("/", iter.first.size());
 					auto gurl = key.substr(0, pos - 0);
 					if (iter.first == gurl) {
-						set_view_method(res);
-						auto& url = iter.first;
-						auto pos = url.find("/");
-						if (pos == std::string::npos) {
-							req.set_generic_path("");
-						}
-						else {
-							req.set_generic_path(url.substr(pos, url.size() - pos));
-						}
-						(iter.second)(req, res);
-						return;
+						overload_set.insert(std::make_pair(iter.first.size(), iter));
+						//set_view_method(res);
+						//auto& url = iter.first;
+						//auto pos = url.find("/");
+						//if (pos == std::string::npos) {
+						//	req.set_generic_path("");
+						//}
+						//else {
+						//	req.set_generic_path(url.substr(pos, url.size() - pos));
+						//}
+						//(iter.second)(req, res);
+						//return;
 					}
+				}
+				if (!overload_set.empty()) {  //é‡è½½æ‰§è¡Œæœ€ä½³åŒ¹é…çš„url
+					auto endIter = overload_set.end();
+					auto& iter = (*(--endIter)).second;
+					set_view_method(res);
+					auto& url = iter.first;
+					auto pos = url.find("/");
+					if (pos == std::string::npos) {
+						req.set_generic_path("");
+					}
+					else {
+						req.set_generic_path(url.substr(pos, url.size() - pos));
+					}
+					(iter.second)(req, res);
+					return;
 				}
 			}
 			if (not_found_callback_ != nullptr) {
@@ -328,14 +346,14 @@ namespace xfinal {
 				file.remove();
 			}
 		}
-		//bool check_validate_request(request& req, response& res) {  //ÓÃÓÚ½âÎöÍêÇëÇóÍ·ºóÅĞ¶ÏÇëÇóÊÇ·ñÊÇÓĞĞ§ÇëÇó
+		//bool check_validate_request(request& req, response& res) {  //ç”¨äºè§£æå®Œè¯·æ±‚å¤´ååˆ¤æ–­è¯·æ±‚æ˜¯å¦æ˜¯æœ‰æ•ˆè¯·æ±‚
 		//	auto url = req.url();
-		//	if (url.size() > 1) {  //È·±£ÕâÀï²»ÊÇ / ¸ùÂ·ÓÉ
+		//	if (url.size() > 1) {  //ç¡®ä¿è¿™é‡Œä¸æ˜¯ / æ ¹è·¯ç”±
 		//		std::size_t back = 0;
-		//		while ((url.size() - back - 1) > 0 && url[url.size() - back - 1] == '/') { //È¥³ıurl ×îºóÓĞ/µÄ¸ÉÈÅ /xxx/xxx/ - > /xxx/xxx
+		//		while ((url.size() - back - 1) > 0 && url[url.size() - back - 1] == '/') { //å»é™¤url æœ€åæœ‰/çš„å¹²æ‰° /xxx/xxx/ - > /xxx/xxx
 		//			back++;
 		//		}
-		//		if (back > 0) {  //Èç¹ûurl²»ÊÇ¹æ·¶µÄurl ÔòÖØ¶¨ÏòÌø×ª
+		//		if (back > 0) {  //å¦‚æœurlä¸æ˜¯è§„èŒƒçš„url åˆ™é‡å®šå‘è·³è½¬
 		//			url = url.substr(0, url.size() - back);
 		//		}
 		//	}
