@@ -28,6 +28,11 @@ namespace xfinal {
 		}
 	public:
 		bool listen(std::string const& ip,std::string const& port) {
+			auto ec = port_occupied(atoi(port.c_str()));
+			if (ec == asio::error::address_in_use) {
+				utils::messageCenter::get().trigger_message(ec.message());
+				return false;
+			}
 			asio::ip::tcp::resolver::query query(ip, port);
 			return listen(query);
 		}
@@ -193,6 +198,20 @@ namespace xfinal {
 					res.write_file(native_path, true); //默认使用chunked方式返回文件数据
 				}
 			});
+		}
+		private:
+			std::error_code port_occupied(unsigned short port) {
+				asio::io_service io_service;
+				asio::ip::tcp::acceptor acceptor(io_service);
+
+				std::error_code ec;
+				acceptor.open(asio::ip::tcp::v4(), ec);
+#ifndef _WIN32
+				acceptor.set_option(boost::asio::ip::tcp::acceptor::reuse_address(true), ec);
+#endif
+				acceptor.bind({ asio::ip::tcp::v4(), port }, ec);
+
+				return ec;
 		}
 	private:
 		ioservice_pool ioservice_pool_handler_;

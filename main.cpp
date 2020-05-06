@@ -69,20 +69,20 @@ int main()
 {
 	auto const thread_number = std::thread::hardware_concurrency();
 	http_server server(thread_number);
+	server.on_error([](std::string const& message) {  //提供用户记录错误日志
+		std::cout << message << std::endl;
+	});
 	bool r = server.listen("0.0.0.0", "8080");
 	if (!r) {
 		return 0;
 	}
 	server.set_url_redirect(false);
-	server.set_upload_path("./myupload");
+	//server.set_upload_path("./myupload");
 	//server.set_not_found_callback([](request& req,response& res) {
 	//	res.write_string("custom not found", true, http_status::bad_request);
 	//});
 
 	//server.set_websocket_frame_size(1024 * 1024);//设置websocket 帧数据长度
-	server.on_error([](std::string const& message) {  //提供用户记录错误日志
-		std::cout << message << std::endl;
-	});
 
 	server.add_view_method("str2int", 1, [](inja::Arguments const& args) {
 		auto i = std::atoi(args[0]->get<std::string>().data());
