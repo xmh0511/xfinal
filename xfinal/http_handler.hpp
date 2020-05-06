@@ -56,7 +56,7 @@ namespace xfinal {
 		}
 
 		nonstd::string_view url() const noexcept {
-			auto it = url_.find('?');
+			auto it = url_.rfind('?');
 			if (it != (nonstd::string_view::size_type)nonstd::string_view::npos) {
 				return url_.substr(0, it);
 			}
@@ -64,7 +64,7 @@ namespace xfinal {
 		}
 		nonstd::string_view param(nonstd::string_view key) noexcept {
 			if (decode_url_params_.empty()) {
-				auto it = url_.find('?');
+				auto it = url_.rfind('?');
 				if (it != (nonstd::string_view::size_type)nonstd::string_view::npos) {
 					decode_url_params_ = url_decode(view2str(url_.substr(it + 1, url_.size())));
 					http_urlform_parser{ decode_url_params_ }.parse_data(url_params_);
@@ -99,7 +99,7 @@ namespace xfinal {
 				auto parms = url_.substr(pos, url_.size() - pos);
 				return parms;
 			}
-			auto it = url_.find('?');
+			auto it = url_.rfind('?');
 			if (it != (nonstd::string_view::size_type)nonstd::string_view::npos) {
 				return url_.substr(it + 1, url_.size());
 			}
@@ -121,7 +121,7 @@ namespace xfinal {
 
 		std::map<nonstd::string_view, nonstd::string_view> key_params() noexcept {
 			if (decode_url_params_.empty()) {
-				auto it = url_.find('?');
+				auto it = url_.rfind('?');
 				if (it != (nonstd::string_view::size_type)nonstd::string_view::npos) {
 					decode_url_params_ = url_decode(view2str(url_.substr(it + 1, url_.size())));
 					http_urlform_parser{ decode_url_params_ }.parse_data(url_params_);
