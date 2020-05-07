@@ -390,14 +390,14 @@ inline void inja_throw(const std::string& type, const std::string& message) {
 
 namespace string_view {
   inline nonstd::string_view slice(nonstd::string_view view, size_t start, size_t end) {
-    start = std::min(start, view.size());
-    end = std::min(std::max(start, end), view.size());
+    start = (std::min)(start, view.size());
+    end = (std::min)((std::max)(start, end), view.size());
     return view.substr(start, end - start); // StringRef(Data + Start, End - Start);
   }
 
   inline std::pair<nonstd::string_view, nonstd::string_view> split(nonstd::string_view view, char Separator) {
     size_t idx = view.find(Separator);
-    if (idx == nonstd::string_view::npos) {
+    if (idx == (nonstd::string_view::size_type)nonstd::string_view::npos) {
       return std::make_pair(view, nonstd::string_view());
     }
     return std::make_pair(slice(view, 0, idx), slice(view, idx + 1, nonstd::string_view::npos));
@@ -457,7 +457,7 @@ class Lexer {
       case State::Text: {
         // fast-scan to first open character
         size_t open_start = m_in.substr(m_pos).find_first_of(m_config.open_chars);
-        if (open_start == nonstd::string_view::npos) {
+        if (open_start == (nonstd::string_view::size_type)nonstd::string_view::npos) {
           // didn't find open, return remaining text as text token
           m_pos = m_in.size();
           return make_token(Token::Kind::Text);
@@ -518,7 +518,7 @@ class Lexer {
       case State::CommentBody: {
         // fast-scan to comment close
         size_t end = m_in.substr(m_pos).find(m_config.comment_close);
-        if (end == nonstd::string_view::npos) {
+        if (end == (nonstd::string_view::size_type)nonstd::string_view::npos) {
           m_pos = m_in.size();
           return make_token(Token::Kind::Eof);
         }
@@ -530,7 +530,7 @@ class Lexer {
       case State::PreBody: {
 				size_t end = m_in.substr(m_pos).find(m_config.pre_close);
 				auto str_v = m_in.substr(m_pos, end);
-				if (end == nonstd::string_view::npos) {
+				if (end == (nonstd::string_view::size_type)nonstd::string_view::npos) {
 					m_pos = m_in.size();
 					return make_token(Token::Kind::Eof);
 				}
@@ -1122,7 +1122,7 @@ class Parser {
     if (!tmpl.bytecodes.empty()) {
       Bytecode& last = tmpl.bytecodes.back();
       if (last.op == Bytecode::Op::Push &&
-          (last.flags & Bytecode::Flag::ValueMask) == Bytecode::Flag::ValueImmediate) {
+          (last.flags & Bytecode::Flag::ValueMask) == (int)Bytecode::Flag::ValueImmediate) {
         last.op = Bytecode::Op::Callback;
         last.args = num_args;
         last.str = static_cast<std::string>(name);
@@ -1348,7 +1348,7 @@ class Renderer {
   std::vector<const json*>& get_args(const Bytecode& bc) {
     m_tmp_args.clear();
 
-    bool has_imm = ((bc.flags & Bytecode::Flag::ValueMask) != Bytecode::Flag::ValuePop);
+    bool has_imm = ((bc.flags & Bytecode::Flag::ValueMask) != (int)Bytecode::Flag::ValuePop);
 
     // get args from stack
     unsigned int pop_args = bc.args;
@@ -1370,7 +1370,7 @@ class Renderer {
 
   void pop_args(const Bytecode& bc) {
     unsigned int popArgs = bc.args;
-    if ((bc.flags & Bytecode::Flag::ValueMask) != Bytecode::Flag::ValuePop) {
+    if ((bc.flags & Bytecode::Flag::ValueMask) != (int)Bytecode::Flag::ValuePop) {
       popArgs -= 1;
     }
     for (unsigned int i = 0; i < popArgs; ++i) {
