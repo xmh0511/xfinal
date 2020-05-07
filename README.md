@@ -498,6 +498,7 @@ int main()
 }
 ````
 # 功能配置
+>如果没有特殊说明,默认在run方法调用前进行设置
 ### 设置是否重定向url
 > 在url请求中,请求的地址是 http://1270.0.1:8080/abc/ 如果`server.set_url_redirect(true);`将会重新跳转，将地址设置为`http://127.0.0.1:8080/abc`
 ````cpp
@@ -509,6 +510,7 @@ server.set_url_redirect(false);
 server.set_static_path("./x/y");
 ````
 ### 单独设置上传文件保存的路径
+> 在set_static_path后进行设置
 ````cpp
 server.set_upload_path("./myupload");
 ````
@@ -535,6 +537,7 @@ set_websocket_check_alive_time(3600)
 #### 以上方法去除set_ 就能获取对应的配置数据
 
 ### 设置服务器错误信息的处理
+>需要在listen方法调用前设置  
 ````cpp
 server.on_error([](std::string const& message) {  //提供用户记录错误日志
 	std::cout << message << std::endl;
