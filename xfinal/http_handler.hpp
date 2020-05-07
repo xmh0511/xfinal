@@ -577,7 +577,11 @@ namespace xfinal {
 
 		template<typename T>
 		T get_attr(std::string const& name) noexcept {
-			return view_data_[name].get<T>();
+			auto it = view_data_.find(name);
+			if (it != view_data_.end()) {
+				return view_data_[name].get<T>();
+			}
+			return T{};
 		}
 	private:
 		std::vector<asio::const_buffer> header_to_buffer() noexcept {
