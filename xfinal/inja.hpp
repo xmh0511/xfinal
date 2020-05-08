@@ -1,5 +1,7 @@
-#ifndef PANTOR_INJA_HPP
-#define PANTOR_INJA_HPP
+// Copyright (c) 2019 Pantor. All rights reserved.
+
+#ifndef INCLUDE_INJA_INJA_HPP_
+#define INCLUDE_INJA_INJA_HPP_
 
 #include <functional>
 #include <iostream>
@@ -8,26 +10,93 @@
 #include <sstream>
 #include <string>
 #include <vector>
-#include "string_view.hpp"
+
 #include "json.hpp"
+#include "string_view.hpp"
+
+// #include "exceptions.hpp"
+// Copyright (c) 2020 Pantor. All rights reserved.
+
+#ifndef INCLUDE_INJA_EXCEPTIONS_HPP_
+#define INCLUDE_INJA_EXCEPTIONS_HPP_
+
+#include <stdexcept>
+#include <string>
+
+
+namespace inja {
+
+struct SourceLocation {
+  size_t line;
+  size_t column;
+};
+
+struct InjaError : public std::runtime_error {
+  std::string type;
+  std::string message;
+
+  bool has_location {false};
+  SourceLocation location;
+
+  InjaError(const std::string& type, const std::string& message)
+    : std::runtime_error("[inja.exception." + type + "] " + message), type(type), message(message) { }
+  
+  InjaError(const std::string& type, const std::string& message, SourceLocation location)
+    : std::runtime_error(
+      "[inja.exception." + type + "] (at " + std::to_string(location.line) + ":" + std::to_string(location.column) + ") " + message
+    ), type(type), message(message), has_location(true), location(location) { }
+};
+
+struct ParserError : public InjaError {
+  ParserError(const std::string& message) : InjaError("parser_error", message) { }
+  ParserError(const std::string& message, SourceLocation location)
+    : InjaError("parser_error", message, location) { }
+};
+
+struct RenderError : public InjaError {
+  RenderError(const std::string& message) : InjaError("render_error", message) { }
+  RenderError(const std::string& message, SourceLocation location)
+    : InjaError("render_error", message, location) { }
+};
+
+struct FileError : public InjaError {
+  FileError(const std::string& message) : InjaError("file_error", message) { }
+  FileError(const std::string& message, SourceLocation location)
+    : InjaError("file_error", message, location) { }
+};
+
+struct JsonError : public InjaError {
+  JsonError(const std::string& message) : InjaError("json_error", message) { }
+  JsonError(const std::string& message, SourceLocation location)
+    : InjaError("json_error", message, location) { }
+};
+
+}  // namespace inja
+
+#endif  // INCLUDE_INJA_EXCEPTIONS_HPP_
 
 // #include "environment.hpp"
-#ifndef PANTOR_INJA_ENVIRONMENT_HPP
-#define PANTOR_INJA_ENVIRONMENT_HPP
+// Copyright (c) 2019 Pantor. All rights reserved.
+
+#ifndef INCLUDE_INJA_ENVIRONMENT_HPP_
+#define INCLUDE_INJA_ENVIRONMENT_HPP_
 
 #include <memory>
 #include <fstream>
 #include <sstream>
 #include <string>
 
-#include "json.hpp"
-
 // #include "config.hpp"
-#ifndef PANTOR_INJA_CONFIG_HPP
-#define PANTOR_INJA_CONFIG_HPP
+// Copyright (c) 2019 Pantor. All rights reserved.
+
+#ifndef INCLUDE_INJA_CONFIG_HPP_
+#define INCLUDE_INJA_CONFIG_HPP_
 
 #include <functional>
 #include <string>
+
+
+
 
 namespace inja {
 
@@ -36,6 +105,9 @@ enum class ElementNotation {
   Pointer
 };
 
+/*!
+ * \brief Class for lexer configuration.
+ */
 struct LexerConfig {
   std::string statement_open {"{%"};
   std::string statement_close {"%}"};
@@ -45,8 +117,11 @@ struct LexerConfig {
   std::string comment_open {"{#"};
   std::string comment_close {"#}"};
   std::string open_chars {"#{"};
-  std::string pre_open{ "#{" };
-	std::string pre_close{ "}#" };
+  std::string pre_open{ "#(" };
+  std::string pre_close{ ")#" };
+
+  bool trim_blocks {false};
+  bool lstrip_blocks {false};
 
   void update_open_chars() {
     open_chars = "";
@@ -62,31 +137,40 @@ struct LexerConfig {
     if (open_chars.find(comment_open[0]) == std::string::npos) {
       open_chars += comment_open[0];
     }
-    if (open_chars.find(pre_open[0]) == std::string::npos) {
-			open_chars += pre_open[0];
-		}
+	if (open_chars.find(pre_open[0]) == std::string::npos) {
+		open_chars += pre_open[0];
+	}
   }
 };
 
+/*!
+ * \brief Class for parser configuration.
+ */
 struct ParserConfig {
   ElementNotation notation {ElementNotation::Dot};
 };
 
-}
+}  // namespace inja
 
-#endif // PANTOR_INJA_CONFIG_HPP
+#endif  // INCLUDE_INJA_CONFIG_HPP_
 
 // #include "function_storage.hpp"
-#ifndef PANTOR_INJA_FUNCTION_STORAGE_HPP
-#define PANTOR_INJA_FUNCTION_STORAGE_HPP
+// Copyright (c) 2019 Pantor. All rights reserved.
+
+#ifndef INCLUDE_INJA_FUNCTION_STORAGE_HPP_
+#define INCLUDE_INJA_FUNCTION_STORAGE_HPP_
+
+#include <vector>
 
 // #include "bytecode.hpp"
-#ifndef PANTOR_INJA_BYTECODE_HPP
-#define PANTOR_INJA_BYTECODE_HPP
+// Copyright (c) 2019 Pantor. All rights reserved.
 
+#ifndef INCLUDE_INJA_BYTECODE_HPP_
+#define INCLUDE_INJA_BYTECODE_HPP_
+
+#include <string>
 #include <utility>
 
-#include "json.hpp"
 
 // #include "string_view.hpp"
 
@@ -94,7 +178,7 @@ struct ParserConfig {
 
 namespace inja {
 
-using namespace nlohmann;
+using json = nlohmann::json;
 
 
 struct Bytecode {
@@ -212,7 +296,7 @@ struct Bytecode {
 
 }  // namespace inja
 
-#endif  // PANTOR_INJA_BYTECODE_HPP
+#endif  // INCLUDE_INJA_BYTECODE_HPP_
 
 // #include "string_view.hpp"
 
@@ -220,11 +304,14 @@ struct Bytecode {
 
 namespace inja {
 
-using namespace nlohmann;
+using json = nlohmann::json;
 
 using Arguments = std::vector<const json*>;
 using CallbackFunction = std::function<json(Arguments& args)>;
 
+/*!
+ * \brief Class for builtin functions and user-defined callbacks.
+ */
 class FunctionStorage {
  public:
   void add_builtin(nonstd::string_view name, unsigned int num_args, Bytecode::Op op) {
@@ -261,7 +348,9 @@ class FunctionStorage {
   FunctionData& get_or_new(nonstd::string_view name, unsigned int num_args) {
     auto &vec = m_map[static_cast<std::string>(name)];
     for (auto &i: vec) {
-      if (i.num_args == num_args) return i;
+      if (i.num_args == num_args) {
+        return i;
+      }
     }
     vec.emplace_back();
     vec.back().num_args = num_args;
@@ -270,9 +359,14 @@ class FunctionStorage {
 
   const FunctionData* get(nonstd::string_view name, unsigned int num_args) const {
     auto it = m_map.find(static_cast<std::string>(name));
-    if (it == m_map.end()) return nullptr;
+    if (it == m_map.end()) {
+      return nullptr;
+    }
+
     for (auto &&i: it->second) {
-      if (i.num_args == num_args) return &i;
+      if (i.num_args == num_args) {
+        return &i;
+      }
     }
     return nullptr;
   }
@@ -282,23 +376,32 @@ class FunctionStorage {
 
 }
 
-#endif // PANTOR_INJA_FUNCTION_STORAGE_HPP
+#endif  // INCLUDE_INJA_FUNCTION_STORAGE_HPP_
 
 // #include "parser.hpp"
-#ifndef PANTOR_INJA_PARSER_HPP
-#define PANTOR_INJA_PARSER_HPP
+// Copyright (c) 2019 Pantor. All rights reserved.
+
+#ifndef INCLUDE_INJA_PARSER_HPP_
+#define INCLUDE_INJA_PARSER_HPP_
 
 #include <limits>
+#include <string>
+#include <utility> 
+#include <vector>
 
 // #include "bytecode.hpp"
 
 // #include "config.hpp"
 
+// #include "exceptions.hpp"
+
 // #include "function_storage.hpp"
 
 // #include "lexer.hpp"
-#ifndef PANTOR_INJA_LEXER_HPP
-#define PANTOR_INJA_LEXER_HPP
+// Copyright (c) 2019 Pantor. All rights reserved.
+
+#ifndef INCLUDE_INJA_LEXER_HPP_
+#define INCLUDE_INJA_LEXER_HPP_
 
 #include <cctype>
 #include <locale>
@@ -306,8 +409,12 @@ class FunctionStorage {
 // #include "config.hpp"
 
 // #include "token.hpp"
-#ifndef PANTOR_INJA_TOKEN_HPP
-#define PANTOR_INJA_TOKEN_HPP
+// Copyright (c) 2019 Pantor. All rights reserved.
+
+#ifndef INCLUDE_INJA_TOKEN_HPP_
+#define INCLUDE_INJA_TOKEN_HPP_
+
+#include <string>
 
 // #include "string_view.hpp"
 
@@ -315,6 +422,9 @@ class FunctionStorage {
 
 namespace inja {
 
+/*!
+ * \brief Helper-class for the inja Parser.
+ */
 struct Token {
   enum class Kind {
     Text,
@@ -326,8 +436,8 @@ struct Token {
     StatementClose,      // %}
     CommentOpen,         // {#
     CommentClose,        // #}
-    PreOpen,             //#{
-		PreClose,            // }#   
+	PreOpen,             //#(
+	PreClose,            // )#   
     Id,                  // this, this.foo
     Number,              // 1, 2, -1, 5.2, -5.3
     String,              // "this"
@@ -370,13 +480,20 @@ struct Token {
 
 }
 
-#endif // PANTOR_INJA_TOKEN_HPP
+#endif  // INCLUDE_INJA_TOKEN_HPP_
 
 // #include "utils.hpp"
-#ifndef PANTOR_INJA_UTILS_HPP
-#define PANTOR_INJA_UTILS_HPP
+// Copyright (c) 2019 Pantor. All rights reserved.
 
-#include <stdexcept>
+#ifndef INCLUDE_INJA_UTILS_HPP_
+#define INCLUDE_INJA_UTILS_HPP_
+
+#include <algorithm>
+#include <fstream>
+#include <string>
+#include <utility>
+
+// #include "exceptions.hpp"
 
 // #include "string_view.hpp"
 
@@ -384,15 +501,22 @@ struct Token {
 
 namespace inja {
 
-inline void inja_throw(const std::string& type, const std::string& message) {
-  throw std::runtime_error("[inja.exception." + type + "] " + message);
+inline std::ifstream open_file_or_throw(const std::string& path) {
+  std::ifstream file;
+  file.exceptions(std::ifstream::failbit | std::ifstream::badbit);
+  try {
+    file.open(path);
+  } catch(const std::ios_base::failure& /*e*/) {
+    throw FileError("failed accessing file at '" + path + "'");
+  }
+  return file;
 }
 
 namespace string_view {
   inline nonstd::string_view slice(nonstd::string_view view, size_t start, size_t end) {
     start = (std::min)(start, view.size());
     end = (std::min)((std::max)(start, end), view.size());
-    return view.substr(start, end - start); // StringRef(Data + Start, End - Start);
+    return view.substr(start, end - start);  // StringRef(Data + Start, End - Start);
   }
 
   inline std::pair<nonstd::string_view, nonstd::string_view> split(nonstd::string_view view, char Separator) {
@@ -406,16 +530,19 @@ namespace string_view {
   inline bool starts_with(nonstd::string_view view, nonstd::string_view prefix) {
     return (view.size() >= prefix.size() && view.compare(0, prefix.size(), prefix) == 0);
   }
-}  // namespace string
+}  // namespace string_view
 
 }  // namespace inja
 
-#endif  // PANTOR_INJA_UTILS_HPP
+#endif  // INCLUDE_INJA_UTILS_HPP_
 
 
 
 namespace inja {
 
+/*!
+ * \brief Class for lexing an inja Template.
+ */
 class Lexer {
   enum class State {
     Text,
@@ -427,8 +554,9 @@ class Lexer {
     StatementBody,
     CommentStart,
     CommentBody,
-    PreStart,
-		PreBody
+	PreStart,
+	PreBody,
+	PreClose
   } m_state;
 
   const LexerConfig& m_config;
@@ -438,6 +566,26 @@ class Lexer {
 
  public:
   explicit Lexer(const LexerConfig& config) : m_config(config) {}
+
+  SourceLocation current_position() const {
+    // Get line and offset position (starts at 1:1)
+    auto sliced = string_view::slice(m_in, 0, m_tok_start);
+    std::size_t last_newline = sliced.rfind("\n");
+
+    if (last_newline == (nonstd::string_view::size_type)nonstd::string_view::npos) {
+      return {1, sliced.length() + 1};
+    }
+
+    // Count newlines
+    size_t count_lines = 0;
+    size_t search_start = 0;
+    while (search_start < sliced.size()) {
+      search_start = sliced.find("\n", search_start + 1);
+      count_lines += 1;
+    }
+    
+    return {count_lines + 1, sliced.length() - last_newline + 1};
+  }
 
   void start(nonstd::string_view in) {
     m_in = in;
@@ -466,23 +614,32 @@ class Lexer {
 
         // try to match one of the opening sequences, and get the close
         nonstd::string_view open_str = m_in.substr(m_pos);
+        bool must_lstrip = false;
         if (inja::string_view::starts_with(open_str, m_config.expression_open)) {
           m_state = State::ExpressionStart;
         } else if (inja::string_view::starts_with(open_str, m_config.statement_open)) {
           m_state = State::StatementStart;
+          must_lstrip = m_config.lstrip_blocks;
         } else if (inja::string_view::starts_with(open_str, m_config.comment_open)) {
           m_state = State::CommentStart;
-        } else if ((m_pos == 0 || m_in[m_pos - 1] == '\n') &&
-                   inja::string_view::starts_with(open_str, m_config.line_statement)) {
-          m_state = State::LineStart;
+          must_lstrip = m_config.lstrip_blocks;
         } else if (inja::string_view::starts_with(open_str, m_config.pre_open)) {
-					m_state = State::PreStart;
-				} else {
-          m_pos += 1; // wasn't actually an opening sequence
+			m_state = State::PreStart;
+			must_lstrip = m_config.lstrip_blocks;
+		} else if ((m_pos == 0 || m_in[m_pos - 1] == '\n') &&
+               inja::string_view::starts_with(open_str, m_config.line_statement)) {
+               m_state = State::LineStart;
+        }else {
+          m_pos += 1;  // wasn't actually an opening sequence
           goto again;
         }
-        if (m_pos == m_tok_start) goto again;  // don't generate empty token
-        return make_token(Token::Kind::Text);
+
+        nonstd::string_view text = string_view::slice(m_in, m_tok_start, m_pos);
+        if (must_lstrip)
+          text = clear_final_line_if_whitespace(text);
+
+        if (text.empty()) goto again;  // don't generate empty token
+        return Token(Token::Kind::Text, text);
       }
       case State::ExpressionStart: {
         m_state = State::ExpressionBody;
@@ -504,17 +661,17 @@ class Lexer {
         m_pos += m_config.comment_open.size();
         return make_token(Token::Kind::CommentOpen);
       }
-      case State::PreStart: {
-				m_state = State::PreBody;
-				m_pos += m_config.pre_open.size();
-				return make_token(Token::Kind::PreOpen);
-			}
+	  case State::PreStart: {
+		  m_state = State::PreBody;
+		  m_pos += m_config.pre_open.size();
+		  return make_token(Token::Kind::PreOpen);
+	  }
       case State::ExpressionBody:
         return scan_body(m_config.expression_close, Token::Kind::ExpressionClose);
       case State::LineBody:
         return scan_body("\n", Token::Kind::LineStatementClose);
       case State::StatementBody:
-        return scan_body(m_config.statement_close, Token::Kind::StatementClose);
+        return scan_body(m_config.statement_close, Token::Kind::StatementClose, m_config.trim_blocks);
       case State::CommentBody: {
         // fast-scan to comment close
         size_t end = m_in.substr(m_pos).find(m_config.comment_close);
@@ -525,28 +682,33 @@ class Lexer {
         // return the entire comment in the close token
         m_state = State::Text;
         m_pos += end + m_config.comment_close.size();
-        return make_token(Token::Kind::CommentClose);
+        Token tok = make_token(Token::Kind::CommentClose);
+        if (m_config.trim_blocks)
+          skip_newline();
+        return tok;
       }
-      case State::PreBody: {
-				size_t end = m_in.substr(m_pos).find(m_config.pre_close);
-				auto str_v = m_in.substr(m_pos, end);
-				if (end == (nonstd::string_view::size_type)nonstd::string_view::npos) {
-					m_pos = m_in.size();
-					return make_token(Token::Kind::Eof);
-				}
-				m_state = State::Text;
-				m_pos += end;
-				auto token = make_token(Token::Kind::PreClose);
-				m_pos += m_config.pre_close.size();
-				return token;
-			}
+	  case State::PreBody: {
+		  size_t end = m_in.substr(m_pos).find(m_config.pre_close);
+		  if (end == (nonstd::string_view::size_type)nonstd::string_view::npos) {
+			  m_pos = m_in.size();
+			  return make_token(Token::Kind::Eof);
+		  }
+		  // return the entire comment in the close token
+		  m_state = State::Text;
+		  m_pos += end;
+		  Token tok = make_token(Token::Kind::PreClose);
+		  m_pos += m_config.pre_close.size();
+		  if (m_config.trim_blocks)
+			  skip_newline();
+		  return tok;
+	  }
     }
   }
 
   const LexerConfig& get_config() const { return m_config; }
 
  private:
-  Token scan_body(nonstd::string_view close, Token::Kind closeKind) {
+  Token scan_body(nonstd::string_view close, Token::Kind closeKind, bool trim = false) {
   again:
     // skip whitespace (except for \n as it might be a close)
     if (m_tok_start >= m_in.size()) return make_token(Token::Kind::Eof);
@@ -560,7 +722,10 @@ class Lexer {
     if (inja::string_view::starts_with(m_in.substr(m_tok_start), close)) {
       m_state = State::Text;
       m_pos = m_tok_start + close.size();
-      return make_token(closeKind);
+      Token tok = make_token(closeKind);
+      if (trim)
+        skip_newline();
+      return tok;
     }
 
     // skip \n
@@ -570,7 +735,10 @@ class Lexer {
     }
 
     m_pos = m_tok_start + 1;
-    if (std::isalpha(ch)) return scan_id();
+    if (std::isalpha(ch)) {
+      return scan_id();
+    }
+    
     switch (ch) {
       case ',':
         return make_token(Token::Kind::Comma);
@@ -681,16 +849,46 @@ class Lexer {
   Token make_token(Token::Kind kind) const {
     return Token(kind, string_view::slice(m_in, m_tok_start, m_pos));
   }
+
+  void skip_newline() {
+    if (m_pos < m_in.size()) {
+      char ch = m_in[m_pos];
+      if (ch == '\n')
+        m_pos += 1;
+      else if (ch == '\r') {
+        m_pos += 1;
+        if (m_pos < m_in.size() && m_in[m_pos] == '\n')
+          m_pos += 1;
+      }
+    }
+  }
+
+  static nonstd::string_view clear_final_line_if_whitespace(nonstd::string_view text) {
+    nonstd::string_view result = text;
+    while (!result.empty()) {
+      char ch = result.back();
+      if (ch == ' ' || ch == '\t')
+       result.remove_suffix(1);
+      else if (ch == '\n' || ch == '\r')
+        break;
+      else
+        return text;
+    }
+    return result;
+  }
 };
 
 }
 
-#endif // PANTOR_INJA_LEXER_HPP
+#endif  // INCLUDE_INJA_LEXER_HPP_
 
 // #include "template.hpp"
-#ifndef PANTOR_INJA_TEMPLATE_HPP
-#define PANTOR_INJA_TEMPLATE_HPP
+// Copyright (c) 2019 Pantor. All rights reserved.
 
+#ifndef INCLUDE_INJA_TEMPLATE_HPP_
+#define INCLUDE_INJA_TEMPLATE_HPP_
+
+#include <map>
 #include <string>
 #include <vector>
 
@@ -700,6 +898,9 @@ class Lexer {
 
 namespace inja {
 
+/*!
+ * \brief The main inja Template.
+ */
 struct Template {
   std::vector<Bytecode> bytecodes;
   std::string content;
@@ -707,16 +908,15 @@ struct Template {
 
 using TemplateStorage = std::map<std::string, Template>;
 
-}
+}  // namespace inja
 
-#endif // PANTOR_INJA_TEMPLATE_HPP
+#endif  // INCLUDE_INJA_TEMPLATE_HPP_
 
 // #include "token.hpp"
 
 // #include "utils.hpp"
 
 
-#include "json.hpp"
 
 
 namespace inja {
@@ -763,6 +963,9 @@ class ParserStatic {
   FunctionStorage functions;
 };
 
+/*!
+ * \brief Class for parsing an inja Template.
+ */
 class Parser {
  public:
   explicit Parser(const ParserConfig& parser_config, const LexerConfig& lexer_config, TemplateStorage& included_templates): m_config(parser_config), m_lexer(lexer_config), m_included_templates(included_templates), m_static(ParserStatic::get_instance()) { }
@@ -844,7 +1047,7 @@ class Parser {
           get_next_token();
           if (!parse_expression(tmpl)) return false;
           if (m_tok.kind != Token::Kind::RightParen) {
-            inja_throw("parser_error", "unmatched '('");
+            throw_parser_error("unmatched '('");
           }
           get_next_token();
           return true;
@@ -863,7 +1066,7 @@ class Parser {
             } else {
               for (;;) {
                 if (!parse_expression(tmpl)) {
-                  inja_throw("parser_error", "expected expression, got '" + m_tok.describe() + "'");
+                  throw_parser_error("expected expression, got '" + m_tok.describe() + "'");
                 }
                 num_args += 1;
                 if (m_tok.kind == Token::Kind::RightParen) {
@@ -871,7 +1074,7 @@ class Parser {
                   break;
                 }
                 if (m_tok.kind != Token::Kind::Comma) {
-                  inja_throw("parser_error", "expected ')' or ',', got '" + m_tok.describe() + "'");
+                  throw_parser_error("expected ')' or ',', got '" + m_tok.describe() + "'");
                 }
                 get_next_token();
               }
@@ -917,7 +1120,7 @@ class Parser {
         case Token::Kind::Comma:
         case Token::Kind::Colon:
           if (brace_level == 0 && bracket_level == 0) {
-            inja_throw("parser_error", "unexpected token '" + m_tok.describe() + "'");
+            throw_parser_error("unexpected token '" + m_tok.describe() + "'");
           }
           break;
         case Token::Kind::LeftBracket:
@@ -934,24 +1137,24 @@ class Parser {
           break;
         case Token::Kind::RightBracket:
           if (bracket_level == 0) {
-            inja_throw("parser_error", "unexpected ']'");
+            throw_parser_error("unexpected ']'");
           }
           --bracket_level;
           if (brace_level == 0 && bracket_level == 0) goto returnJson;
           break;
         case Token::Kind::RightBrace:
           if (brace_level == 0) {
-            inja_throw("parser_error", "unexpected '}'");
+            throw_parser_error("unexpected '}'");
           }
           --brace_level;
           if (brace_level == 0 && bracket_level == 0) goto returnJson;
           break;
         default:
           if (brace_level != 0) {
-            inja_throw("parser_error", "unmatched '{'");
+            throw_parser_error("unmatched '{'");
           }
           if (bracket_level != 0) {
-            inja_throw("parser_error", "unmatched '['");
+            throw_parser_error("unmatched '['");
           }
           return false;
       }
@@ -977,13 +1180,13 @@ class Parser {
       if (!parse_expression(tmpl)) return false;
 
       // start a new if block on if stack
-      m_if_stack.emplace_back(tmpl.bytecodes.size());
+      m_if_stack.emplace_back(static_cast<decltype(m_if_stack)::value_type::jump_t>(tmpl.bytecodes.size()));
 
       // conditional jump; destination will be filled in by else or endif
       tmpl.bytecodes.emplace_back(Bytecode::Op::ConditionalJump);
     } else if (m_tok.text == static_cast<decltype(m_tok.text)>("endif")) {
       if (m_if_stack.empty()) {
-        inja_throw("parser_error", "endif without matching if");
+        throw_parser_error("endif without matching if");
       }
       auto& if_data = m_if_stack.back();
       get_next_token();
@@ -994,7 +1197,7 @@ class Parser {
       }
 
       // update all previous unconditional jumps to here
-      for (unsigned int i: if_data.uncond_jumps) {
+      for (size_t i: if_data.uncond_jumps) {
         tmpl.bytecodes[i].args = tmpl.bytecodes.size();
       }
 
@@ -1002,7 +1205,7 @@ class Parser {
       m_if_stack.pop_back();
     } else if (m_tok.text == static_cast<decltype(m_tok.text)>("else")) {
       if (m_if_stack.empty())
-        inja_throw("parser_error", "else without matching if");
+        throw_parser_error("else without matching if");
       auto& if_data = m_if_stack.back();
       get_next_token();
 
@@ -1033,7 +1236,7 @@ class Parser {
 
       // options: for a in arr; for a, b in obj
       if (m_tok.kind != Token::Kind::Id)
-        inja_throw("parser_error", "expected id, got '" + m_tok.describe() + "'");
+        throw_parser_error("expected id, got '" + m_tok.describe() + "'");
       Token value_token = m_tok;
       get_next_token();
 
@@ -1041,14 +1244,14 @@ class Parser {
       if (m_tok.kind == Token::Kind::Comma) {
         get_next_token();
         if (m_tok.kind != Token::Kind::Id)
-          inja_throw("parser_error", "expected id, got '" + m_tok.describe() + "'");
+          throw_parser_error("expected id, got '" + m_tok.describe() + "'");
         key_token = std::move(value_token);
         value_token = m_tok;
         get_next_token();
       }
 
       if (m_tok.kind != Token::Kind::Id || m_tok.text != static_cast<decltype(m_tok.text)>("in"))
-        inja_throw("parser_error",
+        throw_parser_error(
                    "expected 'in', got '" + m_tok.describe() + "'");
       get_next_token();
 
@@ -1064,7 +1267,7 @@ class Parser {
     } else if (m_tok.text == static_cast<decltype(m_tok.text)>("endfor")) {
       get_next_token();
       if (m_loop_stack.empty()) {
-        inja_throw("parser_error", "endfor without matching for");
+        throw_parser_error("endfor without matching for");
       }
 
       // update loop with EndLoop index (for empty case)
@@ -1077,7 +1280,7 @@ class Parser {
       get_next_token();
 
       if (m_tok.kind != Token::Kind::String) {
-        inja_throw("parser_error", "expected string, got '" + m_tok.describe() + "'");
+        throw_parser_error("expected string, got '" + m_tok.describe() + "'");
       }
 
       // build the relative path
@@ -1089,8 +1292,10 @@ class Parser {
       }
       // sys::path::remove_dots(pathname, true, sys::path::Style::posix);
 
-      Template include_template = parse_template(pathname);
-      m_included_templates.emplace(pathname, include_template);
+      if (m_included_templates.find(pathname) == m_included_templates.end()) {
+        Template include_template = parse_template(pathname);
+        m_included_templates.emplace(pathname, include_template);
+      }
 
       // generate a reference bytecode
       tmpl.bytecodes.emplace_back(Bytecode::Op::Include, json(pathname), Bytecode::Flag::ValueImmediate);
@@ -1142,8 +1347,8 @@ class Parser {
       get_next_token();
       switch (m_tok.kind) {
         case Token::Kind::Eof:
-          if (!m_if_stack.empty()) inja_throw("parser_error", "unmatched if");
-          if (!m_loop_stack.empty()) inja_throw("parser_error", "unmatched for");
+          if (!m_if_stack.empty()) throw_parser_error("unmatched if");
+          if (!m_loop_stack.empty()) throw_parser_error("unmatched for");
           return;
         case Token::Kind::Text:
           tmpl.bytecodes.emplace_back(Bytecode::Op::PrintText, m_tok.text, 0u);
@@ -1151,10 +1356,10 @@ class Parser {
         case Token::Kind::StatementOpen:
           get_next_token();
           if (!parse_statement(tmpl, path)) {
-            inja_throw("parser_error", "expected statement, got '" + m_tok.describe() + "'");
+            throw_parser_error("expected statement, got '" + m_tok.describe() + "'");
           }
           if (m_tok.kind != Token::Kind::StatementClose) {
-            inja_throw("parser_error", "expected statement close, got '" + m_tok.describe() + "'");
+            throw_parser_error("expected statement close, got '" + m_tok.describe() + "'");
           }
           break;
         case Token::Kind::LineStatementOpen:
@@ -1162,34 +1367,40 @@ class Parser {
           parse_statement(tmpl, path);
           if (m_tok.kind != Token::Kind::LineStatementClose &&
               m_tok.kind != Token::Kind::Eof) {
-            inja_throw("parser_error", "expected line statement close, got '" + m_tok.describe() + "'");
+            throw_parser_error("expected line statement close, got '" + m_tok.describe() + "'");
           }
           break;
         case Token::Kind::ExpressionOpen:
           get_next_token();
           if (!parse_expression(tmpl)) {
-            inja_throw("parser_error", "expected expression, got '" + m_tok.describe() + "'");
+            throw_parser_error("expected expression, got '" + m_tok.describe() + "'");
           }
           append_function(tmpl, Bytecode::Op::PrintValue, 1);
           if (m_tok.kind != Token::Kind::ExpressionClose) {
-            inja_throw("parser_error", "expected expression close, got '" + m_tok.describe() + "'");
+            throw_parser_error("expected expression close, got '" + m_tok.describe() + "'");
           }
           break;
         case Token::Kind::CommentOpen:
           get_next_token();
           if (m_tok.kind != Token::Kind::CommentClose) {
-            inja_throw("parser_error", "expected comment close, got '" + m_tok.describe() + "'");
+            throw_parser_error("expected comment close, got '" + m_tok.describe() + "'");
           }
           break;
-        case Token::Kind::PreOpen:
-					get_next_token();
-					if (m_tok.kind != Token::Kind::PreClose) {
-						inja_throw("parser_error", "expected pre close, got '" + m_tok.describe() + "'");
-					}
-					tmpl.bytecodes.emplace_back(Bytecode::Op::PrintText, m_tok.text, 0u);
-				  break;
+		case Token::Kind::PreOpen: {
+			if (m_tok.kind != Token::Kind::PreOpen) {
+				throw_parser_error("expected comment close, got '" + m_tok.describe() + "'");
+			}
+		}
+		break;
+		case Token::Kind::PreClose: {
+		    if (m_tok.kind != Token::Kind::PreClose) {
+				throw_parser_error("expected comment close, got '" + m_tok.describe() + "'");
+			}
+			tmpl.bytecodes.emplace_back(Bytecode::Op::PrintText, m_tok.text, 0u);
+		}
+		break;
         default:
-          inja_throw("parser_error", "unexpected token '" + m_tok.describe() + "'");
+          throw_parser_error("unexpected token '" + m_tok.describe() + "'");
           break;
       }
     }
@@ -1217,10 +1428,10 @@ class Parser {
   }
 
   std::string load_file(nonstd::string_view filename) {
-		std::ifstream file(static_cast<std::string>(filename));
-		std::string text((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-		return text;
-	}
+    std::ifstream file = open_file_or_throw(static_cast<std::string>(filename));
+    std::string text((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+    return text;
+  }
 
  private:
   const ParserConfig& m_config;
@@ -1232,14 +1443,22 @@ class Parser {
   const ParserStatic& m_static;
 
   struct IfData {
-    unsigned int prev_cond_jump;
-    std::vector<unsigned int> uncond_jumps;
+    using jump_t = size_t;
+    jump_t prev_cond_jump;
+    std::vector<jump_t> uncond_jumps;
 
-    explicit IfData(unsigned int condJump): prev_cond_jump(condJump) {}
+    explicit IfData(jump_t condJump)
+      : prev_cond_jump(condJump)
+    {
+    }
   };
 
   std::vector<IfData> m_if_stack;
-  std::vector<unsigned int> m_loop_stack;
+  std::vector<size_t> m_loop_stack;
+
+  void throw_parser_error(const std::string& message) {
+    throw ParserError(message, m_lexer.current_position());
+  }
 
   void get_next_token() {
     if (m_have_peek_tok) {
@@ -1260,70 +1479,80 @@ class Parser {
 
 }  // namespace inja
 
-#endif  // PANTOR_INJA_PARSER_HPP
+#endif  // INCLUDE_INJA_PARSER_HPP_
 
 // #include "polyfill.hpp"
-#ifndef PANTOR_INJA_POLYFILL_HPP
-#define PANTOR_INJA_POLYFILL_HPP
+// Copyright (c) 2019 Pantor. All rights reserved.
+
+#ifndef INCLUDE_INJA_POLYFILL_HPP_
+#define INCLUDE_INJA_POLYFILL_HPP_
 
 
 #if __cplusplus < 201402L
 
 #include <cstddef>
+#include <memory>
 #include <type_traits>
 #include <utility>
 
 
 namespace stdinja {
-  template<class T> struct _Unique_if {
-    typedef std::unique_ptr<T> _Single_object;
-  };
 
-  template<class T> struct _Unique_if<T[]> {
-    typedef std::unique_ptr<T[]> _Unknown_bound;
-  };
+template<class T> struct _Unique_if {
+  typedef std::unique_ptr<T> _Single_object;
+};
 
-  template<class T, size_t N> struct _Unique_if<T[N]> {
-    typedef void _Known_bound;
-  };
+template<class T> struct _Unique_if<T[]> {
+  typedef std::unique_ptr<T[]> _Unknown_bound;
+};
 
-  template<class T, class... Args>
-  typename _Unique_if<T>::_Single_object
-  make_unique(Args&&... args) {
-    return std::unique_ptr<T>(new T(std::forward<Args>(args)...));
-  }
+template<class T, size_t N> struct _Unique_if<T[N]> {
+  typedef void _Known_bound;
+};
 
-  template<class T>
-  typename _Unique_if<T>::_Unknown_bound
-  make_unique(size_t n) {
-    typedef typename std::remove_extent<T>::type U;
-    return std::unique_ptr<T>(new U[n]());
-  }
-
-  template<class T, class... Args>
-  typename _Unique_if<T>::_Known_bound
-  make_unique(Args&&...) = delete;
+template<class T, class... Args>
+typename _Unique_if<T>::_Single_object
+make_unique(Args&&... args) {
+  return std::unique_ptr<T>(new T(std::forward<Args>(args)...));
 }
+
+template<class T>
+typename _Unique_if<T>::_Unknown_bound
+make_unique(size_t n) {
+  typedef typename std::remove_extent<T>::type U;
+  return std::unique_ptr<T>(new U[n]());
+}
+
+template<class T, class... Args>
+typename _Unique_if<T>::_Known_bound
+make_unique(Args&&...) = delete;
+
+}  // namespace stdinja
 
 #else
 
 namespace stdinja = std;
 
-#endif // memory */
+#endif  // memory */
 
-
-#endif // PANTOR_INJA_POLYFILL_HPP
+#endif  // INCLUDE_INJA_POLYFILL_HPP_
 
 // #include "renderer.hpp"
-#ifndef PANTOR_INJA_RENDERER_HPP
-#define PANTOR_INJA_RENDERER_HPP
+// Copyright (c) 2019 Pantor. All rights reserved.
+
+#ifndef INCLUDE_INJA_RENDERER_HPP_
+#define INCLUDE_INJA_RENDERER_HPP_
 
 #include <algorithm>
 #include <numeric>
+#include <string>
+#include <utility>
+#include <vector>
 
-#include "json.hpp"
 
 // #include "bytecode.hpp"
+
+// #include "exceptions.hpp"
 
 // #include "template.hpp"
 
@@ -1344,6 +1573,9 @@ inline nonstd::string_view convert_dot_to_json_pointer(nonstd::string_view dot, 
   return nonstd::string_view(out.data(), out.size());
 }
 
+/*!
+ * \brief Class for rendering a Template with data.
+ */
 class Renderer {
   std::vector<const json*>& get_args(const Bytecode& bc) {
     m_tmp_args.clear();
@@ -1404,7 +1636,7 @@ class Renderer {
         m_tmp_val = callback(arguments);
         return &m_tmp_val;
       }
-      inja_throw("render_error", "variable '" + static_cast<std::string>(bc.str) + "' not found");
+      throw RenderError("variable '" + static_cast<std::string>(bc.str) + "' not found");
       return nullptr;
     }
   }
@@ -1421,8 +1653,7 @@ class Renderer {
     try {
       return var.get<bool>();
     } catch (json::type_error& e) {
-      inja_throw("json_error", e.what());
-      throw;
+      throw JsonError(e.what());
     }
   }
 
@@ -1430,7 +1661,7 @@ class Renderer {
     LoopLevel& level = m_loop_stack.back();
 
     if (level.loop_type == LoopLevel::Type::Array) {
-      level.data[static_cast<std::string>(level.value_name)] = level.values.at(level.index); // *level.it;
+      level.data[static_cast<std::string>(level.value_name)] = level.values.at(level.index);  // *level.it;
       auto& loopData = level.data["loop"];
       loopData["index"] = level.index;
       loopData["index1"] = level.index + 1;
@@ -1452,22 +1683,21 @@ class Renderer {
     enum class Type { Map, Array };
 
     Type loop_type;
-    nonstd::string_view key_name;   // variable name for keys
-    nonstd::string_view value_name; // variable name for values
-    json data;                      // data with loop info added
+    nonstd::string_view key_name;    // variable name for keys
+    nonstd::string_view value_name;  // variable name for values
+    json data;                       // data with loop info added
 
-    json values;                    // values to iterate over
+    json values;                     // values to iterate over
 
     // loop over list
-    size_t index;                   // current list index
-    size_t size;                    // length of list
+    size_t index;                    // current list index
+    size_t size;                     // length of list
 
     // loop over map
     using KeyValue = std::pair<nonstd::string_view, json*>;
     using MapValues = std::vector<KeyValue>;
-    MapValues map_values;           // values to iterate over
-    MapValues::iterator map_it;     // iterator over values
-
+    MapValues map_values;            // values to iterate over
+    MapValues::iterator map_it;      // iterator over values
   };
 
   std::vector<LoopLevel> m_loop_stack;
@@ -1537,7 +1767,7 @@ class Renderer {
         case Bytecode::Op::Length: {
           const json& val = *get_args(bc)[0];
 
-          int result;
+          size_t result;
           if (val.is_string()) {
             result = val.get_ref<const std::string&>().length();
           } else {
@@ -1771,12 +2001,12 @@ class Renderer {
           break;
         }
         case Bytecode::Op::Include:
-          Renderer(m_included_templates, m_callbacks).render_to(os, m_included_templates.find(get_imm(bc)->get_ref<const std::string&>())->second, data);
+          Renderer(m_included_templates, m_callbacks).render_to(os, m_included_templates.find(get_imm(bc)->get_ref<const std::string&>())->second, *m_data);
           break;
         case Bytecode::Op::Callback: {
           auto callback = m_callbacks.find_callback(bc.str, bc.args);
           if (!callback) {
-            inja_throw("render_error", "function '" + static_cast<std::string>(bc.str) + "' (" + std::to_string(static_cast<unsigned int>(bc.args)) + ") not found");
+            throw RenderError("function '" + static_cast<std::string>(bc.str) + "' (" + std::to_string(static_cast<unsigned int>(bc.args)) + ") not found");
           }
           json result = callback(get_args(bc));
           pop_args(bc);
@@ -1813,7 +2043,7 @@ class Renderer {
             // map iterator
             if (!level.values.is_object()) {
               m_loop_stack.pop_back();
-              inja_throw("render_error", "for key, value requires object");
+              throw RenderError("for key, value requires object");
             }
             level.loop_type = LoopLevel::Type::Map;
             level.key_name = bc.value.get_ref<const std::string&>();
@@ -1822,12 +2052,13 @@ class Renderer {
             for (auto it = level.values.begin(), end = level.values.end(); it != end; ++it) {
               level.map_values.emplace_back(it.key(), &it.value());
             }
-            std::sort(level.map_values.begin(), level.map_values.end(), [](const LoopLevel::KeyValue& a, const LoopLevel::KeyValue& b) { return a.first < b.first; });
+            auto sort_lambda = [](const LoopLevel::KeyValue& a, const LoopLevel::KeyValue& b) { return a.first < b.first; };
+            std::sort(level.map_values.begin(), level.map_values.end(), sort_lambda);
             level.map_it = level.map_values.begin();
           } else {
             if (!level.values.is_array()) {
               m_loop_stack.pop_back();
-              inja_throw("render_error", "type must be array");
+              throw RenderError("type must be array");
             }
 
             // list iterator
@@ -1850,7 +2081,7 @@ class Renderer {
         }
         case Bytecode::Op::EndLoop: {
           if (m_loop_stack.empty()) {
-            inja_throw("render_error", "unexpected state in renderer");
+            throw RenderError("unexpected state in renderer");
           }
           LoopLevel& level = m_loop_stack.back();
 
@@ -1881,7 +2112,7 @@ class Renderer {
           break;
         }
         default: {
-          inja_throw("render_error", "unknown op in renderer: " + std::to_string(static_cast<unsigned int>(bc.op)));
+          throw RenderError("unknown op in renderer: " + std::to_string(static_cast<unsigned int>(bc.op)));
         }
       }
     }
@@ -1890,88 +2121,89 @@ class Renderer {
 
 }  // namespace inja
 
-#endif  // PANTOR_INJA_RENDERER_HPP
+#endif  // INCLUDE_INJA_RENDERER_HPP_
 
 // #include "string_view.hpp"
 
 // #include "template.hpp"
 
+// #include "utils.hpp"
+
 
 
 namespace inja {
 
-using namespace nlohmann;
+using json = nlohmann::json;
 
+/*!
+ * \brief Class for changing the configuration.
+ */
 class Environment {
-  class Impl {
-   public:
-    std::string input_path;
-    std::string output_path;
-
-    LexerConfig lexer_config;
-    ParserConfig parser_config;
-
-    FunctionStorage callbacks;
-    TemplateStorage included_templates;
-  };
-
-  std::unique_ptr<Impl> m_impl;
-
  public:
   Environment(): Environment("") { }
 
-  explicit Environment(const std::string& global_path): m_impl(stdinja::make_unique<Impl>()) {
-    m_impl->input_path = global_path;
-    m_impl->output_path = global_path;
-  }
+  explicit Environment(const std::string& global_path): m_input_path(global_path), m_output_path(global_path) {}
 
-  explicit Environment(const std::string& input_path, const std::string& output_path): m_impl(stdinja::make_unique<Impl>()) {
-    m_impl->input_path = input_path;
-    m_impl->output_path = output_path;
-  }
+  Environment(const std::string& input_path, const std::string& output_path): m_input_path(input_path), m_output_path(output_path) {}
 
   /// Sets the opener and closer for template statements
   void set_statement(const std::string& open, const std::string& close) {
-    m_impl->lexer_config.statement_open = open;
-    m_impl->lexer_config.statement_close = close;
-    m_impl->lexer_config.update_open_chars();
+    m_lexer_config.statement_open = open;
+    m_lexer_config.statement_close = close;
+    m_lexer_config.update_open_chars();
   }
 
   /// Sets the opener for template line statements
   void set_line_statement(const std::string& open) {
-    m_impl->lexer_config.line_statement = open;
-    m_impl->lexer_config.update_open_chars();
+    m_lexer_config.line_statement = open;
+    m_lexer_config.update_open_chars();
   }
 
   /// Sets the opener and closer for template expressions
   void set_expression(const std::string& open, const std::string& close) {
-    m_impl->lexer_config.expression_open = open;
-    m_impl->lexer_config.expression_close = close;
-    m_impl->lexer_config.update_open_chars();
+    m_lexer_config.expression_open = open;
+    m_lexer_config.expression_close = close;
+    m_lexer_config.update_open_chars();
   }
 
   /// Sets the opener and closer for template comments
   void set_comment(const std::string& open, const std::string& close) {
-    m_impl->lexer_config.comment_open = open;
-    m_impl->lexer_config.comment_close = close;
-    m_impl->lexer_config.update_open_chars();
+    m_lexer_config.comment_open = open;
+    m_lexer_config.comment_close = close;
+    m_lexer_config.update_open_chars();
+  }
+
+  void set_original_output(const std::string& open, const std::string& close) {
+	  m_lexer_config.pre_open = open;
+	  m_lexer_config.pre_close = close;
+	  m_lexer_config.update_open_chars();
+  }
+
+  /// Sets whether to remove the first newline after a block
+  void set_trim_blocks(bool trim_blocks) {
+    m_lexer_config.trim_blocks = trim_blocks;
+  }
+
+  /// Sets whether to strip the spaces and tabs from the start of a line to a block
+  void set_lstrip_blocks(bool lstrip_blocks) {
+    m_lexer_config.lstrip_blocks = lstrip_blocks;
   }
 
   /// Sets the element notation syntax
   void set_element_notation(ElementNotation notation) {
-    m_impl->parser_config.notation = notation;
+    m_parser_config.notation = notation;
   }
 
 
   Template parse(nonstd::string_view input) {
-    Parser parser(m_impl->parser_config, m_impl->lexer_config, m_impl->included_templates);
+    Parser parser(m_parser_config, m_lexer_config, m_included_templates);
     return parser.parse(input);
   }
 
   Template parse_template(const std::string& filename) {
-    Parser parser(m_impl->parser_config, m_impl->lexer_config, m_impl->included_templates);
-		return parser.parse_template(m_impl->input_path + static_cast<std::string>(filename));
-	}
+    Parser parser(m_parser_config, m_lexer_config, m_included_templates);
+    return parser.parse_template(m_input_path + static_cast<std::string>(filename));
+  }
 
   std::string render(nonstd::string_view input, const json& data) {
     return render(parse(input), data);
@@ -1984,55 +2216,55 @@ class Environment {
   }
 
   std::string render_file(const std::string& filename, const json& data) {
-		return render(parse_template(filename), data);
-	}
+    return render(parse_template(filename), data);
+  }
 
   std::string render_file_with_json_file(const std::string& filename, const std::string& filename_data) {
-		const json data = load_json(filename_data);
-		return render_file(filename, data);
-	}
+    const json data = load_json(filename_data);
+    return render_file(filename, data);
+  }
 
   void write(const std::string& filename, const json& data, const std::string& filename_out) {
-		std::ofstream file(m_impl->output_path + filename_out);
-		file << render_file(filename, data);
-		file.close();
-	}
+    std::ofstream file(m_output_path + filename_out);
+    file << render_file(filename, data);
+    file.close();
+  }
 
   void write(const Template& temp, const json& data, const std::string& filename_out) {
-		std::ofstream file(m_impl->output_path + filename_out);
-		file << render(temp, data);
-		file.close();
-	}
+    std::ofstream file(m_output_path + filename_out);
+    file << render(temp, data);
+    file.close();
+  }
 
-	void write_with_json_file(const std::string& filename, const std::string& filename_data, const std::string& filename_out) {
-		const json data = load_json(filename_data);
-		write(filename, data, filename_out);
-	}
+  void write_with_json_file(const std::string& filename, const std::string& filename_data, const std::string& filename_out) {
+    const json data = load_json(filename_data);
+    write(filename, data, filename_out);
+  }
 
-	void write_with_json_file(const Template& temp, const std::string& filename_data, const std::string& filename_out) {
-		const json data = load_json(filename_data);
-		write(temp, data, filename_out);
-	}
+  void write_with_json_file(const Template& temp, const std::string& filename_data, const std::string& filename_out) {
+    const json data = load_json(filename_data);
+    write(temp, data, filename_out);
+  }
 
   std::ostream& render_to(std::ostream& os, const Template& tmpl, const json& data) {
-    Renderer(m_impl->included_templates, m_impl->callbacks).render_to(os, tmpl, data);
+    Renderer(m_included_templates, m_callbacks).render_to(os, tmpl, data);
     return os;
   }
 
   std::string load_file(const std::string& filename) {
-    Parser parser(m_impl->parser_config, m_impl->lexer_config, m_impl->included_templates);
-		return parser.load_file(m_impl->input_path + filename);
-	}
+    Parser parser(m_parser_config, m_lexer_config, m_included_templates);
+    return parser.load_file(m_input_path + filename);
+  }
 
   json load_json(const std::string& filename) {
-		std::ifstream file(m_impl->input_path + filename);
-		json j;
-		file >> j;
-		return j;
-	}
+    std::ifstream file = open_file_or_throw(m_input_path + filename);
+    json j;
+    file >> j;
+    return j;
+  }
 
   void add_callback(const std::string& name, unsigned int numArgs, const CallbackFunction& callback) {
-    m_impl->callbacks.add_callback(name, numArgs, callback);
+    m_callbacks.add_callback(name, numArgs, callback);
   }
 
   /** Includes a template with a given name into the environment.
@@ -2040,8 +2272,18 @@ class Environment {
    * include "<name>" syntax.
    */
   void include_template(const std::string& name, const Template& tmpl) {
-    m_impl->included_templates[name] = tmpl;
+    m_included_templates[name] = tmpl;
   }
+
+ private:
+  std::string m_input_path;
+  std::string m_output_path;
+
+  LexerConfig m_lexer_config;
+  ParserConfig m_parser_config;
+
+  FunctionStorage m_callbacks;
+  TemplateStorage m_included_templates;
 };
 
 /*!
@@ -2061,7 +2303,7 @@ inline void render_to(std::ostream& os, nonstd::string_view input, const json& d
 
 }
 
-#endif // PANTOR_INJA_ENVIRONMENT_HPP
+#endif  // INCLUDE_INJA_ENVIRONMENT_HPP_
 
 // #include "string_view.hpp"
 
@@ -2073,4 +2315,4 @@ inline void render_to(std::ostream& os, nonstd::string_view input, const json& d
 
 
 
-#endif  // PANTOR_INJA_HPP
+#endif  // INCLUDE_INJA_INJA_HPP_

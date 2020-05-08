@@ -78,7 +78,7 @@ namespace xfinal {
 
 	template<typename T, typename U>
 	bool less_than(T iter0, U iter1, std::size_t number) {
-		if ((iter1 - iter0) >= number) {
+		if (int(iter1 - iter0) >= number) {
 			return true;
 		}
 		return false;
