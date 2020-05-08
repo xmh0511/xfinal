@@ -3,7 +3,7 @@
 using namespace xfinal;
 class Test {
 public:
-	bool before(request& req,response& res) {
+	bool before(request& req, response& res) {
 		std::cout << "pre process aop 1" << std::endl;
 		//res.write_string("aop1 stop");
 		return true;
@@ -50,7 +50,7 @@ private:
 
 class Process {
 public:
-	void test(request& req,response& res) {
+	void test(request& req, response& res) {
 		res.write_string("OK test!");
 	}
 };
@@ -58,7 +58,7 @@ public:
 class Shop :public Controller {
 public:
 	void goshop() {
-		get_response().write_string(std::to_string(count++)+" go shop");
+		get_response().write_string(std::to_string(count++) + " go shop");
 	}
 private:
 	int count = 0;
@@ -71,7 +71,7 @@ int main()
 	http_server server(thread_number);
 	server.on_error([](std::string const& message) {  //提供用户记录错误日志
 		std::cout << message << std::endl;
-	});
+		});
 	bool r = server.listen("0.0.0.0", "8080");
 	if (!r) {
 		return 0;
@@ -87,42 +87,53 @@ int main()
 	server.add_view_method("str2int", 1, [](inja::Arguments const& args) {
 		auto i = std::atoi(args[0]->get<std::string>().data());
 		return std::string("transform:") + std::to_string(i);
-	});
+		});
 
 	server.router<GET>("/sessionrecord", [](request& req, response& res) {
 		auto& session = req.session("test_session0");
 		session.set_expires(3600);
 		res.write_string("OK");
-	}, init_session{});
+		}, init_session{});
 
-	server.router<GET,POST>("/abc", [](request& req,response& res) {
+	server.router<GET, POST>("/abc", [](request& req, response& res) {
 		std::cout << req.query("id") << std::endl;
-		std::cout << "hahaha "<<req.url() <<" text :"<<req.query<GBK>("text")<< std::endl;
+		std::cout << "hahaha " << req.url() << " text :" << req.query<GBK>("text") << std::endl;
 		res.write_string("OK");
-	}, Test{}, Base{}, Test2{});
+		}, Test{}, Base{}, Test2{});
 
 	server.router<GET, POST>("/", [](request& req, response& res) {
-		res.write_string(std::string("hello world"),false);
-	});
+		res.write_string(std::string("hello world"), false);
+		});
 
 	server.router<GET, POST>("/ip", [](request& req, response& res) {
 		auto ip = res.connection().remote_ip();
 		auto locip = res.connection().local_ip();
-		res.write_string(std::move(ip+" "+ locip));
-	});
+		res.write_string(std::move(ip + " " + locip));
+		});
 
-	server.router<GET,POST>("/json", [](request& req, response& res) {
-		std::cout << "body: " << req.body()<<std::endl;
+	server.router<GET, POST>("/json", [](request& req, response& res) {
+		std::cout << "body: " << req.body() << std::endl;
 		json root;
 		root["hello"] = u8"你好，中文";
 		res.write_json(root);
-	});
+		});
+
+	server.router<GET, POST>("/postjson", [](request& req, response& res) {
+		try {
+			auto root = json::parse(view2str(req.body()));
+			root["url"] = "postjson";
+			res.write_json(root);
+		}
+		catch (std::exception const& ec) {
+			res.write_string("error", false, http_status::bad_request);
+		}
+		});
 
 	server.router<GET>("/params", [](request& req, response& res) {
 		auto params = req.key_params();
 		std::cout << "id: " << req.param("id") << std::endl;
 		res.write_string("id");
-	});
+		});
 
 	server.router<POST>("/upload", [](request& req, response& res) {
 		std::cout << "text: " << req.query("text") << std::endl;
@@ -136,34 +147,34 @@ int main()
 		data["file_path"] = file.path();
 		data["success"] = true;
 		res.write_json(data);
-	});
+		});
 
 	server.router<GET, POST>("/chunkedstr", [](request& req, response& res) {
 		std::ifstream file("./data.txt");
 		std::stringstream ss;
 		ss << file.rdbuf();
-		res.write_string(ss.str(),true);
-	});
+		res.write_string(ss.str(), true);
+		});
 
 	server.router<GET, POST>("/chunkedfile", [](request& req, response& res) {
 
 		res.write_file("./data.txt", true);
-	});
+		});
 
 	server.router<GET, POST>("/video", [](request& req, response& res) {
 		res.write_file("./test.mp4", true);
-	});
+		});
 
 	server.router<GET, POST>("/pathinfo/*", [](request& req, response& res) {
 		auto raw_param = req.raw_url_params();
 		auto param = req.param(0);
 		auto params = req.url_params();
 		res.write_string("abc");
-	});
+		});
 
 	server.router<GET, POST>("/oct", [](request& req, response& res) {
 		res.write_string("abc");
-	});
+		});
 
 	Process c;
 	server.router<GET, POST>("/test", &Process::test, c, Test{});
@@ -173,7 +184,7 @@ int main()
 	server.router<GET, POST>("/test1", &Process::test);
 
 	Shop ss;
-	server.router<GET, POST>("/controller", &Shop::goshop,ss, Test{});
+	server.router<GET, POST>("/controller", &Shop::goshop, ss, Test{});
 
 	server.router<GET, POST>("/controller0", &Shop::goshop, nullptr, Test{});
 
@@ -185,19 +196,19 @@ int main()
 		auto header = con.get_header("Content-Length");
 		auto state = con.get_status_code();
 		res.write_string(con.get_content());
-	});
+		});
 
 	server.router<GET>("/asyclient", [](request& req, response& res) {
 		http_client client("www.baidu.com");
-		client.request<GET>("/", [](http_client::client_response const& res,std::error_code const& ec) {
+		client.request<GET>("/", [](http_client::client_response const& res, std::error_code const& ec) {
 			if (ec) {
 				return;
-			 }
+			}
 			std::cout << res.get_content() << std::endl;
-		});
+			});
 		client.run();
 		res.write_string("OK");
-	});
+		});
 
 	server.router<GET>("/client_post", [](request& req, response& res) {
 		try {
@@ -211,7 +222,7 @@ int main()
 		catch (...) {
 			res.write_string("error");
 		}
-	});
+		});
 
 	server.router<GET>("/client_multipart", [](request& req, response& res) {
 		try {
@@ -225,21 +236,21 @@ int main()
 		catch (...) {
 			res.write_string("error");
 		}
-	});
+		});
 
 	server.router<GET>("/view", [](request& req, response& res) {
 		res.set_attr("name", "xfinal");
 		res.set_attr("language", "c++");
 		res.set_attr("str", "1024");
 		res.write_view("./static/test.html");
-	});
+		});
 
 	server.router<GET>("/session", [](request& req, response& res) {
 		auto& session = req.create_session();
 		session.set_data("time", std::to_string(std::time(nullptr)));
 		session.set_expires(30);
 		res.write_string("OK");
-	});
+		});
 
 	server.router<GET>("/changesession", [](request& req, response& res) {
 		auto& session = req.session();
@@ -259,7 +270,7 @@ int main()
 		else {
 			res.write_string("yes");
 		}
-	});
+		});
 
 	websocket_event event;
 	event.on("message", [](websocket& ws) {
@@ -270,15 +281,15 @@ int main()
 			message.append(std::to_string(i));
 		}
 		ws.write_string(message);
-	}).on("open", [](websocket& ws) {
-		std::cout << "open" << std::endl;
-	}).on("close", [](websocket& ws) {
-		std::cout << "close" << std::endl;
-	});
-	server.router("/ws", event);
+		}).on("open", [](websocket& ws) {
+			std::cout << "open" << std::endl;
+			}).on("close", [](websocket& ws) {
+				std::cout << "close" << std::endl;
+				});
+			server.router("/ws", event);
 
 
 
-	server.run();
-	return 0;
+			server.run();
+			return 0;
 }
