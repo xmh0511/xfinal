@@ -38,6 +38,16 @@ namespace xfinal {
 		class connection& connection() {
 			return *connecter_;
 		}
+	private:
+		bool is_key_params(nonstd::string_view view) const{
+			auto str = view2str(view);
+			std::map<nonstd::string_view, nonstd::string_view> form;
+			http_urlform_parser{ str ,false }.parse_data(form);
+			if (!form.empty()) {
+				return true;
+			}
+			return false;
+		}
 	public:
 		bool has_body() const noexcept {
 			if (header("content-length").empty()) {
@@ -58,21 +68,19 @@ namespace xfinal {
 		nonstd::string_view url() const noexcept {
 			auto it = url_.rfind('?');
 			if (it != (nonstd::string_view::size_type)nonstd::string_view::npos) {
-				std::map<nonstd::string_view, nonstd::string_view> form;
-				auto str = view2str(url_);
-				http_urlform_parser{ str ,false }.parse_data(form);
-				if (!form.empty()) {
+				bool r = is_key_params(url_.substr(it + 1));
+				if (r) {
 					return url_.substr(0, it);
 				}
 			}
 			return url_;
 		}
 
-		nonstd::string_view param(nonstd::string_view key) noexcept {
+		nonstd::string_view param(nonstd::string_view key) noexcept {  //获取问号后的键值对参数值
 			if (decode_url_params_.empty()) {
 				auto it = url_.rfind('?');
 				if (it != (nonstd::string_view::size_type)nonstd::string_view::npos) {
-					decode_url_params_ = url_decode(view2str(url_.substr(it + 1, url_.size())));
+					decode_url_params_ = url_decode(view2str(url_.substr(it + 1)));
 					http_urlform_parser{ decode_url_params_ }.parse_data(url_params_);
 				}
 			}
@@ -83,7 +91,7 @@ namespace xfinal {
 			return "";
 		}
 
-		nonstd::string_view param(std::size_t index) noexcept {
+		nonstd::string_view param(std::size_t index) noexcept {  //获取url参数类型的参数值
 			if (is_generic_) {
 				auto pos = generic_base_path_.size();
 				auto url_fix = url();
@@ -97,7 +105,7 @@ namespace xfinal {
 			return "";
 		}
 
-		nonstd::string_view raw_url_params() const noexcept {
+		nonstd::string_view raw_url_params() const noexcept {  //获取url参数字符串
 			if (is_generic_) {
 				auto pos = generic_base_path_.size();
 				auto url_fix = url();
@@ -110,20 +118,19 @@ namespace xfinal {
 			return "";
 		}
 
-		nonstd::string_view raw_key_params() const noexcept {
+		nonstd::string_view raw_key_params() const noexcept {  //获取问号后的参数字符串
 			auto it = url_.rfind('?');
+			auto view = url_.substr(it + 1);
 			if (it != (nonstd::string_view::size_type)nonstd::string_view::npos) {
-				std::map<nonstd::string_view, nonstd::string_view> form;
-				auto str = view2str(url_);
-				http_urlform_parser{ str ,false }.parse_data(form);
-				if (!form.empty()) {
-					return url_.substr(it + 1, url_.size());
+				bool r = is_key_params(view);
+				if (r) {
+					return view;
 				}
 			}
 			return "";
 		}
 
-		std::vector<nonstd::string_view> url_params() noexcept {
+		std::vector<nonstd::string_view> url_params() noexcept {  //获取url类型参数的数组
 			if (is_generic_) {
 				auto pos = generic_base_path_.size();
 				auto url_fix = url();
@@ -137,7 +144,7 @@ namespace xfinal {
 			return {};
 		}
 
-		std::map<nonstd::string_view, nonstd::string_view> key_params() noexcept {
+		std::map<nonstd::string_view, nonstd::string_view> key_params() noexcept { //获取问号键值对的map
 			if (decode_url_params_.empty()) {
 				auto it = url_.rfind('?');
 				if (it != (nonstd::string_view::size_type)nonstd::string_view::npos) {

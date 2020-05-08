@@ -132,8 +132,9 @@ int main()
 	server.router<GET>("/params", [](request& req, response& res) {
 		auto params = req.key_params();
 		std::cout << "id: " << req.param("id") << std::endl;
+		std::cout << "all value: " << req.raw_key_params() << std::endl;
 		res.write_string("id");
-		});
+	});
 
 	server.router<POST>("/upload", [](request& req, response& res) {
 		std::cout << "text: " << req.query("text") << std::endl;
@@ -170,7 +171,7 @@ int main()
 		auto param = req.param(0);
 		auto params = req.url_params();
 		res.write_string("abc");
-		});
+	});
 
 	server.router<GET, POST>("/oct", [](request& req, response& res) {
 		res.write_string("abc");
