@@ -197,6 +197,7 @@ namespace xfinal {
 			for (auto& iter : files) {
 				iter.second.remove();
 			}
+			return true;
 		}
 
 		nonstd::string_view method() const noexcept {

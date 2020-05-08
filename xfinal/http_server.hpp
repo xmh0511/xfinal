@@ -207,7 +207,7 @@ namespace xfinal {
 				std::error_code ec;
 				acceptor.open(asio::ip::tcp::v4(), ec);
 #ifndef _WIN32
-				acceptor.set_option(boost::asio::ip::tcp::acceptor::reuse_address(true), ec);
+				acceptor.set_option(asio::ip::tcp::acceptor::reuse_address(true), ec);
 #endif
 				acceptor.bind({ asio::ip::tcp::v4(), port }, ec);
 
