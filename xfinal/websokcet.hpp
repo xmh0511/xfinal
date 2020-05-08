@@ -176,7 +176,7 @@ namespace xfinal {
 					}
 					a_frame.append(std::string(&message[read_pos], write_data_size));
 					read_pos += write_data_size;
-					message_size = left_size;
+					message_size = (std::size_t)left_size;
 					write_frame_queue_.emplace(std::unique_ptr<std::string>(new std::string(std::move(a_frame))));
 				}
 			}

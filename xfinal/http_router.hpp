@@ -134,8 +134,64 @@ namespace xfinal {
 		response& res_;
 	};
 
+	template<typename Methods,typename Function,typename MemberClass>
+	struct fiction_auto_lambda_in_router0 {
+		fiction_auto_lambda_in_router0(nonstd::string_view url,Methods methods, Function function, MemberClass* that):url_(url),methods_(methods), function_(function), that_(that){
+
+		}
+		template<typename T>
+		void operator()(T&& tp) {
+			auto b = std::bind(&MemberClass::template pre_handler<Function,typename std::remove_reference<T>::type>, that_, std::placeholders::_1, std::placeholders::_2, function_, tp);
+			that_->reg_router(url_, methods_, std::move(b));
+		}
+		nonstd::string_view url_;
+		Methods methods_;
+		Function function_;
+		MemberClass* that_;
+	};
+
+	template<typename Methods, typename Function,typename ClassType, typename MemberClass>
+	struct fiction_auto_lambda_in_router1 {
+		fiction_auto_lambda_in_router1(nonstd::string_view url, Methods methods, Function function, ClassType* class_ptr,MemberClass* that) :url_(url), methods_(methods), function_(function), class_(class_ptr), that_(that){
+
+		}
+		template<typename T>
+		void operator()(T&& tp) {
+			auto b = std::bind(&MemberClass::template pre_handler_member_function<Function, ClassType, typename std::remove_reference<T>::type>, that_, std::placeholders::_1, std::placeholders::_2, function_, class_, tp);
+			that_->reg_router(url_, methods_, std::move(b));
+		}
+		nonstd::string_view url_;
+		Methods methods_;
+		Function function_;
+		ClassType* class_;
+		MemberClass* that_;
+	};
+
+	template<typename Methods, typename Function, typename ClassType, typename MemberClass>
+	struct fiction_auto_lambda_in_router2 {
+		fiction_auto_lambda_in_router2(nonstd::string_view url, Methods methods, Function function, ClassType* class_ptr, MemberClass* that) :url_(url), methods_(methods), function_(function), class_(class_ptr), that_(that) {
+
+		}
+		template<typename T>
+		void operator()(T&& tp) {
+			auto b = std::bind(&MemberClass::template pre_handler_controller<ClassType, typename std::remove_reference<T>::type>, that_, std::placeholders::_1, std::placeholders::_2, function_, class_, tp);
+			that_->reg_router(url_, methods_, std::move(b));
+		}
+		nonstd::string_view url_;
+		Methods methods_;
+		Function function_;
+		ClassType* class_;
+		MemberClass* that_;
+	};
+
 	class http_router {
 		friend class http_server;
+		template<typename Methods, typename Function, typename MemberClass>
+		friend struct fiction_auto_lambda_in_router0;
+		template<typename Methods, typename Function, typename ClassType, typename MemberClass>
+		friend struct fiction_auto_lambda_in_router1;
+		template<typename Methods, typename Function, typename ClassType, typename MemberClass>
+		friend struct fiction_auto_lambda_in_router2;
 	public:
 		using router_function = std::function<void(request&, response&)>;
 	public:
@@ -171,76 +227,59 @@ namespace xfinal {
 
 		template<typename Array, typename Function, typename...Args>
 		void router(nonstd::string_view url, Array&& methods, Function&& lambda, Args&& ...args) { //lambda or regular function
-			auto tp = std::tuple<Args...>(std::forward<Args>(args)...);
-			auto b = std::bind(&http_router::pre_handler<Function, std::tuple<Args...>>, this, std::placeholders::_1, std::placeholders::_2, std::forward<Function>(lambda), std::move(tp));
-			reg_router(url, std::forward<Array>(methods), std::move(b));
+			fiction_auto_lambda_in_router0<Array, Function, http_router> callable(url, std::forward<Array>(methods), std::forward<Function>(lambda),this);
+			reorganize_tuple_v1(callable, std::tuple<>{}, std::tuple<>{}, std::tuple<>{}, std::forward<Args>(args)...);
 		}
 
 		template<typename Array, typename Ret, typename Class, typename...Params, typename Object, typename...Args>
 		void router(nonstd::string_view url, Array&& methods, Ret(Class::* memberfunc)(Params...), Object& that, Args&& ...args) {  // member function with lvalue object argument
-			auto tp = std::tuple<Args...>(std::forward<Args>(args)...);
-			auto b = std::bind(&http_router::pre_handler_member_function<Ret(Class::*)(Params...), Class, std::tuple<Args...>>, this, std::placeholders::_1, std::placeholders::_2, memberfunc, static_cast<Class*>(&that), std::move(tp));
-			reg_router(url, std::forward<Array>(methods), std::move(b));
+			fiction_auto_lambda_in_router1< Array, Ret(Class::*)(Params...), Object, http_router> callable(url, std::forward<Array>(methods), memberfunc, static_cast<Object*>(&that), this);
+			reorganize_tuple_v1(callable, std::tuple<>{}, std::tuple<>{}, std::tuple<>{}, std::forward<Args>(args)...);
 		}
 
 		template<typename Array, typename Ret, typename Class, typename...Params, typename...Args>
 		void router(nonstd::string_view url, Array&& methods, Ret(Class::* memberfunc)(Params...), Args&& ...args) {  // member function elision object argument
-			auto tp = std::tuple<Args...>(std::forward<Args>(args)...);
-			auto b = std::bind(&http_router::pre_handler_member_function<Ret(Class::*)(Params...), Class, std::tuple<Args...>>, this, std::placeholders::_1, std::placeholders::_2, memberfunc, nullptr, std::move(tp));
-			reg_router(url, std::forward<Array>(methods), std::move(b));
+			fiction_auto_lambda_in_router1< Array, Ret(Class::*)(Params...), Class, http_router> callable(url, std::forward<Array>(methods), memberfunc, static_cast<Class*>(nullptr), this);
+			reorganize_tuple_v1(callable, std::tuple<>{}, std::tuple<>{}, std::tuple<>{}, std::forward<Args>(args)...);
 		}
 
-		template<typename Array, typename Ret, typename Class, typename...Params, typename...Args>
-		void router(nonstd::string_view url, Array&& methods, Ret(Class::* memberfunc)(Params...), Class* that, Args&& ...args) {  // member function with object pointer
-			auto tp = std::tuple<Args...>(std::forward<Args>(args)...);
-			auto b = std::bind(&http_router::pre_handler_member_function<Ret(Class::*)(Params...), Class, std::tuple<Args...>>, this, std::placeholders::_1, std::placeholders::_2, memberfunc, static_cast<Class*>(that), std::move(tp));
-			reg_router(url, std::forward<Array>(methods), std::move(b));
+		template<typename Array, typename Ret, typename Class, typename...Params,typename Object, typename...Args>
+		void router(nonstd::string_view url, Array&& methods, Ret(Class::* memberfunc)(Params...), Object* that, Args&& ...args) {  // member function with object pointer
+			fiction_auto_lambda_in_router1< Array, Ret(Class::*)(Params...), Class, http_router> callable(url, std::forward<Array>(methods), memberfunc, static_cast<Object*>(that), this);
+			reorganize_tuple_v1(callable, std::tuple<>{}, std::tuple<>{}, std::tuple<>{}, std::forward<Args>(args)...);
 		}
 
 		template<typename Array, typename Class, typename...Args>
 		typename std::enable_if<std::is_base_of<Controller, typename std::remove_cv<Class>::type>::value>::type router(nonstd::string_view url, Array&& methods, void(Class::* memberfunc)(), Class& that, Args&& ...args) {  //controller with lvalue object argument
-			auto tp = std::tuple<Args...>(std::forward<Args>(args)...);
-			auto b = std::bind(&http_router::pre_handler_controller<Class, std::tuple<Args...>>, this, std::placeholders::_1, std::placeholders::_2, memberfunc, &that, std::move(tp));
-			reg_router(url, std::forward<Array>(methods), std::move(b));
+			fiction_auto_lambda_in_router2< Array, void(Class::*)(), Class, http_router> callable(url, std::forward<Array>(methods), memberfunc, static_cast<Class*>(&that), this);
+			reorganize_tuple_v1(callable, std::tuple<>{}, std::tuple<>{}, std::tuple<>{}, std::forward<Args>(args)...);
 		}
 
 		template<typename Array, typename Class, typename...Args>
 		typename std::enable_if<std::is_base_of<Controller, typename std::remove_cv<Class>::type>::value>::type router(nonstd::string_view url, Array&& methods, void(Class::* memberfunc)(), Args&& ...args) {  //controller elision object argument
-			auto tp = std::tuple<Args...>(std::forward<Args>(args)...);
-			auto b = std::bind(&http_router::pre_handler_controller<Class, std::tuple<Args...>>, this, std::placeholders::_1, std::placeholders::_2, memberfunc, nullptr, std::move(tp));
-			reg_router(url, std::forward<Array>(methods), std::move(b));
+			fiction_auto_lambda_in_router2< Array, void(Class::*)(), Class, http_router> callable(url, std::forward<Array>(methods), memberfunc, static_cast<Class*>(nullptr), this);
+			reorganize_tuple_v1(callable, std::tuple<>{}, std::tuple<>{}, std::tuple<>{}, std::forward<Args>(args)...);
 		}
 
-		template<typename Array, typename Class, typename...Args>
-		typename std::enable_if<std::is_base_of<Controller, Class>::value>::type router(nonstd::string_view url, Array&& methods, void(Class::* memberfunc)(), Class* that, Args&& ...args) {  //controller with object pointer
-			auto tp = std::tuple<Args...>(std::forward<Args>(args)...);
-			auto b = std::bind(&http_router::pre_handler_controller<Class, std::tuple<Args...>>, this, std::placeholders::_1, std::placeholders::_2, memberfunc, that, std::move(tp));
-			reg_router(url, std::forward<Array>(methods), std::move(b));
+		template<typename Array, typename Class, typename Object, typename...Args>
+		typename std::enable_if<std::is_base_of<Controller, Class>::value>::type router(nonstd::string_view url, Array&& methods, void(Class::* memberfunc)(), Object* that, Args&& ...args) {  //controller with object pointer
+			fiction_auto_lambda_in_router2< Array, void(Class::*)(), Class, http_router> callable(url, std::forward<Array>(methods), memberfunc, static_cast<Object*>(that), this);
+			reorganize_tuple_v1(callable, std::tuple<>{}, std::tuple<>{}, std::tuple<>{}, std::forward<Args>(args)...);
 		}
 
 		///lambda or regular function  process --start
 		template<typename Function, typename Tuple>
 		void pre_handler(request& req, response& res, Function& function, Tuple& tp) {  //lambda or regular function
-			pre_handler_expand(req, res, function, tp, typename make_index_sequence<std::tuple_size<typename std::remove_reference<Tuple>::type>::value>::type{});
-		}
-
-		template<typename Function, typename Tuple, std::size_t...Indexs>
-		void pre_handler_expand(request& req, response& res, Function& function, Tuple& tp, index_sequence<Indexs...>) {
 			auto_params_lambda<Function> lambda{ req ,res ,function };
-			reorganize_tuple(lambda, std::tuple<>{}, std::tuple<>{}, std::get<Indexs>(tp)...);
+			lambda(tp);
 		}
 		///lambda or regular function  process --end
 
 		///class member function process   --start
 		template<typename Function, typename Class, typename Tuple>
 		void pre_handler_member_function(request& req, response& res, Function& function, Class* that, Tuple& tp) {
-			pre_handler_member_function_expand(req, res, function, that, tp, typename make_index_sequence<std::tuple_size<typename std::remove_reference<Tuple>::type>::value>::type{});
-		}
-
-		template<typename Function, typename Class, typename Tuple, std::size_t...Indexs>
-		void pre_handler_member_function_expand(request& req, response& res, Function& function, Class* that, Tuple& tp, index_sequence<Indexs...>) {
 			auto_params_lambda<Function, Class> lambda{ req ,res ,that ,function };
-			reorganize_tuple(lambda, std::tuple<>{}, std::tuple<>{}, std::get<Indexs>(tp)...);
+			lambda(tp);
 		}
 
 		///class member function process   --end;
@@ -248,14 +287,10 @@ namespace xfinal {
 		///controller process --start
 		template<typename Class, typename Tuple>
 		void pre_handler_controller(request& req, response& res, void(Class::* memberfunc)(), Class* that, Tuple& tp) {
-			handler_controller_expand(req, res, memberfunc, that, tp, typename make_index_sequence<std::tuple_size<typename std::remove_reference<Tuple>::type>::value>::type{});
+			auto_params_lambda<void(Class::*)(), Class> lambda{ req ,res ,that ,memberfunc };
+			lambda(tp);
 		}
 
-		template<typename Class, typename Tuple, std::size_t...Indexs>
-		void handler_controller_expand(request& req, response& res, void(Class::* memberfunc)(), Class* that, Tuple& tp, index_sequence<Indexs...>) {
-			auto_params_lambda<void(Class::*)(), Class> lambda{ req ,res ,that ,memberfunc };
-			reorganize_tuple(lambda, std::tuple<>{}, std::tuple<>{}, std::get<Indexs>(tp)...);
-		}
 
 		///controller process --end
 

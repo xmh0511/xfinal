@@ -174,32 +174,50 @@ namespace xfinal {
 		static constexpr bool value = true;
 	};
 
-	template<typename AopTuple, typename NoAopTuple,typename T,typename U = typename std::enable_if<is_aop<typename std::remove_reference<T>::type>::value>::type>
-	auto process_reorganize(int,AopTuple&& atp, NoAopTuple&& natp,T&& t) ->decltype(std::make_tuple(std::tuple_cat(atp, std::tuple<T>(t)), natp)) 
+
+	template<typename T, typename U = void>
+	struct is_interceptor {
+		static constexpr bool value = false;
+	};
+
+	template<typename T>
+	struct is_interceptor<T, typename void_t<std::tuple<decltype(&T::prehandle), decltype(&T::posthandle)>>::type> {
+		static constexpr bool value = true;
+	};
+
+	template<typename AopTuple, typename Interceptor, typename NoAopTuple,typename T,typename U = typename std::enable_if<(is_aop<typename std::remove_reference<T>::type>::value && !is_interceptor<typename std::remove_reference<T>::type>::value)>::type>
+	auto process_reorganize(int,AopTuple&& atp, Interceptor&& inteceptor, NoAopTuple&& natp,T&& t) ->decltype(std::make_tuple(std::tuple_cat(atp,  std::tuple<T>(t)), inteceptor, natp)) //如果只是aop
 	{
 		auto tp =  std::tuple_cat(atp, std::tuple<T>(t));
-		return std::make_tuple(tp, natp);
+		return std::make_tuple(tp, inteceptor, natp);
 	}
 
-	template<typename AopTuple, typename NoAopTuple, typename T, typename U = typename std::enable_if<!is_aop<typename std::remove_reference<T>::type>::value>::type>
-	auto process_reorganize(float,AopTuple&& atp, NoAopTuple&& natp, T&& t) ->decltype(std::make_tuple(atp, std::tuple_cat(natp, std::tuple<T>(t)))) 
+	template<typename AopTuple, typename Interceptor, typename NoAopTuple, typename T, typename U = typename std::enable_if<(!is_aop<typename std::remove_reference<T>::type>::value&& !is_interceptor<typename std::remove_reference<T>::type>::value)>::type>
+	auto process_reorganize(float,AopTuple&& atp, Interceptor&& inteceptor, NoAopTuple&& natp, T&& t) ->decltype(std::make_tuple(atp, inteceptor, std::tuple_cat(natp, std::tuple<T>(t)))) //如果只是其他
 	{
 		auto tp = std::tuple_cat(natp, std::tuple<T>(t));
-		return std::make_tuple(atp, tp);
+		return std::make_tuple(atp, inteceptor,tp);
 	}
 
-	template<typename Functor,typename AopTuple, typename NoAopTuple>
-	void reorganize_tuple(Functor&& functor, AopTuple&& atp, NoAopTuple&& natp) //->decltype(std::make_tuple(atp, natp))
+	template<typename AopTuple, typename Interceptor, typename NoAopTuple, typename T, typename U = typename std::enable_if<(!is_aop<typename std::remove_reference<T>::type>::value && is_interceptor<typename std::remove_reference<T>::type>::value)>::type>
+	auto process_reorganize(float, AopTuple&& atp, Interceptor&& inteceptor, NoAopTuple&& natp, T&& t) ->decltype(std::make_tuple(atp, std::tuple_cat(inteceptor, std::tuple<T>(t)), natp)) //如果只是拦截器
 	{
-		 auto tp = std::make_tuple(atp, natp);
-		 functor(tp);
+		auto tp = std::tuple_cat(inteceptor, std::tuple<T>(t));
+		return std::make_tuple(atp, tp, natp);
 	}
 
-	template<typename Functor, typename AopTuple,typename NoAopTuple,typename T,typename...Args>
-	void reorganize_tuple(Functor&& functor,AopTuple&& atp, NoAopTuple&& natp,T&& t,Args&&...args)// ->decltype(reorganize_tuple(std::get<0>(process_reorganize(0, atp, natp, std::forward<T>(t))), std::get<1>(process_reorganize(0, atp, natp, std::forward<T>(t))), std::forward<Args>(args)...))
+	template<typename Function,typename AopTuple, typename Interceptor, typename NoAopTuple>
+	void reorganize_tuple_v1(Function&& callback,AopTuple&& atp, Interceptor&& inteceptor, NoAopTuple&& natp)
 	{
-		auto tp = process_reorganize(0, atp, natp, std::forward<T>(t));
-		reorganize_tuple(std::forward<Functor>(functor),std::get<0>(tp), std::get<1>(tp), std::forward<Args>(args)...);
+		auto tp = std::make_tuple(atp, inteceptor,natp);
+		callback(tp);
+	}
+
+	template<typename Function, typename AopTuple, typename Interceptor ,typename NoAopTuple, typename T, typename...Args>
+	void reorganize_tuple_v1(Function&& callback, AopTuple&& atp, Interceptor&& inteceptor,NoAopTuple&& natp, T&& t, Args&&...args)
+	{
+		auto tp = process_reorganize(0, std::forward<AopTuple>(atp), std::forward<Interceptor>(inteceptor), std::forward<NoAopTuple>(natp),std::forward<T>(t));
+		reorganize_tuple_v1(std::forward<Function>(callback),std::get<0>(tp), std::get<1>(tp), std::get<2>(tp),std::forward<Args>(args)...);
 	}
 
 	template<std::size_t N,std::size_t Max>
