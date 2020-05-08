@@ -360,6 +360,9 @@ class sql_storage:public session_storage{
       void remove(session& session){
          /*用来移除session*/
       }
+      void remove(std::string const& uuid){
+        /*通过uuid 删除session*/
+      }
 };
 int main()
 {
