@@ -90,6 +90,7 @@ namespace xfinal {
 		}
 		void post_router() {
 			//router_.post_router(req_, res_);
+			need_terminate_request_ = false;
 			if (current_router_ != nullptr) {
 				current_router_(req_, res_);
 			}
@@ -117,14 +118,18 @@ namespace xfinal {
 					if (process_interceptor != nullptr) {
 						auto r = process_interceptor(req_, res_);
 						if (!r) {  //终止此次请求
-							terminate_request();
+							//terminate_request();
+							need_terminate_request_ = true;
+							write();
 							return;
 						}
 					}
 				}
 				else {  //无效请求
 					current_router_(req_, res_);
-					terminate_request();
+					need_terminate_request_ = true;
+					write();
+					//terminate_request();
 					return;
 				}
 				handle_read();
@@ -517,6 +522,7 @@ namespace xfinal {
 			router_.trigger_error(what_error);
 			res_.write_string(std::move(what_error), false, http_status::bad_request);
 			//req_.is_validate_request_ = false;
+			need_terminate_request_ = true;
 			write();
 		}
 
@@ -529,12 +535,17 @@ namespace xfinal {
 				chunked_write();
 			}
 		}
+
 		void forward_write(bool is_websokcet = false) {  //直接写 非chunked
 			if (!socket_close_) {
 				auto handler = this->shared_from_this();
 				asio::async_write(*socket_, res_.to_buffers(), [handler, is_websokcet,this](std::error_code const& ec, std::size_t write_size) {
 					if (ec) {
 						disconnect();
+						return;
+					}
+					if (need_terminate_request_ == true) {  //因为中断请求
+						terminate_request();
 						return;
 					}
 					if (!is_websokcet) {
@@ -598,6 +609,10 @@ namespace xfinal {
 						disconnect();
 						return;
 					}
+					if (need_terminate_request_ == true) {  //因为中断请求
+						terminate_request();
+						return;
+					}
 					handler->close();
 				});
 			}
@@ -605,23 +620,18 @@ namespace xfinal {
 	private:
 		void terminate_request() {  //终止请求
 			if (!socket_close_) {
-				auto handler = this->shared_from_this();
-				asio::async_write(*socket_, res_.to_buffers(), [handler, this](std::error_code const& ec, std::size_t write_size) {
-					//std::error_code ignore_write_ec;
-					//socket_->write_some(asio::buffer("\0\0"), ignore_write_ec);  //solve time_wait problem
-					std::error_code ignore_shutdown_ec;
-					socket_->shutdown(asio::ip::tcp::socket::shutdown_send, ignore_shutdown_ec);
-					auto have_size = socket_->available();
-					if (have_size > 0) {
-						asio::streambuf buff;
-						std::error_code ignore_read_error;
-						asio::read(*socket_, buff, ignore_read_error);
-					}
-					std::error_code ignore_close_ec;
-					socket_->close(ignore_close_ec);
-					socket_close_ = true;
-				});
+				std::error_code ignore_shutdown_ec;
+				socket_->shutdown(asio::ip::tcp::socket::shutdown_send, ignore_shutdown_ec);
+				auto have_size = socket_->available();
+				if (have_size > 0) {
+					asio::streambuf buff;
+					std::error_code ignore_read_error;
+					asio::read(*socket_, buff, ignore_read_error);
+				}
+				std::error_code ignore_close_ec;
+				socket_->close(ignore_close_ec);
 			}
+			socket_close_ = true;
 		}
 	private:
 		void close() {  //回应完成 准备关闭连接
@@ -646,6 +656,7 @@ namespace xfinal {
 	private:
 		void reset() {
 			current_router_ = nullptr;
+			need_terminate_request_ = false;
 			req_.reset();
 			res_.reset();
 			request_info.reset();
@@ -681,6 +692,7 @@ namespace xfinal {
 		response res_;
 		http_router& router_;
 		bool socket_close_ = false;
+		bool need_terminate_request_ = false;
 		std::string const& static_path_;
 		std::string const& upload_path_;
 		std::size_t start_read_pos_ = 0;

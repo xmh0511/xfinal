@@ -68,7 +68,7 @@ struct limitUpload {
 	bool prehandle(request& req, response& res) {
 		auto fileSize = atoi(req.header("content-length").data());
 		if (fileSize > 1024*20) {
-			res.write_string("too large", false, http_status::bad_request);
+			res.write_string("too large", true, http_status::bad_request);
 			return false;
 		}
 		return true;
