@@ -109,6 +109,7 @@ namespace xfinal {
 				req_.multipart_files_map_ = &(request_info.multipart_files_map_);
 				req_.oct_steam_ = &(request_info.oct_steam_);
 				req_.empty_file_ = &(request_info.empty_file_);
+				req_.init_content_type();
 				bool is_general = false;
 				auto router_iter = router_.pre_router(req_, res_, is_general);
 				auto&& url_key = router_iter.first;
@@ -139,7 +140,6 @@ namespace xfinal {
 			//http request error;
 		}
 		void handle_read() {  //读取请求头完毕后 开始下一步处理
-			req_.init_content_type();
 			if (req_.has_body()) {  //has request body
 				auto type = req_.content_type();
 				switch (type)

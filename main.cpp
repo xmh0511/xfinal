@@ -66,9 +66,14 @@ private:
 
 struct limitUpload {
 	bool prehandle(request& req, response& res) {
-		auto fileSize = atoi(req.header("content-length").data());
-		if (fileSize > 1024*20) {
-			res.write_string("too large", true, http_status::bad_request);
+		//auto fileSize = atoi(req.header("content-length").data());
+		//if (fileSize > 1024*20) {
+		//	res.write_string("too large", true, http_status::bad_request);
+		//	return false;
+		//}
+		auto type = req.content_type();
+		if (type == content_type::multipart_form) {
+			res.write_view("./www/test.html", true, http_status::bad_request);
 			return false;
 		}
 		return true;
