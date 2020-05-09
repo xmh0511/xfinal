@@ -37,6 +37,20 @@ namespace xfinal {
 		response& res_;
 	};
 
+	struct c11_auto_lambda_interceptor_pre {
+		c11_auto_lambda_interceptor_pre(bool& b, request& req, response& res) :result(b), req_(req), res_(res) {
+
+		}
+		template<typename T>
+		bool operator()(T&& interceptor) {
+			result = result && (interceptor.prehandle(req_, res_));
+			return result;
+		}
+		bool& result;
+		request& req_;
+		response& res_;
+	};
+
 	template<std::size_t N>
 	struct router_caller {
 		template<typename Function, typename Tuple>
@@ -62,7 +76,7 @@ namespace xfinal {
 		template<typename T>
 		void operator()(T&& t) {
 			bool b = true;
-			auto aop_tp = std::get<0>(t);
+			auto&& aop_tp = std::get<0>(t);
 			router_caller<std::tuple_size<typename std::remove_reference<decltype(aop_tp)>::type>::value>::template apply<c11_auto_lambda_aop_before>(b, req_, res_, aop_tp);
 			if (!b) {
 				return;
@@ -83,7 +97,7 @@ namespace xfinal {
 		template<typename T>
 		void operator()(T&& t) {
 			bool b = true;
-			auto aop_tp = std::get<0>(t);
+			auto&& aop_tp = std::get<0>(t);
 			router_caller<std::tuple_size<typename std::remove_reference<decltype(aop_tp)>::type>::value>::template apply<c11_auto_lambda_aop_before>(b, req_, res_, aop_tp);
 			if (!b) {
 				return;
@@ -110,7 +124,7 @@ namespace xfinal {
 		template<typename T>
 		void operator()(T&& t) {
 			bool b = true;
-			auto aop_tp = std::get<0>(t);
+			auto&& aop_tp = std::get<0>(t);
 			router_caller<std::tuple_size<typename std::remove_reference<decltype(aop_tp)>::type>::value>::template apply<c11_auto_lambda_aop_before>(b, req_, res_, aop_tp);
 			if (!b) {
 				return;
@@ -142,7 +156,7 @@ namespace xfinal {
 		template<typename T>
 		void operator()(T&& tp) {
 			auto b = std::bind(&MemberClass::template pre_handler<Function,typename std::remove_reference<T>::type>, that_, std::placeholders::_1, std::placeholders::_2, function_, tp);
-			that_->reg_router(url_, methods_, std::move(b));
+			that_->reg_router(url_, methods_, std::move(b), std::get<1>(tp));
 		}
 		nonstd::string_view url_;
 		Methods methods_;
@@ -158,7 +172,7 @@ namespace xfinal {
 		template<typename T>
 		void operator()(T&& tp) {
 			auto b = std::bind(&MemberClass::template pre_handler_member_function<Function, ClassType, typename std::remove_reference<T>::type>, that_, std::placeholders::_1, std::placeholders::_2, function_, class_, tp);
-			that_->reg_router(url_, methods_, std::move(b));
+			that_->reg_router(url_, methods_, std::move(b), std::get<1>(tp));
 		}
 		nonstd::string_view url_;
 		Methods methods_;
@@ -175,7 +189,7 @@ namespace xfinal {
 		template<typename T>
 		void operator()(T&& tp) {
 			auto b = std::bind(&MemberClass::template pre_handler_controller<ClassType, typename std::remove_reference<T>::type>, that_, std::placeholders::_1, std::placeholders::_2, function_, class_, tp);
-			that_->reg_router(url_, methods_, std::move(b));
+			that_->reg_router(url_, methods_, std::move(b),std::get<1>(tp));
 		}
 		nonstd::string_view url_;
 		Methods methods_;
@@ -194,6 +208,7 @@ namespace xfinal {
 		friend struct fiction_auto_lambda_in_router2;
 	public:
 		using router_function = std::function<void(request&, response&)>;
+		using interceptor_function = std::function<bool(request&, response&)>;
 	public:
 		http_router() :timer_(io_) {
 			check_session_expires();
@@ -207,13 +222,20 @@ namespace xfinal {
 			}
 		}
 	private:
-		template<typename Array, typename Bind>
-		void reg_router(nonstd::string_view url, Array&& methods, Bind&& router) {
+		template<typename Array, typename Bind,typename Interceptor>
+		void reg_router(nonstd::string_view url, Array&& methods, Bind&& router, Interceptor&& interceptors) {
+			auto interceptor_pre_process = [interceptors](request& req,response& res) mutable ->bool  {
+				using tupleType = typename std::remove_reference<decltype(interceptors)>::type;
+				bool result = true;
+				each_tuple<0, tuple_size<tupleType>::value>{}(interceptors, c11_auto_lambda_interceptor_pre{ result,req,res });
+				return result;
+			};
 			auto generator = url.find('*');
 			if (generator == nonstd::string_view::npos) {
 				for (auto& iter : methods) {
 					std::string key = iter + std::string(url.data(), url.size());
 					router_map_.insert(std::make_pair(key, static_cast<router_function>(router)));
+					interceptor_map_.insert(std::make_pair(key, static_cast<interceptor_function>(interceptor_pre_process)));
 				}
 			}
 			else {
@@ -221,6 +243,7 @@ namespace xfinal {
 				for (auto& iter : methods) {
 					std::string key = iter + std::string(url_.data(), url_.size());
 					genera_router_map_.insert(std::make_pair(key, static_cast<router_function>(router)));
+					genera_interceptor_map_.insert(std::make_pair(key, static_cast<interceptor_function>(interceptor_pre_process)));
 				}
 			}
 		}
@@ -295,7 +318,82 @@ namespace xfinal {
 		///controller process --end
 
 	public:
-		void post_router(request& req, response& res) {
+		//void post_router(request& req, response& res) {
+		//	auto url = req.url();
+		//	if (url.size() > 1) {  //确保这里不是 / 根路由
+		//		std::size_t back = 0;
+		//		while ((url.size() - back - 1) > 0 && url[url.size() - back - 1] == '/') { //去除url 最后有/的干扰 /xxx/xxx/ - > /xxx/xxx
+		//			back++;
+		//		}
+		//		if (back > 0) {  //如果url不是规范的url 则重定向跳转
+		//			if (url_redirect_) {
+		//				auto url_str = view2str(url.substr(0, url.size() - back));
+		//				auto params = req.raw_key_params();
+		//				if (!params.empty()) {
+		//					url_str += "?";
+		//				}
+		//				url_str += view2str(params);
+		//				res.redirect(url_str);
+		//				return;
+		//			}
+		//			else {
+		//				url = url.substr(0, url.size() - back);
+		//			}
+		//		}
+		//	}
+		//	auto key = view2str(req.method()) + view2str(url);
+		//	if (router_map_.find(key) != router_map_.end()) {
+		//		auto& it = router_map_.at(key);
+		//		set_view_method(res);
+		//		it(req, res);
+		//		return;
+		//	}
+		//	else {
+		//		using value_type = std::pair<std::string, router_function>;
+		//		std::map<std::size_t, value_type> overload_set;
+		//		for (auto& iter : genera_router_map_) {
+		//			auto pos = key.find("/", iter.first.size());
+		//			auto gurl = key.substr(0, pos - 0);
+		//			if (iter.first == gurl) {
+		//				overload_set.insert(std::make_pair(iter.first.size(), iter));
+		//			}
+		//		}
+		//		if (!overload_set.empty()) {  //重载执行最佳匹配的url
+		//			auto endIter = overload_set.end();
+		//			auto& iter = (*(--endIter)).second;
+		//			set_view_method(res);
+		//			auto& url = iter.first;
+		//			auto pos = url.find("/");
+		//			if (pos == std::string::npos) {
+		//				req.set_generic_path("");
+		//			}
+		//			else {
+		//				req.set_generic_path(url.substr(pos, url.size() - pos));
+		//			}
+		//			(iter.second)(req, res);
+		//			return;
+		//		}
+		//	}
+		//	if (not_found_callback_ != nullptr) {
+		//		not_found_callback_(req, res);
+		//	}
+		//	else {
+		//		std::stringstream ss;
+		//		ss << "the request " << view2str(req.method()) << " \"" << view2str(req.url()) << "\" is not found";
+		//		res.write_string(ss.str(), false, http_status::bad_request);
+		//	}
+		//	if (req.content_type() == content_type::multipart_form) {
+		//		auto& files = req.files();
+		//		for (auto& iter : files) {
+		//			iter.second.remove();
+		//		}
+		//	}
+		//	if (req.content_type() == content_type::octet_stream) {
+		//		auto& file = req.file();
+		//		file.remove();
+		//	}
+		//}
+		std::pair<std::string,router_function> pre_router(request& req, response& res,bool& is_general) {
 			auto url = req.url();
 			if (url.size() > 1) {  //确保这里不是 / 根路由
 				std::size_t back = 0;
@@ -303,27 +401,29 @@ namespace xfinal {
 					back++;
 				}
 				if (back > 0) {  //如果url不是规范的url 则重定向跳转
-					if (url_redirect_) {
-						auto url_str = view2str(url.substr(0, url.size() - back));
-						auto params = req.raw_key_params();
-						if (!params.empty()) {
-							url_str += "?";
-						}
-						url_str += view2str(params);
-						res.redirect(url_str);
-						return;
-					}
-					else {
-						url = url.substr(0, url.size() - back);
-					}
+					url = url.substr(0, url.size() - back);
+					//if (url_redirect_) {
+					//	auto url_str = view2str(url.substr(0, url.size() - back));
+					//	auto params = req.raw_key_params();
+					//	if (!params.empty()) {
+					//		url_str += "?";
+					//	}
+					//	url_str += view2str(params);
+					//	res.redirect(url_str);
+					//	return;
+					//}
+					//else {
+					//	url = url.substr(0, url.size() - back);
+					//}
 				}
 			}
 			auto key = view2str(req.method()) + view2str(url);
-			if (router_map_.find(key) != router_map_.end()) {
-				auto& it = router_map_.at(key);
+			auto&& common_iter = router_map_.find(key);
+			if (common_iter != router_map_.end()) {
+				//auto& it = router_map_.at(key);
 				set_view_method(res);
-				it(req, res);
-				return;
+				is_general = false;
+				return *common_iter;
 			}
 			else {
 				using value_type = std::pair<std::string, router_function>;
@@ -333,17 +433,6 @@ namespace xfinal {
 					auto gurl = key.substr(0, pos - 0);
 					if (iter.first == gurl) {
 						overload_set.insert(std::make_pair(iter.first.size(), iter));
-						//set_view_method(res);
-						//auto& url = iter.first;
-						//auto pos = url.find("/");
-						//if (pos == std::string::npos) {
-						//	req.set_generic_path("");
-						//}
-						//else {
-						//	req.set_generic_path(url.substr(pos, url.size() - pos));
-						//}
-						//(iter.second)(req, res);
-						//return;
 					}
 				}
 				if (!overload_set.empty()) {  //重载执行最佳匹配的url
@@ -358,63 +447,48 @@ namespace xfinal {
 					else {
 						req.set_generic_path(url.substr(pos, url.size() - pos));
 					}
-					(iter.second)(req, res);
-					return;
+					is_general = true;
+					return iter ;
 				}
 			}
+			//if (req.content_type() == content_type::multipart_form) {
+			//	auto& files = req.files();
+			//	for (auto& iter : files) {
+			//		iter.second.remove();
+			//	}
+			//}
+			//if (req.content_type() == content_type::octet_stream) {
+			//	auto& file = req.file();
+			//	file.remove();
+			//}
+			is_general = false;
 			if (not_found_callback_ != nullptr) {
-				not_found_callback_(req, res);
+				return { "",not_found_callback_ };
 			}
 			else {
-				std::stringstream ss;
-				ss << "the request " << view2str(req.method()) << " \"" << view2str(req.url()) << "\" is not found";
-				res.write_string(ss.str(), false, http_status::bad_request);
-			}
-			if (req.content_type() == content_type::multipart_form) {
-				auto& files = req.files();
-				for (auto& iter : files) {
-					iter.second.remove();
-				}
-			}
-			if (req.content_type() == content_type::octet_stream) {
-				auto& file = req.file();
-				file.remove();
+				return { "",[](request& req, response& res) {
+					std::stringstream ss;
+					ss << "the request " << view2str(req.method()) << " \"" << view2str(req.url()) << "\" is not found";
+					res.write_string(ss.str(), false, http_status::bad_request);
+				} };
 			}
 		}
-		//bool check_validate_request(request& req, response& res) {  //用于解析完请求头后判断请求是否是有效请求
-		//	auto url = req.url();
-		//	if (url.size() > 1) {  //确保这里不是 / 根路由
-		//		std::size_t back = 0;
-		//		while ((url.size() - back - 1) > 0 && url[url.size() - back - 1] == '/') { //去除url 最后有/的干扰 /xxx/xxx/ - > /xxx/xxx
-		//			back++;
-		//		}
-		//		if (back > 0) {  //如果url不是规范的url 则重定向跳转
-		//			url = url.substr(0, url.size() - back);
-		//		}
-		//	}
-		//	auto key = view2str(req.method()) + view2str(url);
-		//	if (router_map_.find(key) != router_map_.end()) {
-		//		return true;
-		//	}
-		//	else {
-		//		for (auto& iter : genera_router_map_) {
-		//			auto pos = key.find("/", iter.first.size());
-		//			auto gurl = key.substr(0, pos - 0);
-		//			if (iter.first == gurl) {
-		//				return true;
-		//			}
-		//		}
-		//	}
-		//	if (not_found_callback_ != nullptr) {
-		//		not_found_callback_(req, res);
-		//	}
-		//	else {
-		//		std::stringstream ss;
-		//		ss << "the request " << view2str(req.method()) << " \"" << view2str(req.url()) << "\" is not found";
-		//		res.write_string(ss.str(), false, http_status::bad_request);
-		//	}
-		//	return false;
-		//}
+	public:
+		interceptor_function get_interceptors_process(std::string const& key,bool is_general) {
+			if (!is_general) {
+				auto iter = interceptor_map_.find(key);
+				if (iter != interceptor_map_.end()) {
+					return iter->second;
+				}
+			}
+			else {
+				auto iter = genera_interceptor_map_.find(key);
+				if (iter != genera_interceptor_map_.end()) {
+					return  iter->second;
+				}
+			}
+			return nullptr;
+		}
 	public:
 		void trigger_error(std::string const& err) {
 			utils::messageCenter::get().trigger_message(err);
@@ -449,6 +523,8 @@ namespace xfinal {
 	private:
 		std::unordered_map<std::string, router_function> router_map_;
 		std::unordered_map<std::string, router_function> genera_router_map_;
+		std::unordered_map<std::string, interceptor_function> interceptor_map_;
+		std::unordered_map<std::string, interceptor_function> genera_interceptor_map_;
 		std::unordered_map<std::string, std::pair<std::size_t, inja::CallbackFunction>> view_method_map_;
 		asio::io_service io_;
 		asio::steady_timer timer_;

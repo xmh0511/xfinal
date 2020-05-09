@@ -89,7 +89,10 @@ namespace xfinal {
 			current_use_pos_ += addpos;
 		}
 		void post_router() {
-			router_.post_router(req_, res_);
+			//router_.post_router(req_, res_);
+			if (current_router_ != nullptr) {
+				current_router_(req_, res_);
+			}
 			write();  //回应请求
 		}
 		void parse_header(http_parser_header& parser) {  //解析请求头
@@ -105,11 +108,25 @@ namespace xfinal {
 				req_.multipart_files_map_ = &(request_info.multipart_files_map_);
 				req_.oct_steam_ = &(request_info.oct_steam_);
 				req_.empty_file_ = &(request_info.empty_file_);
-				//if (!router_.check_validate_request(req_, res_)) { //验证是否为有效请求 请求的url是否注册过路由
-				//	req_.is_validate_request_ = false;
-				//	write();
-				//	return;
-				//}
+				bool is_general = false;
+				auto router_iter = router_.pre_router(req_, res_, is_general);
+				auto&& url_key = router_iter.first;
+				current_router_ = std::move(router_iter.second);
+				if (!url_key.empty()) {
+					auto process_interceptor = router_.get_interceptors_process(url_key, is_general);
+					if (process_interceptor != nullptr) {
+						auto r = process_interceptor(req_, res_);
+						if (!r) {  //终止此次请求
+							terminate_request();
+							return;
+						}
+					}
+				}
+				else {  //无效请求
+					current_router_(req_, res_);
+					terminate_request();
+					return;
+				}
 				handle_read();
 				return;
 			}
@@ -334,22 +351,25 @@ namespace xfinal {
 			auto pos_name = value.find("name") + sizeof("name") + 1;
 			auto name = value.substr(pos_name, value.find('\"', pos_name) - pos_name);
 			auto type = value.find("filename");
+			auto f_type_iter = head.find("content-type"); //必须有否则无效
 			if (type != std::string::npos) {  //是文件类型
-				auto file = request_info.multipart_files_map_.find(name);
-				if (file != request_info.multipart_files_map_.end()) {
-					file->second.add_data(data);
-				}
-				else {
-					auto f_type = head.at("content-type");
-					auto extension = get_extension(f_type);
-					auto t = std::time(nullptr);
-					auto& fileo = request_info.multipart_files_map_[name];
-					auto path = upload_path_ + "/" + uuids::uuid_system_generator{}().to_short_str() + view2str(extension);
-					fileo.open(path);
-					auto filename_start = type + sizeof("filename") + 1;
-					auto original_name = value.substr(filename_start, value.find('\"', filename_start) - filename_start);
-					fileo.set_original_name(std::move(original_name));
-					fileo.add_data(data);
+				if (f_type_iter != head.end()) {  //只有有content-type的file才是合法的 否则跳过处理
+					auto file = request_info.multipart_files_map_.find(name);
+					if (file != request_info.multipart_files_map_.end()) {
+						file->second.add_data(data);
+					}
+					else {
+						auto f_type = head.at("content-type");
+						auto extension = get_extension(f_type);
+						auto t = std::time(nullptr);
+						auto& fileo = request_info.multipart_files_map_[name];
+						auto path = upload_path_ + "/" + uuids::uuid_system_generator{}().to_short_str() + view2str(extension);
+						fileo.open(path);
+						auto filename_start = type + sizeof("filename") + 1;
+						auto original_name = value.substr(filename_start, value.find('\"', filename_start) - filename_start);
+						fileo.set_original_name(std::move(original_name));
+						fileo.add_data(data);
+					}
 				}
 			}
 			else {  //是文本类型
@@ -583,6 +603,27 @@ namespace xfinal {
 			}
 		}
 	private:
+		void terminate_request() {  //终止请求
+			if (!socket_close_) {
+				auto handler = this->shared_from_this();
+				asio::async_write(*socket_, res_.to_buffers(), [handler, this](std::error_code const& ec, std::size_t write_size) {
+					//std::error_code ignore_write_ec;
+					//socket_->write_some(asio::buffer("\0\0"), ignore_write_ec);  //solve time_wait problem
+					std::error_code ignore_shutdown_ec;
+					socket_->shutdown(asio::ip::tcp::socket::shutdown_send, ignore_shutdown_ec);
+					auto have_size = socket_->available();
+					if (have_size > 0) {
+						asio::streambuf buff;
+						std::error_code ignore_read_error;
+						asio::read(*socket_, buff, ignore_read_error);
+					}
+					std::error_code ignore_close_ec;
+					socket_->close(ignore_close_ec);
+					socket_close_ = true;
+				});
+			}
+		}
+	private:
 		void close() {  //回应完成 准备关闭连接
 			if (req_.is_keep_alive()) {  //keep_alive
 				reset();
@@ -604,6 +645,7 @@ namespace xfinal {
 		}
 	private:
 		void reset() {
+			current_router_ = nullptr;
 			req_.reset();
 			res_.reset();
 			request_info.reset();
@@ -644,5 +686,6 @@ namespace xfinal {
 		std::size_t start_read_pos_ = 0;
 		asio::steady_timer keep_alive_waiter_;
 		std::time_t keep_alive_wait_time_ = 30;
+		std::function<void(request&, response&)> current_router_ = nullptr;
 	};
 }

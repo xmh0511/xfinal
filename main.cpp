@@ -64,6 +64,20 @@ private:
 	int count = 0;
 };
 
+struct limitUpload {
+	bool prehandle(request& req, response& res) {
+		auto fileSize = atoi(req.header("content-length").data());
+		if (fileSize > 1024*20) {
+			res.write_string("too large", false, http_status::bad_request);
+			return false;
+		}
+		return true;
+	}
+	bool posthandle(request& req, response& res) {
+		return true;
+	}
+};
+
 
 int main()
 {
@@ -271,7 +285,17 @@ int main()
 		else {
 			res.write_string("yes");
 		}
-		});
+	});
+
+	server.router<POST, GET>("/uploadlimt", [](request& req, response& res) {
+		std::cout << "command" << std::endl;
+		std::cout << req.query("text") << std::endl;
+		auto& file = req.file("img");
+		json root;
+		root["size"] = file.size();
+		root["url"] = file.url_path();
+		res.write_json(root);
+	}, limitUpload{});
 
 	websocket_event event;
 	event.on("message", [](websocket& ws) {
