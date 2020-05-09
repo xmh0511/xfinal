@@ -527,6 +527,12 @@ namespace xfinal {
 		}
 
 		void write() {
+			if (need_terminate_request_ == true) {
+				auto it = res_.header_map_.find("Connection");
+				if (it == res_.header_map_.end()) {
+					res_.add_header("Connection", "close");
+				}
+			}
 			auto is_chunked = res_.is_chunked_;
 			if (!is_chunked) {  //非chunked方式返回数据
 				forward_write();
