@@ -14,7 +14,7 @@ namespace xfinal {
 	class connection final :public std::enable_shared_from_this<connection> {
 		friend class http_server;
 	public:
-		connection(asio::io_service& io, http_router& router, std::string const& static_path, std::string const& upload_path) :socket_(std::unique_ptr<asio::ip::tcp::socket>(new asio::ip::tcp::socket(io))), io_service_(io), buffers_(expand_buffer_size), router_(router), static_path_(static_path), req_(res_, this), res_(req_, this), upload_path_(upload_path), keep_alive_waiter_(io){
+		connection(asio::io_service& io, http_router& router, std::string const& static_path, std::string const& upload_path) :socket_(std::unique_ptr<asio::ip::tcp::socket>(new asio::ip::tcp::socket(io))), io_service_(io), buffers_(expand_buffer_size), router_(router), static_path_(static_path), req_(res_, this), res_(req_, this), upload_path_(upload_path), keep_alive_waiter_(io), read_waiter_(io){
 			left_buffer_size_ = buffers_.size();
 		}
 	public:
@@ -49,6 +49,12 @@ namespace xfinal {
 		std::time_t get_keep_alive_wait_time() {
 			return keep_alive_wait_time_;
 		}
+		void set_wait_read_time(std::time_t time) {
+			wait_read_time_ = time;
+		}
+		std::time_t get_wait_read_time() {
+			return wait_read_time_;
+		}
 	private:
 		std::vector<char>& get_buffers() {
 			return buffers_;
@@ -62,6 +68,19 @@ namespace xfinal {
 					return;
 				}
 				disconnect();
+			});
+		}
+		void start_read_waiter() {  //如果读取数据超时
+			auto handler = this->shared_from_this();
+			read_waiter_.expires_from_now(std::chrono::seconds(wait_read_time_));
+			read_waiter_.async_wait([handler, this](std::error_code const& ec) {
+				if (ec) {
+					return;
+				}
+				std::error_code ignore_shutdown_ec;
+				socket_->shutdown(asio::ip::tcp::socket::shutdown_receive, ignore_shutdown_ec);
+				std::error_code ignore_close_ec;
+				socket_->close(ignore_close_ec);
 			});
 		}
 	private:
@@ -634,7 +653,9 @@ namespace xfinal {
 				if (have_size > 0) {
 					auto handler = this->shared_from_this();
 					std::shared_ptr<asio::streambuf> buff(new asio::streambuf{});
+					start_read_waiter();
 					asio::async_read(*socket_, *buff, [handler,this, buff](std::error_code const& ec, std::size_t read_size) {
+						read_waiter_.cancel();
 						std::error_code ignore_close_ec;
 						socket_->close(ignore_close_ec);
 					});
@@ -688,6 +709,7 @@ namespace xfinal {
 			}
 			//std::cout << "connection destory" << std::endl;
 			keep_alive_waiter_.cancel();
+			read_waiter_.cancel();
 		}
 	private:
 		std::unique_ptr<asio::ip::tcp::socket> socket_;
@@ -701,6 +723,7 @@ namespace xfinal {
 		request req_;
 		response res_;
 		http_router& router_;
+		std::function<void(request&, response&)> current_router_ = nullptr;
 		bool socket_close_ = false;
 		bool need_terminate_request_ = false;
 		std::string const& static_path_;
@@ -708,6 +731,7 @@ namespace xfinal {
 		std::size_t start_read_pos_ = 0;
 		asio::steady_timer keep_alive_waiter_;
 		std::time_t keep_alive_wait_time_ = 30;
-		std::function<void(request&, response&)> current_router_ = nullptr;
+		std::time_t wait_read_time_ = 10;
+		asio::steady_timer read_waiter_;
 	};
 }

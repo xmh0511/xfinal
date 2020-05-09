@@ -132,6 +132,12 @@ namespace xfinal {
 		std::time_t keep_alive_wait_time() {
 			return keep_alive_wait_time_;
 		}
+		void set_wait_read_time(std::time_t seconds) {
+			wait_read_time_ = seconds;
+		}
+		std::time_t wait_read_time() {
+			return wait_read_time_;
+		}
 	private:
 		bool listen(asio::ip::tcp::resolver::query& query) {
 			bool result = false;
@@ -168,6 +174,7 @@ namespace xfinal {
 			auto connector = std::make_shared<connection>(ioservice_pool_handler_.get_io(), http_router_, static_path_, upload_path_);
 			connector->set_chunked_size(chunked_size_);
 			connector->set_keep_alive_wait_time(keep_alive_wait_time_);
+			connector->set_wait_read_time(wait_read_time_);
 			acceptor_.async_accept(connector->get_socket(), [this,connector](std::error_code const& ec) {
 				if (!ec) {
 					connector->read_header();
@@ -222,5 +229,6 @@ namespace xfinal {
 		std::string static_url_;
 		std::uint64_t chunked_size_ = 1*1024*1024;
 		std::time_t keep_alive_wait_time_ = 30;
+		std::time_t wait_read_time_ = 10;
 	};
 }
