@@ -626,19 +626,23 @@ namespace xfinal {
 	private:
 		void terminate_request() {  //终止请求
 			if (!socket_close_) {
+				std::error_code ignore_write_ec;
+				socket_->write_some(asio::buffer("\0\0"), ignore_write_ec);  //solve time_wait problem
 				std::error_code ignore_shutdown_ec;
 				socket_->shutdown(asio::ip::tcp::socket::shutdown_send, ignore_shutdown_ec);
 				auto have_size = socket_->available();
 				if (have_size > 0) {
-					asio::streambuf buff;
-					std::error_code ignore_read_error;
-					asio::read(*socket_, buff, ignore_read_error);
+					auto handler = this->shared_from_this();
+					std::shared_ptr<asio::streambuf> buff(new asio::streambuf{});
+					asio::async_read(*socket_, *buff, [handler,this, buff](std::error_code const& ec, std::size_t read_size) {
+						std::error_code ignore_close_ec;
+						socket_->close(ignore_close_ec);
+					});
 				}
-				std::error_code ignore_close_ec;
-				socket_->close(ignore_close_ec);
 			}
 			socket_close_ = true;
 		}
+
 	private:
 		void close() {  //回应完成 准备关闭连接
 			if (req_.is_keep_alive()) {  //keep_alive
