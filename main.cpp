@@ -96,6 +96,7 @@ int main()
 		return 0;
 	}
 	server.set_url_redirect(false);
+	server.set_wait_read_time(3);
 	//server.set_upload_path("./myupload");
 	//server.set_not_found_callback([](request& req,response& res) {
 	//	res.write_string("custom not found", true, http_status::bad_request);

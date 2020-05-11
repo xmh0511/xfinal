@@ -70,18 +70,27 @@ namespace xfinal {
 				disconnect();
 			});
 		}
-		void start_read_waiter() {  //如果读取数据超时
+		void cancel_keep_timer() {
+			std::error_code ignore_ec;
+			keep_alive_waiter_.cancel(ignore_ec);
+		}
+		void start_read_waiter() {  //如果读写数据超时
 			auto handler = this->shared_from_this();
 			read_waiter_.expires_from_now(std::chrono::seconds(wait_read_time_));
 			read_waiter_.async_wait([handler, this](std::error_code const& ec) {
 				if (ec) {
 					return;
 				}
+				std::cout << "time over" << std::endl;
 				std::error_code ignore_shutdown_ec;
-				socket_->shutdown(asio::ip::tcp::socket::shutdown_receive, ignore_shutdown_ec);
+				socket_->shutdown(asio::ip::tcp::socket::shutdown_both, ignore_shutdown_ec);
 				std::error_code ignore_close_ec;
 				socket_->close(ignore_close_ec);
 			});
+		}
+		void cancel_read_waiter() {
+			std::error_code ignore_ec;
+			read_waiter_.cancel(ignore_ec);
 		}
 	private:
 		bool expand_size(bool is_multipart_data) {
@@ -468,7 +477,9 @@ namespace xfinal {
 			}
 			expand_size(true);
 			auto handler = this->shared_from_this();
+			start_read_waiter();
 			socket_->async_read_some(asio::buffer(&buffers_[0], buffers_.size()), [handler, body_size,this](std::error_code const& ec, std::size_t read_size) {
+				cancel_read_waiter();
 				if (ec) {
 					disconnect();
 					return;
@@ -499,7 +510,9 @@ namespace xfinal {
 			}
 			auto handler = this->shared_from_this();
 			auto function = std::move(callback);
+			start_read_waiter();  //开启超时
 			socket_->async_read_some(asio::buffer(&buffers_[current_use_pos_], left_buffer_size_), [handler, function,this](std::error_code const& ec, std::size_t read_size) {
+				cancel_read_waiter(); //读取到了就取消超时 无论是否ec
 				if (ec) {
 					disconnect();
 					return;
@@ -510,12 +523,14 @@ namespace xfinal {
 		}
 		void read_header() {  //有连接请求后 开始读取请求头
 			auto handler = this->shared_from_this();
+			start_read_waiter();
 			socket_->async_read_some(asio::buffer(&buffers_[current_use_pos_], left_buffer_size_), [handler,this](std::error_code const& ec, std::size_t read_size){
+				cancel_read_waiter(); //读取到了就取消超时 无论是否ec
 				if (ec) {
 					disconnect();
 					return;
 				}
-				keep_alive_waiter_.cancel();
+				cancel_keep_timer();
 				handler->set_current_pos(read_size);
 				auto& buffer = handler->get_buffers();
 				//std::cout << handler->get_buffers().data() << std::endl;
@@ -564,7 +579,9 @@ namespace xfinal {
 		void forward_write(bool is_websokcet = false) {  //直接写 非chunked
 			if (!socket_close_) {
 				auto handler = this->shared_from_this();
+				start_read_waiter();  //开启超时
 				asio::async_write(*socket_, res_.to_buffers(), [handler, is_websokcet,this](std::error_code const& ec, std::size_t write_size) {
+					cancel_read_waiter();
 					if (ec) {
 						disconnect();
 						return;
@@ -578,7 +595,7 @@ namespace xfinal {
 					}
 					else {
 						handler->socket_close_ = true; //对于connection来说 sokcet 进行逻辑关闭 http部分处理结束 转交给websocket处理
-						keep_alive_waiter_.cancel();
+						cancel_keep_timer();
 						auto ws = handler->router_.websokcets().start_webscoket(view2str(handler->req_.url()));
 						ws->move_socket(std::move(handler->socket_));
 					}
@@ -590,7 +607,9 @@ namespace xfinal {
 			if (!socket_close_) {
 				auto handler = this->shared_from_this();
 				auto startpos = res_.init_start_pos_;
+				start_read_waiter();  //开启超时
 				asio::async_write(*socket_, res_.header_to_buffer(), [handler, startpos,this](std::error_code const& ec, std::size_t write_size) {
+					cancel_read_waiter();
 					if (ec) {
 						disconnect();
 						return;
@@ -606,7 +625,9 @@ namespace xfinal {
 				auto handler = this->shared_from_this();
 				auto eof = std::get<0>(tp);
 				auto pos = std::get<2>(tp);
+				start_read_waiter();  //开启超时
 				asio::async_write(*socket_, std::get<1>(tp), [handler, pos, eof,this](std::error_code const& ec, std::size_t write_size) {
+					cancel_read_waiter();
 					if (ec) {
 						disconnect();
 						return;
@@ -629,7 +650,9 @@ namespace xfinal {
 			buffers.emplace_back(asio::buffer(crlf.data(), crlf.size()));
 			if (!socket_close_) {
 				auto handler = this->shared_from_this();
+				start_read_waiter();  //开启超时
 				asio::async_write(*socket_, buffers, [handler,this](std::error_code const& ec, std::size_t write_size) {
+					cancel_read_waiter();
 					if (ec) {
 						disconnect();
 						return;
@@ -655,7 +678,7 @@ namespace xfinal {
 					std::shared_ptr<asio::streambuf> buff(new asio::streambuf{});
 					start_read_waiter();
 					asio::async_read(*socket_, *buff, [handler,this, buff](std::error_code const& ec, std::size_t read_size) {
-						read_waiter_.cancel();
+						cancel_read_waiter();
 						std::error_code ignore_close_ec;
 						socket_->close(ignore_close_ec);
 					});
@@ -708,8 +731,9 @@ namespace xfinal {
 				disconnect();
 			}
 			//std::cout << "connection destory" << std::endl;
-			keep_alive_waiter_.cancel();
-			read_waiter_.cancel();
+			std::error_code ignore_ec;
+			cancel_keep_timer();
+			cancel_read_waiter();
 		}
 	private:
 		std::unique_ptr<asio::ip::tcp::socket> socket_;
