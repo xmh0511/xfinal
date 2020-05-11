@@ -149,8 +149,8 @@ int main()
 }
 ````
 ## 支持泛化url重载 
-#### 自动路由到最佳匹配的url路径 { /* , /abc/* , /abc/ccc/* }
->请求的url为 http://127.0.0.1:8080/abc/ccc/ddd,则最佳匹配的是`/abc/ccc/*`路由,如果url为 http://127.0.0.1:8080/abc/cccc/ddd,则匹配`/abc/*`,  如果url是http://127.0.0.1:8080/ddd/kkk,则只匹配`/*`
+#### 自动路由到最佳匹配的url路径 { /* , /abc/* , /abc/ccc/* , /abc   }
+>请求的url为 http://127.0.0.1:8080/abc/ccc/ddd,则最佳匹配的是`/abc/ccc/*`路由,如果url为 http://127.0.0.1:8080/abc/cccc/ddd,则匹配`/abc/*`,  如果url是http://127.0.0.1:8080/ddd/kkk,则只匹配`/*`,如果url为http://127.0.0.1:8080/abc,则最佳匹配的就是`/abc`
 ````cpp
 #include <xfinal.hpp>
 using namespace xfinal;
@@ -197,10 +197,10 @@ int main()
 	});
 
 
-	server.router<GET>("/xxx/*", [](request& req, response& res) {
+	server.router<GET>("/abc/ccc/*", [](request& req, response& res) {
 		auto url = req.raw_url();
 		json root;
-		root["router"] = "/xxx/*";
+		root["router"] = "/abc/ccc/*";
 		root["url"] = view2str(url);
 		auto params = req.url_params();
 		for (auto& iter : params) {
@@ -209,19 +209,7 @@ int main()
 		root["param_size"] = req.url_params().size();
 		res.write_json(root);
 	});
-
-	server.router<GET>("/xxx/abc/*", [](request& req, response& res) {
-		auto url = req.raw_url();
-		json root;
-		root["router"] = "/xxx/abc/*";
-		root["url"] = view2str(url);
-		auto params = req.url_params();
-		for (auto& iter : params) {
-			root["params"].push_back(view2str(iter));
-		}
-		root["param_size"] = req.url_params().size();
-		res.write_json(root);
-	});
+	
 	server.run();
 	return 0;
 }
