@@ -323,10 +323,6 @@ int main()
 	}, limitRequest{});
 
 
-	server.router<GET>("/stopserver", [&server](request& req, response& res) {
-		server.stop();
-	});
-
 	websocket_event event;
 	event.on("message", [](websocket& ws) {
 		std::cout << view2str(ws.messages()) << std::endl;
@@ -341,11 +337,10 @@ int main()
 			}).on("close", [](websocket& ws) {
 				std::cout << "close" << std::endl;
 				});
-			server.router("/ws", event);
+		server.router("/ws", event);
 
 
-
-			server.run();
-			std::cout << "server end" << std::endl;
-			return 0;
+		server.run();
+		std::cout << "server end" << std::endl;
+		return 0;
 }

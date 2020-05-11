@@ -40,17 +40,11 @@ namespace xfinal {
 		}
 		void stop() {
 			io_workers_.clear();
-			speciafied_acceptor_work_.release();
+			speciafied_acceptor_work_ = nullptr;
 			for (auto& iter : io_pool_) {
 				iter.stop();
 			}
 			speciafied_accpetor_io_.stop();
-		}
-	public:
-		~ioservice_pool() {
-			io_pool_.clear();
-			thread_pool_.clear();
-			speciafied_accpetor_io_.reset();
 		}
 	private:
 		std::vector<asio::io_service> io_pool_;

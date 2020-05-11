@@ -20,7 +20,7 @@ namespace xfinal {
 
 	class http_server :private nocopyable {
 	public:
-		http_server(std::size_t thread_size):ioservice_pool_handler_(thread_size), acceptor_(std::unique_ptr<asio::ip::tcp::acceptor>(new asio::ip::tcp::acceptor(ioservice_pool_handler_.accpetor_io()))){
+		http_server(std::size_t thread_size):ioservice_pool_handler_(thread_size), acceptor_(ioservice_pool_handler_.accpetor_io()){
 			static_url_ = std::string("/")+ get_root_director(static_path_)+ "/*";
 			upload_path_ = static_path_ + "/upload";
 			set_session_storager();
@@ -148,11 +148,11 @@ namespace xfinal {
 			auto endpoints  = resolver.resolve(query);
 			for (; endpoints != asio::ip::tcp::resolver::iterator(); ++endpoints) {
 				asio::ip::tcp::endpoint endpoint = *endpoints;
-				acceptor_->open(endpoint.protocol());
-				acceptor_->set_option(asio::ip::tcp::acceptor::reuse_address(true));
+				acceptor_.open(endpoint.protocol());
+				acceptor_.set_option(asio::ip::tcp::acceptor::reuse_address(true));
 				try {
-					acceptor_->bind(endpoint);
-					acceptor_->listen();
+					acceptor_.bind(endpoint);
+					acceptor_.listen();
 					start_acceptor();
 					result = true;
 				}
@@ -178,7 +178,7 @@ namespace xfinal {
 			connector->set_chunked_size(chunked_size_);
 			connector->set_keep_alive_wait_time(keep_alive_wait_time_);
 			connector->set_wait_read_time(wait_read_time_);
-			acceptor_->async_accept(connector->get_socket(), [this,connector](std::error_code const& ec) {
+			acceptor_.async_accept(connector->get_socket(), [this,connector](std::error_code const& ec) {
 				if (!ec) {
 					connector->read_header();
 				}
@@ -223,15 +223,9 @@ namespace xfinal {
 
 				return ec;
 		}
-	public:
-		~http_server() {
-			std::error_code ec;
-			acceptor_->close(ec);
-			acceptor_.release();
-		}
 	private:
 		ioservice_pool ioservice_pool_handler_;
-		std::unique_ptr<asio::ip::tcp::acceptor> acceptor_;
+		asio::ip::tcp::acceptor acceptor_;
 		http_router http_router_;
 		std::string static_path_ = "./static";
 		std::string upload_path_;
