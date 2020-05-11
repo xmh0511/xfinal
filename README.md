@@ -149,7 +149,8 @@ int main()
 }
 ````
 ## 支持泛化url重载 
-#### 越特化的url路径越匹配 { /* , /abc/* , /abc/ccc/* }
+#### 自动路由到最佳匹配的url路径 { /* , /abc/* , /abc/ccc/* }
+>请求的url为 http://127.0.0.1:8080/abc/ccc/ddd,则最佳匹配的是`/abc/ccc/*`路由,如果url为 http://127.0.0.1:8080/abc/cccc/ddd,则匹配`/abc/*`,  如果url是http://127.0.0.1:8080/ddd/kkk,则只匹配`/*`
 ````cpp
 #include <xfinal.hpp>
 using namespace xfinal;
@@ -401,7 +402,7 @@ int main()
    serve.run();
 }
 ````
-## xfinal 请求预处理
+## xfinal 请求拦截处理
 ````cpp
 #include <xfinal.hpp>
 using namespace xfinal;
