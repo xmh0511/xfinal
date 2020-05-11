@@ -81,7 +81,8 @@ namespace xfinal {
 				if (ec) {
 					return;
 				}
-				std::cout << "time over" << std::endl;
+				//std::cout << "time over" << std::endl;
+				router_.trigger_error("connection read/write time out");
 				std::error_code ignore_shutdown_ec;
 				socket_->shutdown(asio::ip::tcp::socket::shutdown_both, ignore_shutdown_ec);
 				std::error_code ignore_close_ec;

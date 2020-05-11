@@ -83,6 +83,21 @@ struct limitUpload {
 	}
 };
 
+struct limitRequest {
+	bool prehandle(request& req, response& res) {
+		using namespace nonstd::literals;
+		auto id = req.param("id");
+		if (id == "0"_sv) {
+			res.write_view("./www/error.html", true, http_status::bad_request);
+			return false;
+		}
+		return true;
+	}
+	bool posthandle(request& req, response& res) {
+		return true;
+	}
+};
+
 
 int main()
 {
@@ -96,7 +111,7 @@ int main()
 		return 0;
 	}
 	server.set_url_redirect(false);
-	server.set_wait_read_time(3);
+	server.set_wait_read_time(10);
 	//server.set_upload_path("./myupload");
 	//server.set_not_found_callback([](request& req,response& res) {
 	//	res.write_string("custom not found", true, http_status::bad_request);
@@ -302,6 +317,10 @@ int main()
 		root["url"] = file.url_path();
 		res.write_json(root);
 	}, limitUpload{});
+
+	server.router<GET, POST>("/performance", [](request& req, response& res) {
+		res.write_string("ok");
+	}, limitRequest{});
 
 	websocket_event event;
 	event.on("message", [](websocket& ws) {
