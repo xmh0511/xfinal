@@ -11,6 +11,7 @@
 #include <memory>
 #include "code_parser.hpp"
 #include "files.hpp"
+#include "message_handler.hpp"
 namespace fs = ghc::filesystem;
 namespace xfinal {
 	class session;
@@ -334,21 +335,26 @@ namespace xfinal {
 					reader.open(iter->path().string());
 					std::string buffer;
 					reader.read_all(buffer);
-					auto data = json::parse(buffer);
-					auto session = std::make_shared<class session>();
-					if (!data.is_null() && !data["expires"].is_null() && !data["id"].is_null() && !data["cookie_name"].is_null() && !data["path"].is_null() && !data["domain"].is_null() && !data["http_only"].is_null()) {
-						session->init_id(data["id"].get<std::string>());
-						session->replace_expires(data["expires"].get<std::time_t>());
-						session->get_cookie().set_name(data["cookie_name"].get<std::string>());
-						session->get_cookie().set_path(data["path"].get<std::string>());
-						session->get_cookie().set_domain(data["domain"].get<std::string>());
-						session->get_cookie().set_http_only(data["http_only"].get<bool>());
-						session->set_cookie_update(false);
-						session->set_data_update(false);
-						if (!data["data"].is_null()) {
-							session->replace_data(data["data"]);
+					try {
+						auto data = json::parse(buffer);
+						auto session = std::make_shared<class session>();
+						if (!data.is_null() && !data["expires"].is_null() && !data["id"].is_null() && !data["cookie_name"].is_null() && !data["path"].is_null() && !data["domain"].is_null() && !data["http_only"].is_null()) {
+							session->init_id(data["id"].get<std::string>());
+							session->replace_expires(data["expires"].get<std::time_t>());
+							session->get_cookie().set_name(data["cookie_name"].get<std::string>());
+							session->get_cookie().set_path(data["path"].get<std::string>());
+							session->get_cookie().set_domain(data["domain"].get<std::string>());
+							session->get_cookie().set_http_only(data["http_only"].get<bool>());
+							session->set_cookie_update(false);
+							session->set_data_update(false);
+							if (!data["data"].is_null()) {
+								session->replace_data(data["data"]);
+							}
+							session_manager::get().add_session(session->get_id(), session);
 						}
-						session_manager::get().add_session(session->get_id(), session);
+					}
+					catch (std::exception const& ec) {
+						utils::messageCenter::get().trigger_message(ec.what());
 					}
 				}
 			}

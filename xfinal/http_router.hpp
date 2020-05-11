@@ -217,6 +217,7 @@ namespace xfinal {
 				}, std::ref(io_))));
 		}
 		~http_router() {
+			io_.stop();
 			if (thread_->joinable()) {
 				thread_->join();
 			}

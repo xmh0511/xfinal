@@ -322,6 +322,11 @@ int main()
 		res.write_string("ok");
 	}, limitRequest{});
 
+
+	server.router<GET>("/stopserver", [&server](request& req, response& res) {
+		server.stop();
+	});
+
 	websocket_event event;
 	event.on("message", [](websocket& ws) {
 		std::cout << view2str(ws.messages()) << std::endl;
@@ -341,5 +346,6 @@ int main()
 
 
 			server.run();
+			std::cout << "server end" << std::endl;
 			return 0;
 }
