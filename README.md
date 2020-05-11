@@ -149,7 +149,8 @@ int main()
 }
 ````
 ## 支持泛化url重载 
-#### 自动路由到最佳匹配的url路径 { /* , /abc/* , /abc/ccc/* , /abc   }
+#### 自动路由到最佳匹配url的注册器 
+**假设注册路由的集合是{ /* , /abc/* , /abc/ccc/* , /abc   }**  
 >请求示例  
 >> 1. url为 http://127.0.0.1:8080/abc/ccc/ddd,则最佳匹配的是 /abc/ccc/* 
 >> 2. url为 http://127.0.0.1:8080/abc/cccc/ddd, 则匹配 /abc/* ,  
