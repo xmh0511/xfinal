@@ -401,6 +401,33 @@ int main()
    serve.run();
 }
 ````
+## xfinal 请求预处理
+````cpp
+#include <xfinal.hpp>
+using namespace xfinal;
+struct pre_interceptor{
+   bool prehandle(request& req,response& res){  //这里的返回值用来告诉框架是否继续处理当前http请求，如果返回false则返回用户通过write_xxx的信息，并断开连接
+       if(req.content_type() == content_type::multipart_form){  //如果是上传文件 则断开连接
+          res.write_string("invalid request",http_status::bad_request );
+          return false;
+       }
+       return true;
+   }
+   
+   bool posthandle(request& req,response& res){
+      return true;
+   }
+};
+int main()
+{
+   http_server serve(4); //线程数
+   serve.listen("0.0.0.0","8080");
+   serve.router<POST>("/interceptor",[](request& req,response& res){
+       res.write_string("OK");
+   },pre_interceptor{}); //可以注册多个拦截器 定义如示例中的http_interceptor
+   serve.run();
+}
+````
 ## xfinal 异常错误信息获取
 ````cpp
 #include <xfinal.hpp>
@@ -516,6 +543,11 @@ server.set_static_path("./x/y");
 > 在set_static_path后进行设置
 ````cpp
 server.set_upload_path("./myupload");
+````
+### 设置socket读写超时时间
+>单位: 秒 超时关闭当前socket连接
+````cpp
+server.set_wait_read_time(10);
 ````
 ### keep-alivek空闲时长
 >单位:秒  超时自动断开
