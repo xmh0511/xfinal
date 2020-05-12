@@ -23,7 +23,6 @@ namespace xfinal {
 		http_server(std::size_t thread_size):ioservice_pool_handler_(thread_size), acceptor_(ioservice_pool_handler_.accpetor_io()){
 			static_url_ = std::string("/")+ get_root_director(static_path_)+ "/*";
 			upload_path_ = static_path_ + "/upload";
-			set_session_storager();
 		}
 	public:
 		bool listen(std::string const& ip,std::string const& port) {
@@ -38,11 +37,16 @@ namespace xfinal {
 	public:
 		void run() {
 			register_static_router(); //注册静态文件处理逻辑
-			if (!fs::exists(static_path_)) {
-				fs::create_directories(static_path_);
-			}
-			if (!fs::exists(upload_path_)) {
-				fs::create_directories(upload_path_);
+			auto session_storager = std::unique_ptr<default_session_storage>(new default_session_storage());
+			session_storager->save_dir_ = default_storage_session_path_;
+			set_session_storager(std::move(session_storager));
+			if (!disable_auto_create_directories_) {
+				if (!fs::exists(static_path_)) {
+					fs::create_directories(static_path_);
+				}
+				if (!fs::exists(upload_path_)) {
+					fs::create_directories(upload_path_);
+				}
 			}
 			ioservice_pool_handler_.run();
 		}
@@ -92,9 +96,9 @@ namespace xfinal {
 		}
 
 		template<typename T = default_session_storage>
-		void set_session_storager() {
+		void set_session_storager(std::unique_ptr<T>&& handler) {
 			static_assert(std::is_base_of<session_storage, T>::value, "set storage is not base on session_storage!");
-			session_manager::get().set_storage(std::move(std::unique_ptr<T>(new T())));
+			session_manager::get().set_storage(std::move(handler));
 			session_manager::get().get_storage().init();  //初始化 
 		}
 
@@ -105,12 +109,12 @@ namespace xfinal {
 		std::time_t check_session_rate() {
 			return http_router_.check_session_time_;
 		}
-		void set_url_redirect(bool flag) {
-			http_router_.url_redirect_ = flag;
-		}
-		bool url_redirect() {
-			return http_router_.url_redirect_;
-		}
+		//void set_url_redirect(bool flag) {
+		//	http_router_.url_redirect_ = flag;
+		//}
+		//bool url_redirect() {
+		//	return http_router_.url_redirect_;
+		//}
 		void set_websocket_check_alive_time(std::time_t seconds) {
 			http_router_.websokcets().set_check_alive_time(seconds);
 		}
@@ -140,6 +144,18 @@ namespace xfinal {
 		}
 		std::time_t wait_read_time() {
 			return wait_read_time_;
+		}
+		void set_disable_auto_create_directories(bool flag) {
+			disable_auto_create_directories_ = flag;
+		}
+		bool disable_auto_create_directories() {
+			return disable_auto_create_directories_;
+		}
+		void set_default_session_save_path(std::string const& path) {
+			default_storage_session_path_ = path;
+		}
+		std::string default_session_save_path() {
+			return default_storage_session_path_;
 		}
 	private:
 		bool listen(asio::ip::tcp::resolver::query& query) {
@@ -233,5 +249,7 @@ namespace xfinal {
 		std::uint64_t chunked_size_ = 1*1024*1024;
 		std::time_t keep_alive_wait_time_ = 30;
 		std::time_t wait_read_time_ = 10;
+		bool disable_auto_create_directories_ = false;
+		std::string default_storage_session_path_ = "./session";
 	};
 }

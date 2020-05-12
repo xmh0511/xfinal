@@ -110,7 +110,7 @@ int main()
 	if (!r) {
 		return 0;
 	}
-	server.set_url_redirect(false);
+
 	server.set_wait_read_time(10);
 	//server.set_upload_path("./myupload");
 	//server.set_not_found_callback([](request& req,response& res) {
