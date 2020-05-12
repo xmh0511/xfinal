@@ -181,7 +181,7 @@ namespace xfinal {
 				auto key = iter.substr(0, key_pos);
 				auto value_pos = skip_value_white_space(iter, key_pos + 1);
 				auto value = iter.substr(value_pos);
-				headers.insert(std::make_pair(view2str(key), view2str(value)));
+				headers.emplace(to_lower(view2str(key)), view2str(value));
 			}
 			return { parse_state::valid ,headers };
 		}
