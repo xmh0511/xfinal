@@ -32,7 +32,7 @@ namespace xfinal {
 		request_meta(std::string&& method, std::string&& url, std::string&& version, std::map<std::string, std::string>&& headers) :method_(std::move(method)), url_(std::move(url)), version_(std::move(version)), headers_(std::move(headers)) {
 
 		}
-		request_meta(request_meta&& r) :method_(std::move(r.method_)), url_(std::move(r.url_)), version_(std::move(r.version_)), headers_(std::move(r.headers_)), form_map_(std::move(r.form_map_)), body_(std::move(r.body_)), decode_body_(std::move(r.decode_body_)), multipart_form_map_(std::move(r.multipart_form_map_)), multipart_files_map_(std::move(r.multipart_files_map_)), oct_steam_(std::move(r.oct_steam_)), empty_file_(std::move(r.empty_file_)){
+		request_meta(request_meta&& r) :method_(std::move(r.method_)), url_(std::move(r.url_)), version_(std::move(r.version_)), headers_(std::move(r.headers_)), form_map_(std::move(r.form_map_)), body_(std::move(r.body_)), decode_body_(std::move(r.decode_body_)), multipart_form_map_(std::move(r.multipart_form_map_)), multipart_files_map_(std::move(r.multipart_files_map_)), oct_steam_(std::move(r.oct_steam_)), empty_file_(std::move(r.empty_file_)) {
 
 		}
 		request_meta& operator=(request_meta&& r) {
@@ -90,46 +90,72 @@ namespace xfinal {
 
 		}
 		std::pair<parse_state, bool> is_complete_header() {
-			auto current = begin_;
 			header_begin_ = begin_;
-			while (current != end_) {
-				if (*current == '\0') {  //不合法的请求
+			auto view = nonstd::string_view(&(*begin_), end_ - begin_);
+			auto pos = view.find("\r\n\r\n");
+			auto npos = (nonstd::string_view::size_type)nonstd::string_view::npos;
+			if (pos != npos) {
+				auto invalid_char = view.rfind('\0', pos);
+				if (invalid_char != npos) {
 					return { parse_state::invalid,false };
 				}
-				if (less_than(current, end_,4) && *current == '\r' && *(current + 1) == '\n' && *(current + 2) == '\r' && *(current + 3) == '\n') {
-					header_end_ = current + 4;
-					return { parse_state::valid,true };
-				}
-				++current;
+				header_end_ = begin_ + pos + 4;
+				return { parse_state::valid,true };
 			}
 			return { parse_state::valid,false };
+			//auto current = begin_;
+			//header_begin_ = begin_;
+			//while (current != end_) {
+			//	if (*current == '\0') {  //不合法的请求
+			//		return { parse_state::invalid,false };
+			//	}
+			//	if (less_than(current, end_,4) && *current == '\r' && *(current + 1) == '\n' && *(current + 2) == '\r' && *(current + 3) == '\n') {
+			//		header_end_ = current + 4;
+			//		return { parse_state::valid,true };
+			//	}
+			//	++current;
+			//}
+			//return { parse_state::valid,false };
 		}
-		std::pair < parse_state, std::string> get_method() {
-			auto start = begin_;
-			while (begin_ != end_) {
-				//auto c = *begin_;
-				//auto c_next = *(begin_ + 1);
-				if (less_than(begin_ , end_,2) && (*begin_) == ' ' && (*(begin_ + 1)) != ' ') {
-					return { parse_state::valid,std::string(start, begin_++) };
+		std::pair < parse_state, std::string> get_white_split_value() {
+			auto view = nonstd::string_view(&(*begin_), header_end_ - begin_);
+			auto white_space_pos = view.find(' ');
+			auto npos = (nonstd::string_view::size_type)nonstd::string_view::npos;
+			if (white_space_pos != npos) {
+				auto special_iter = begin_ + white_space_pos + 1;
+				if (*special_iter != ' ') {
+					begin_ = special_iter;
+					return { parse_state::valid ,view2str(view.substr(0,white_space_pos)) };
 				}
-				++begin_;
 			}
 			return { parse_state::invalid,"" };
 		}
-		std::pair < parse_state, std::string> get_url() {
-			auto start = begin_;
-			while (begin_ != end_) {
-				if (less_than(begin_, end_,2) && (*begin_) == ' ' && (*(begin_ + 1)) != ' ') {
-					return { parse_state::valid,std::string(start, begin_++) };
-				}
-				++begin_;
-			}
-			return { parse_state::invalid,"" };
-		}
+		//std::pair < parse_state, std::string> get_method() {
+		//	auto start = begin_;
+		//	while (begin_ != end_) {
+		//		//auto c = *begin_;
+		//		//auto c_next = *(begin_ + 1);
+		//		if (less_than(begin_, end_, 2) && (*begin_) == ' ' && (*(begin_ + 1)) != ' ') {
+		//			return { parse_state::valid,std::string(start, begin_++) };
+		//		}
+		//		++begin_;
+		//	}
+		//	return { parse_state::invalid,"" };
+		//}
+		//std::pair < parse_state, std::string> get_url() {
+		//	auto start = begin_;
+		//	while (begin_ != end_) {
+		//		if (less_than(begin_, end_, 2) && (*begin_) == ' ' && (*(begin_ + 1)) != ' ') {
+		//			return { parse_state::valid,std::string(start, begin_++) };
+		//		}
+		//		++begin_;
+		//	}
+		//	return { parse_state::invalid,"" };
+		//}
 		std::pair < parse_state, std::string> get_version() {
 			auto start = begin_;
-			while (begin_ != end_) {
-				if (less_than(begin_, end_,2) && (*begin_) == '\r' && (*(begin_ + 1)) == '\n') {
+			while (begin_ != header_end_) {
+				if (less_than(begin_, header_end_, 2) && (*begin_) == '\r' && (*(begin_ + 1)) == '\n') {
 					begin_ += 2;
 					return { parse_state::valid ,std::string(start,begin_ - 2) };
 				}
@@ -137,50 +163,72 @@ namespace xfinal {
 			}
 			return { parse_state::invalid,"" };
 		}
+		nonstd::string_view::size_type skip_value_white_space(nonstd::string_view view,nonstd::string_view::size_type pos) {
+			while (*(view.data() + pos) == ' ') {
+				++pos;
+			}
+			return pos;
+		}
 		std::pair < parse_state, std::map<std::string, std::string>> get_header() {
-			if (less_than(begin_, end_,2) && (*begin_) == '\r' && (*(begin_ + 1)) == '\n') {  //没有键值对
+			if (less_than(begin_, header_end_, 2) && (*begin_) == '\r' && (*(begin_ + 1)) == '\n') {  //没有键值对
 				return { parse_state::valid ,{} };
 			}
+			auto view = nonstd::string_view(&(*begin_), header_end_ - begin_-2);
+			auto header_vec = split(view, "\r\n");
 			std::map<std::string, std::string> headers;
-			char r = ' ';
-			char n = ' ';
-			auto start = begin_;
-			while (begin_ != end_) {
-				if (less_than(begin_, end_,2) && (*begin_) == '\r' && (*(begin_ + 1)) == '\n') {  //maybe a header = > key:value
-					if ((end_ - begin_) >= 4) {
-						r = *(begin_ + 2);
-						n = *(begin_ + 3);
-					}
-					auto old_start = start;
-					while (start != begin_) {
-						if ((*start) == ':') {
-							auto key = std::string(old_start, start);
-							++start;
-							while ((*start) == ' ') {
-								++start;
-							}
-							headers.emplace(to_lower(std::move(key)), std::string(start, begin_));
-							begin_ += 2;
-							start = begin_;
-							break;
-						}
-						++start;
-					}
-					if (start != begin_) {
-						return { parse_state::invalid ,{} };
-					}
-					if (r == '\r'&& n == '\n') {
-						break;
-					}
-				}
-				++begin_;
+			for (auto& iter : header_vec) {
+				auto key_pos = iter.find(':');
+				auto key = iter.substr(0, key_pos);
+				auto value_pos = skip_value_white_space(iter, key_pos + 1);
+				auto value = iter.substr(value_pos);
+				headers.insert(std::make_pair(view2str(key), view2str(value)));
 			}
 			return { parse_state::valid ,headers };
 		}
+		//std::pair < parse_state, std::map<std::string, std::string>> get_header() {
+		//	if (less_than(begin_, header_end_, 2) && (*begin_) == '\r' && (*(begin_ + 1)) == '\n') {  //没有键值对
+		//		return { parse_state::valid ,{} };
+		//	}
+		//	std::map<std::string, std::string> headers;
+		//	char r = ' ';
+		//	char n = ' ';
+		//	auto start = begin_;
+		//	while (begin_ != end_) {
+		//		if (less_than(begin_, end_, 2) && (*begin_) == '\r' && (*(begin_ + 1)) == '\n') {  //maybe a header = > key:value
+		//			if ((end_ - begin_) >= 4) {
+		//				r = *(begin_ + 2);
+		//				n = *(begin_ + 3);
+		//			}
+		//			auto old_start = start;
+		//			while (start != begin_) {
+		//				if ((*start) == ':') {
+		//					auto key = std::string(old_start, start);
+		//					++start;
+		//					while ((*start) == ' ') {
+		//						++start;
+		//					}
+		//					headers.emplace(to_lower(std::move(key)), std::string(start, begin_));
+		//					begin_ += 2;
+		//					start = begin_;
+		//					break;
+		//				}
+		//				++start;
+		//			}
+		//			if (start != begin_) {
+		//				return { parse_state::invalid ,{} };
+		//			}
+		//			if (r == '\r' && n == '\n') {
+		//				break;
+		//			}
+		//		}
+		//		++begin_;
+		//	}
+		//	return { parse_state::valid ,headers };
+		//}
 		std::pair<bool, request_meta> parse_request_header() {
-			auto method = get_method();
+			auto method = get_white_split_value();
 			if (method.first == parse_state::valid) {
-				auto url = get_url();
+				auto url = get_white_split_value();
 				if (url.first == parse_state::valid) {
 					auto version = get_version();
 					if (version.first == parse_state::valid) {
@@ -263,7 +311,7 @@ namespace xfinal {
 
 	class http_multipart_parser final {
 	public:
-		http_multipart_parser(std::string const & boundary_start_key_, std::string const & boundary_end_key_) :boundary_start_key_(boundary_start_key_), boundary_end_key_(boundary_end_key_) {
+		http_multipart_parser(std::string const& boundary_start_key_, std::string const& boundary_end_key_) :boundary_start_key_(boundary_start_key_), boundary_end_key_(boundary_end_key_) {
 
 		}
 	public:
