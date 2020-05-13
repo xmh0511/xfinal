@@ -98,8 +98,8 @@ namespace xfinal {
 		template<typename T = default_session_storage>
 		void set_session_storager(std::unique_ptr<T>&& handler) {
 			static_assert(std::is_base_of<session_storage, T>::value, "set storage is not base on session_storage!");
-			session_manager::get().set_storage(std::move(handler));
-			session_manager::get().get_storage().init();  //初始化 
+			session_manager<class session>::get().set_storage(std::move(handler));
+			session_manager<class session>::get().get_storage().init();  //初始化 
 		}
 
 		void set_check_session_rate(std::time_t seconds) {

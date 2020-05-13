@@ -304,7 +304,7 @@ namespace xfinal {
 			session_->get_cookie().set_name(name);
 			session_->init_id(uuids::uuid_system_generator{}().to_short_str());
 			//session_->set_expires(600);
-			session_manager::get().add_session(session_->get_id(), session_);
+			session_manager<class session>::get().add_session(session_->get_id(), session_);
 			return *session_;
 		}
 		class session& session(std::string const& name) {
@@ -318,17 +318,17 @@ namespace xfinal {
 			auto name_view = nonstd::string_view{ name.data(),name.size() };
 			auto it = cookies_value.find(name_view);
 			if (it == (nonstd::string_view::size_type)nonstd::string_view::npos) {
-				session_ = session_manager::get().empty_session();
+				session_ = session_manager<class session>::get().empty_session();
 			}
 			else {
 				auto pos = it + name.size() + 1;
 				auto dot_pos = cookies_value.find(';', pos);
 				auto id = dot_pos != (nonstd::string_view::size_type)nonstd::string_view::npos ? cookies_value.substr(pos, dot_pos - pos) : cookies_value.substr(pos, cookies_value.size() - pos);
 				if (id.empty()) {
-					session_ = session_manager::get().empty_session();
+					session_ = session_manager<class session>::get().empty_session();
 				}
 				else {
-					session_ = session_manager::get().validata(view2str(id));//验证session的有效性并返回
+					session_ = session_manager<class session>::get().validata(view2str(id));//验证session的有效性并返回
 				}
 			}
 			return *session_;
@@ -606,7 +606,7 @@ namespace xfinal {
 					add_header("Set-Cookie", req_.session_->cookie_str());
 				}
 				if (req_.session_->cookie_update() || req_.session_->data_update()) {
-					req_.session_->save(session_manager::get().get_storage()); //保存到存储介质
+					req_.session_->save(session_manager<class session>::get().get_storage()); //保存到存储介质
 					req_.session_->set_data_update(false);
 				}
 				req_.session_->set_cookie_update(false);

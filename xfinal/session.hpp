@@ -84,22 +84,88 @@ namespace xfinal {
 		Session& session_;
 	};
 
-	template<typename Manager>
-	void remove_from_manager(std::string const& id) {
-		Manager::get().remove_session(id);
-	}
 
-	template<typename Manager>
-	void add_to_manager(std::string const& id, std::weak_ptr<session> session) {
-		Manager::get().add_session(id, session);
-	}
+	template<typename SessionType>
+	class session_manager final :private nocopyable {
+	private:
+		std::unordered_map<std::string, std::shared_ptr<SessionType>> session_map_;
+		std::mutex mutex_;
+		std::unique_ptr<session_storage> storage_ = nullptr;
+	private:
+		session_manager()/*:empty_session_(std::make_shared<session>(true))*/ {
+		}
+	public:
+		static session_manager& get() {
+			static session_manager manager_;
+			return manager_;
+		}
+	public:
+		void set_storage(std::unique_ptr<session_storage> storage) {
+			storage_ = std::move(storage);
+		}
+		session_storage& get_storage() {
+			return *storage_;
+		}
+	public:
+		std::shared_ptr<SessionType> get_session(std::string const& id) {
+			std::unique_lock<std::mutex> lock(mutex_);
+			auto it = session_map_.find(id);
+			if (it != session_map_.end()) {
+				return it->second;
+			}
+			return empty_session(); //空的session
+		}
+		void add_session(std::string const& id, std::weak_ptr<SessionType> session) {
+			std::unique_lock<std::mutex> lock(mutex_);
+			session_map_[id] = session.lock();
+		}
+		auto remove_session(std::string const& id)->decltype(session_map_.find(id)) {
+			std::unique_lock<std::mutex> lock(mutex_);
+			auto it = session_map_.find(id);
+			if (it != session_map_.end()) {
+				(*storage_).remove(id);
+				it = session_map_.erase(it);
+			}
+			return it;
+		}
+		void replace_session(std::string const& oldId, std::string const& newId, std::weak_ptr<SessionType> session) {
+			std::unique_lock<std::mutex> lock(mutex_);
+			auto it = session_map_.find(oldId);
+			if (it != session_map_.end()) {
+				(*storage_).remove(oldId);
+				it = session_map_.erase(it);
+			}
+			session_map_[newId] = session.lock();
+		}
+		std::shared_ptr<SessionType> empty_session() {
+			return std::make_shared<SessionType>(true);  //空的session
+		}
+		std::shared_ptr<SessionType> validata(std::string const& id) {
+			auto session = get_session(id);
+			if (!session->empty()) {
+				auto expires = session->get_expires();
+				if (expires <= std::time(nullptr)) {
+					remove_session(id);
+					return empty_session(); //过期的session 删除后 返回空的session
+				}
+			}
+			return session;
+		}
+		void check_expires() {
+			std::unique_lock<std::mutex> lock(mutex_);
+			for (auto iter = session_map_.begin(); iter != session_map_.end();) {
+				auto expires = iter->second->get_expires();
+				if (expires <= std::time(nullptr)) {
+					iter->second->remove(*storage_);
+					iter = session_map_.erase(iter);
+				}
+				else {
+					++iter;
+				}
+			}
+		}
+	};
 
-	template<typename Manager>
-	void replace_session_to_manager(std::string const& oldId,std::string const& newId, std::weak_ptr<session> session) {
-		Manager::get().replace_session(oldId, newId, session);
-	}
-
-	class session_manager;
 	class session final:public std::enable_shared_from_this<session> ,private nocopyable {  //session 模块
 	public:
 		session(bool is_empty = false):is_empty_(is_empty), cookie_(uuid_, expires_,*this), data_(json::object()){
@@ -118,7 +184,7 @@ namespace xfinal {
 			is_update_ = true;
 			uuid_ = id;
 			if (!old_id.empty()) {
-				replace_session_to_manager<session_manager>(old_id, uuid_, that);  //修改了唯一标识 就从session_manager中删除旧的session并增加新的
+				session_manager<session>::get().replace_session(old_id, uuid_, that);//修改了唯一标识 就从session_manager中删除旧的session并增加新的
 			}
 		}
 		std::string get_id() {
@@ -240,85 +306,6 @@ namespace xfinal {
 		bool data_update_ = true;
 	};
 
-	class session_manager final :private nocopyable {
-	private:
-		std::unordered_map<std::string, std::shared_ptr<session>> session_map_;
-		std::mutex mutex_;
-		std::unique_ptr<session_storage> storage_ = nullptr;
-	private:
-		session_manager()/*:empty_session_(std::make_shared<session>(true))*/{
-		}
-	public:
-		static session_manager& get() {
-			static session_manager manager_;
-			return manager_;
-		}
-	public:
-		void set_storage(std::unique_ptr<session_storage> storage) {
-			storage_ = std::move(storage);
-		}
-		session_storage& get_storage() {
-			return *storage_;
-		}
-	public:
-		std::shared_ptr<session> get_session(std::string const& id) {
-			std::unique_lock<std::mutex> lock(mutex_);
-			auto it = session_map_.find(id);
-			if (it != session_map_.end()) {
-				return it->second;
-			}
-			return empty_session(); //空的session
-		}
-		void add_session(std::string const& id, std::weak_ptr<session> session) {
-			std::unique_lock<std::mutex> lock(mutex_);
-			session_map_[id] = session.lock();
-		}
-		auto remove_session(std::string const& id)->decltype(session_map_.find(id)) {
-			std::unique_lock<std::mutex> lock(mutex_);
-			auto it = session_map_.find(id);
-			if (it != session_map_.end()) {
-				(*storage_).remove(id);
-				it = session_map_.erase(it);
-			}
-			return it;
-		}
-		void replace_session(std::string const& oldId, std::string const& newId, std::weak_ptr<session> session) {
-			std::unique_lock<std::mutex> lock(mutex_);
-			auto it = session_map_.find(oldId);
-			if (it != session_map_.end()) {
-				(*storage_).remove(oldId);
-				it = session_map_.erase(it);
-			}
-			session_map_[newId] = session.lock();
-		}
-		std::shared_ptr<session> empty_session() {
-			return std::make_shared<session>(true);  //空的session
-		}
-		std::shared_ptr<session> validata(std::string const& id) {
-			auto session = get_session(id);
-			if (!session->empty()) {
-				auto expires = session->get_expires();
-				if (expires <= std::time(nullptr)) {
-					remove_session(id);
-					return empty_session(); //过期的session 删除后 返回空的session
-				}
-			}
-			return session;
-		}
-		void check_expires() {
-			std::unique_lock<std::mutex> lock(mutex_);
-			for (auto iter = session_map_.begin(); iter != session_map_.end();) {
-				auto expires = iter->second->get_expires();
-				if (expires <= std::time(nullptr)) {
-					iter->second->remove(*storage_);
-					iter = session_map_.erase(iter);
-				}
-				else {
-					++iter;
-				}
-			}
-		}
-	};
 
 	class default_session_storage:public session_storage {
 	public:
@@ -350,7 +337,7 @@ namespace xfinal {
 							if (!data["data"].is_null()) {
 								session->replace_data(data["data"]);
 							}
-							session_manager::get().add_session(session->get_id(), session);
+							session_manager<class session>::get().add_session(session->get_id(), session);
 						}
 					}
 					catch (std::exception const& ec) {

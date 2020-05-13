@@ -506,9 +506,9 @@ namespace xfinal {
 		void check_session_expires() {
 			timer_.expires_from_now(std::chrono::seconds(check_session_time_));
 			timer_.async_wait([this](std::error_code const& ec) {
-				session_manager::get().check_expires();
+				session_manager<class session>::get().check_expires();
 				check_session_expires();
-				});
+			});
 		}
 		void set_check_session_rate(std::time_t seconds) {
 			check_session_time_ = seconds;
