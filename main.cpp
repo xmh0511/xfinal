@@ -333,7 +333,7 @@ int main()
 		}
 		ws.write_string(message);
 		}).on("open", [](websocket& ws) {
-			std::cout << "open" << std::endl;
+			std::cout << "open"<<ws.is_open() << std::endl;
 			}).on("close", [](websocket& ws) {
 				std::cout << "close" << std::endl;
 				});

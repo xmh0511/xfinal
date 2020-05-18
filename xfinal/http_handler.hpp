@@ -480,14 +480,20 @@ namespace xfinal {
 			init_start_pos_ = 0;
 		}
 
-		void write_file(std::string const& filename, bool is_chunked = false) noexcept {
+		void write_file(std::string const& filename, bool is_chunked = false, std::string const& conent_type = "") noexcept {
 			if (!filename.empty()) {
 				bool b = file_.open(filename);
 				if (!b) {
 					write_string("", false, http_status::bad_request);
 				}
 				else {
-					add_header("Content-Type", view2str(file_.content_type()));
+					if (conent_type.empty()) {  //do not specify content_type
+						add_header("Content-Type", view2str(file_.content_type()));
+					}
+					else {
+						add_header("Content-Type", conent_type);
+					}
+
 					write_type_ = write_type::file;
 					is_chunked_ = is_chunked;
 					if (!is_chunked) {
