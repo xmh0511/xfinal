@@ -239,7 +239,7 @@ namespace xfinal {
 		}
 	};
 
-	std::string view2str(nonstd::string_view view) {
+	inline std::string view2str(nonstd::string_view view) {
 		return std::string(view.data(), view.size());
 	}
 
