@@ -95,9 +95,16 @@ namespace xfinal {
 		std::string& uuid() {
 			return socket_uid_;
 		}
+		bool is_open() {
+			return socket_is_open_;
+		}
+		asio::ip::tcp::socket& socket() {
+			return *socket_;
+		}
 	private:
 		void move_socket(std::unique_ptr<asio::ip::tcp::socket>&& socket) {
 			socket_ = std::move(socket);
+			socket_is_open_ = true;
 			auto& io = static_cast<asio::io_service&>(socket_->get_executor().context());
 			wait_timer_ = std::move(std::unique_ptr<asio::steady_timer>(new asio::steady_timer(io)));
 			websocket_event_manager.trigger(url_, "open", *this);
@@ -271,6 +278,10 @@ namespace xfinal {
 			else if (c2 == 126) { //后续2个字节 unsigned
 				auto handler = this->shared_from_this();
 				asio::async_read(*socket_, asio::buffer(&frame[read_pos_], 2), [handler](std::error_code const& ec, std::size_t read_size) {
+					if (ec) {
+						handler->close();
+						return;
+					}
 					handler->reset_time();
 					handler->handle_payload_length(2);
 				});
@@ -278,6 +289,10 @@ namespace xfinal {
 			else if (c2 == 127) {  //后续8个字节 unsigned
 				auto handler = this->shared_from_this();
 				asio::async_read(*socket_, asio::buffer(&frame[read_pos_], 8), [handler](std::error_code const& ec, std::size_t read_size) {
+					if (ec) {
+						handler->close();
+						return;
+					}
 					handler->reset_time();
 					handler->handle_payload_length(8);
 				});
@@ -297,6 +312,10 @@ namespace xfinal {
 			if (frame_info_.mask == 1) {  //应该必须等于1
 				auto handler = this->shared_from_this();
 				asio::async_read(*socket_, asio::buffer(&frame_info_.mask_key[0], 4), [handler](std::error_code const& ec, std::size_t read_size) {
+					if (ec) {
+						handler->close();
+						return;
+					}
 					handler->reset_time();
 					handler->read_data();
 				});
@@ -306,6 +325,10 @@ namespace xfinal {
 			expand_buffer(frame_info_.payload_length);
 			auto handler = this->shared_from_this();
 			asio::async_read(*socket_, asio::buffer(&buffers_[data_current_pos_], (std::size_t)frame_info_.payload_length), [handler](std::error_code const& ec, std::size_t read_size) {
+				if (ec) {
+					handler->close();
+					return;
+				}
 				handler->reset_time();
 				handler->set_current_pos(read_size);
 				handler->decode_data(read_size);
@@ -356,6 +379,7 @@ namespace xfinal {
 			socket_->shutdown(asio::ip::tcp::socket::shutdown_both, ec);
 			std::error_code ec0;
 			socket_->close(ec0);
+			socket_is_open_ = false;
 			wait_timer_->cancel();
 			//ping_pong_timer_->cancel();
 			websocket_event_manager.trigger(url_, "close", *this);  //关闭事件
@@ -370,6 +394,7 @@ namespace xfinal {
 			socket_->shutdown(asio::ip::tcp::socket::shutdown_both, ec);
 			std::error_code ec0;
 			socket_->close(ec0);
+			socket_is_open_ = false;
 			wait_timer_->cancel();
 			//ping_pong_timer_->cancel();
 			websocket_event_manager.remove(nonstd::string_view(socket_uid_.data(), socket_uid_.size()));
@@ -392,6 +417,7 @@ namespace xfinal {
 		std::unique_ptr<asio::steady_timer> wait_timer_;
 		//std::unique_ptr<asio::steady_timer> ping_pong_timer_;
 		unsigned char message_opcode = 0;
+		std::atomic_bool socket_is_open_ = false;
 	};
 
 	template<typename T>
