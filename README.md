@@ -155,7 +155,7 @@ int main()
 >> 1. url为 http://127.0.0.1:8080/abc/ccc/ddd,则最佳匹配的是 /abc/ccc/* 
 >> 2. url为 http://127.0.0.1:8080/abc/cccc/ddd, 则匹配 /abc/* ,  
 >> 3. url为 http://127.0.0.1:8080/ddd/kkk,则只匹配 /*
->> 4. url为 http://127.0.0.1:8080/abc**,则最佳匹配的就是 /abc
+>> 4. url为 http://127.0.0.1:8080/abc,则最佳匹配的就是 /abc
 ````cpp
 #include <xfinal.hpp>
 using namespace xfinal;
