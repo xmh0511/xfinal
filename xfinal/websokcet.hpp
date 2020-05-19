@@ -417,7 +417,7 @@ namespace xfinal {
 		std::unique_ptr<asio::steady_timer> wait_timer_;
 		//std::unique_ptr<asio::steady_timer> ping_pong_timer_;
 		unsigned char message_opcode = 0;
-		std::atomic_bool socket_is_open_ = false;
+		std::atomic_bool socket_is_open_{ false };
 	};
 
 	template<typename T>
