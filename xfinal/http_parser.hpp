@@ -42,7 +42,7 @@ namespace xfinal {
 			headers_ = std::move(r.headers_);
 			form_map_ = std::move(r.form_map_);
 			body_ = std::move(r.body_);
-			decode_body_ = std::move(r.body_);
+			decode_body_ = std::move(r.decode_body_);
 			multipart_form_map_ = std::move(r.multipart_form_map_);
 			multipart_files_map_ = std::move(r.multipart_files_map_);
 			oct_steam_ = std::move(r.oct_steam_);
@@ -268,9 +268,16 @@ namespace xfinal {
 			if (need_url_decode) {
 				body = xfinal::get_string_by_urldecode(body);
 			}
+			auto view = nonstd::string_view(body.data(), body.size());
+			begin_ = view.begin();
+			end_ = view.end();
+		}
+
+		http_urlform_parser(nonstd::string_view body) {
 			begin_ = body.begin();
 			end_ = body.end();
 		}
+
 		void parse_data(std::map<nonstd::string_view, nonstd::string_view>& form) {
 			auto old = begin_;
 			while (begin_ != end_) {
@@ -288,7 +295,7 @@ namespace xfinal {
 			}
 		}
 	protected:
-		void parse_key_value(std::map<nonstd::string_view, nonstd::string_view>& form, std::string::iterator old) {
+		void parse_key_value(std::map<nonstd::string_view, nonstd::string_view>& form, nonstd::string_view::iterator old) {
 			auto start = old;
 			while (old != begin_) {
 				if ((*old) == '=') {
@@ -305,8 +312,8 @@ namespace xfinal {
 			}
 		}
 	private:
-		std::string::iterator begin_;
-		std::string::iterator end_;
+		nonstd::string_view::iterator begin_;
+		nonstd::string_view::iterator end_;
 	};
 
 	class http_multipart_parser final {

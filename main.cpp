@@ -131,8 +131,8 @@ int main()
 		}, init_session{});
 
 	server.router<GET, POST>("/abc", [](request& req, response& res) {
-		std::cout << req.query("id") << std::endl;
-		std::cout << "hahaha " << req.url() << " text :" << req.query<GBK>("text") << std::endl;
+		std::cout <<"id: "<< req.query("id") << std::endl;
+		std::cout <<"text: "<< req.query("text") << std::endl;
 		res.write_string("OK");
 		}, Test{}, Base{}, Test2{});
 
@@ -167,6 +167,7 @@ int main()
 	server.router<GET>("/params", [](request& req, response& res) {
 		auto params = req.key_params();
 		std::cout << "id: " << req.param("id") << std::endl;
+		std::cout << "text: " << req.param("text") << std::endl;
 		std::cout << "all value: " << req.raw_key_params() << std::endl;
 		res.write_string("id");
 	});
@@ -175,7 +176,6 @@ int main()
 		std::cout << "text: " << req.query("text") << std::endl;
 		auto& file = req.file("img");
 		std::cout << file.size() << std::endl;
-		std::cout << req.query<GBK>("text2") << std::endl;
 		json data;
 		data["name"] = file.original_name();
 		data["text"] = view2str(req.query("text"));

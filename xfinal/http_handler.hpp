@@ -77,18 +77,12 @@ namespace xfinal {
 		}
 
 		nonstd::string_view param(nonstd::string_view key) noexcept {  //获取问号后的键值对参数值
-			if (decode_url_params_.empty()) {
-				auto it = url_.rfind('?');
-				if (it != (nonstd::string_view::size_type)nonstd::string_view::npos) {
-					decode_url_params_ = url_decode(view2str(url_.substr(it + 1)));
-					http_urlform_parser{ decode_url_params_ }.parse_data(url_params_);
-				}
+			auto key_str = view2str(key);
+			auto it = decode_url_params_.find(key_str);
+			if (it != decode_url_params_.end()) {
+				return it->second;
 			}
-			auto vit = url_params_.find(key);
-			if (vit != url_params_.end()) {
-				return vit->second;
-			}
-			return "";
+			return  "";
 		}
 
 		nonstd::string_view param(std::size_t index) noexcept {  //获取url参数类型的参数值
@@ -122,10 +116,11 @@ namespace xfinal {
 			auto it = url_.rfind('?');
 			auto view = url_.substr(it + 1);
 			if (it != (nonstd::string_view::size_type)nonstd::string_view::npos) {
-				bool r = is_key_params(view);
-				if (r) {
-					return view;
-				}
+				//bool r = is_key_params(view);
+				//if (r) {
+				//	return view;
+				//}
+				return view;
 			}
 			return "";
 		}
@@ -144,15 +139,8 @@ namespace xfinal {
 			return {};
 		}
 
-		std::map<nonstd::string_view, nonstd::string_view> key_params() noexcept { //获取问号键值对的map
-			if (decode_url_params_.empty()) {
-				auto it = url_.rfind('?');
-				if (it != (nonstd::string_view::size_type)nonstd::string_view::npos) {
-					decode_url_params_ = url_decode(view2str(url_.substr(it + 1, url_.size())));
-					http_urlform_parser{ decode_url_params_ }.parse_data(url_params_);
-				}
-			}
-			return url_params_;
+		std::map<std::string ,std::string> key_params() noexcept { //获取问号键值对的map
+			return decode_url_params_;
 		}
 
 
@@ -161,25 +149,25 @@ namespace xfinal {
 			return url_;
 		}
 
-		template<typename T>
-		typename std::enable_if<std::is_same<T, GBK>::value, nonstd::string_view>::type param(nonstd::string_view key) {
-			auto view = param(key);
-			auto key_str = view2str(key);
-			if (!view.empty()) {
-				auto it = gbk_decode_params_.find(key_str);
-				if (it != gbk_decode_params_.end()) {
-					return { it->second.data(),it->second.size() };
-				}
-				else {
-					gbk_decode_params_.insert(std::make_pair(key_str, utf8_to_gbk(view2str(view))));
-					auto& v = gbk_decode_params_[key_str];
-					return { v.data(),v.size() };
-				}
-			}
-			else {
-				return "";
-			}
-		}
+		//template<typename T>
+		//typename std::enable_if<std::is_same<T, GBK>::value, nonstd::string_view>::type param(nonstd::string_view key) {
+		//	auto view = param(key);
+		//	auto key_str = view2str(key);
+		//	if (!view.empty()) {
+		//		auto it = gbk_decode_params_.find(key_str);
+		//		if (it != gbk_decode_params_.end()) {
+		//			return { it->second.data(),it->second.size() };
+		//		}
+		//		else {
+		//			gbk_decode_params_.insert(std::make_pair(key_str, utf8_to_gbk(view2str(view))));
+		//			auto& v = gbk_decode_params_[key_str];
+		//			return { v.data(),v.size() };
+		//		}
+		//	}
+		//	else {
+		//		return "";
+		//	}
+		//}
 
 		std::map<std::string, xfinal::filewriter> const& files() const noexcept {
 			return *multipart_files_map_;
@@ -219,13 +207,14 @@ namespace xfinal {
 		}
 
 		nonstd::string_view query(nonstd::string_view key) const noexcept {
-			auto it = form_map_.find(key);
-			if (it != form_map_.end()) {
+			auto key_str = view2str(key);
+			auto it = decode_form_map_.find(key_str);
+			if (it != decode_form_map_.end()) {
 				return it->second;
 			}
 			else {
 				if (multipart_form_map_ != nullptr) {
-					auto itm = multipart_form_map_->find(view2str(key));
+					auto itm = multipart_form_map_->find(key_str);
 					if (itm != multipart_form_map_->end()) {
 						return nonstd::string_view{ itm->second.data(),itm->second.size() };
 					}
@@ -237,28 +226,28 @@ namespace xfinal {
 			}
 		}
 
-		template<typename T>
-		typename std::enable_if<std::is_same<T, GBK>::value, nonstd::string_view>::type query(nonstd::string_view key) {
-			auto view = query(key);
-			auto key_str = view2str(key);
-			if (!view.empty()) {
-				auto it = gbk_decode_form_map_.find(key_str);
-				if (it != gbk_decode_form_map_.end()) {
-					return { it->second.data(),it->second.size() };
-				}
-				else {
-					gbk_decode_form_map_.insert(std::make_pair(key_str, utf8_to_gbk(view2str(view))));
-					auto& v = gbk_decode_form_map_[key_str];
-					return { v.data(),v.size() };
-				}
-			}
-			else {
-				return "";
-			}
-		}
+		//template<typename T>
+		//typename std::enable_if<std::is_same<T, GBK>::value, nonstd::string_view>::type query(nonstd::string_view key) {
+		//	auto view = query(key);
+		//	auto key_str = view2str(key);
+		//	if (!view.empty()) {
+		//		auto it = gbk_decode_form_map_.find(key_str);
+		//		if (it != gbk_decode_form_map_.end()) {
+		//			return { it->second.data(),it->second.size() };
+		//		}
+		//		else {
+		//			gbk_decode_form_map_.insert(std::make_pair(key_str, utf8_to_gbk(view2str(view))));
+		//			auto& v = gbk_decode_form_map_[key_str];
+		//			return { v.data(),v.size() };
+		//		}
+		//	}
+		//	else {
+		//		return "";
+		//	}
+		//}
 
-		std::map<nonstd::string_view, nonstd::string_view> const& url_form() const noexcept {
-			return form_map_;
+		std::map<std::string, std::string> const& url_form() const noexcept {
+			return decode_form_map_;
 		}
 
 		std::map<std::string, std::string> const& multipart_form() const noexcept {
@@ -378,6 +367,16 @@ namespace xfinal {
 				}
 			}
 		}
+		void init_url_params() {
+			auto it = url_.rfind('?');
+			if (it != (nonstd::string_view::size_type)nonstd::string_view::npos) {
+				auto url = url_.substr(it + 1);
+				http_urlform_parser{ url }.parse_data(url_params_);
+				for (auto& iter : url_params_) {
+					decode_url_params_.emplace(view2str(iter.first), url_decode(view2str(iter.second)));
+				}
+			}
+		}
 	private:
 		void reset() {
 			method_ = "";
@@ -387,10 +386,11 @@ namespace xfinal {
 			header_length_ = 0;
 			form_map_.clear();
 			body_ = "";
-			gbk_decode_form_map_.clear();
+			//gbk_decode_form_map_.clear();
 			decode_url_params_.clear();
+			decode_form_map_.clear();
 			url_params_.clear();
-			gbk_decode_params_.clear();
+			//gbk_decode_params_.clear();
 			boundary_key_ = "";
 			multipart_form_map_ = nullptr;
 			multipart_files_map_ = nullptr;
@@ -412,11 +412,12 @@ namespace xfinal {
 		std::size_t header_length_;
 		enum content_type content_type_;
 		std::map<nonstd::string_view, nonstd::string_view> form_map_;
+		std::map<std::string, std::string> decode_form_map_;
 		nonstd::string_view body_;
-		std::map<std::string, std::string> gbk_decode_form_map_;
-		std::string decode_url_params_;
+		//std::map<std::string, std::string> gbk_decode_form_map_;
+		std::map<std::string, std::string> decode_url_params_;
 		std::map<nonstd::string_view, nonstd::string_view> url_params_;
-		std::map<std::string, std::string> gbk_decode_params_;
+		//std::map<std::string, std::string> gbk_decode_params_;
 		nonstd::string_view boundary_key_;
 		std::map<std::string, std::string> const* multipart_form_map_ = nullptr;
 		std::map<std::string, xfinal::filewriter> const* multipart_files_map_ = nullptr;

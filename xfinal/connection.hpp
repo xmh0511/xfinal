@@ -138,6 +138,7 @@ namespace xfinal {
 				req_.multipart_files_map_ = &(request_info.multipart_files_map_);
 				req_.oct_steam_ = &(request_info.oct_steam_);
 				req_.empty_file_ = &(request_info.empty_file_);
+				req_.init_url_params();
 				req_.init_content_type();
 				bool is_general = false;
 				auto router_iter = router_.pre_router(req_, res_, is_general);
@@ -288,11 +289,14 @@ namespace xfinal {
 		/// 处理有content-length的body  读取完整body部分 ---end
 
 		void process_url_form(std::size_t body_length) { // 处理application/x-www-form-urlencoded 类型请求
-			request_info.decode_body_ = request_info.body_;
+			//request_info.decode_body_ = request_info.body_;
 			req_.body_ = request_info.body_;
-			http_urlform_parser parser{ request_info.decode_body_ };
+			http_urlform_parser parser{ request_info.body_,false };
 			parser.parse_data(request_info.form_map_);
 			req_.form_map_ = request_info.form_map_;
+			for (auto& iter : req_.form_map_) {
+				req_.decode_form_map_.emplace(view2str(iter.first), url_decode(view2str(iter.second)));
+			}
 		}
 
 		void process_string() {  //处理诸如 json text 等纯文本类型的body
