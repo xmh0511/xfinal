@@ -196,6 +196,7 @@ namespace xfinal {
 			connector->set_wait_read_time(wait_read_time_);
 			acceptor_.async_accept(connector->get_socket(), [this,connector](std::error_code const& ec) {
 				if (!ec) {
+					connector->get_socket().set_option(asio::ip::tcp::no_delay(true));
 					connector->read_header();
 				}
 				else {

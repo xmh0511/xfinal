@@ -147,7 +147,7 @@ int main()
 		});
 
 	server.router<GET, POST>("/json", [](request& req, response& res) {
-		std::cout << "body: " << req.body() << std::endl;
+		std::cout << "body: " << view2str(req.body()) << std::endl;
 		json root;
 		root["hello"] = u8"你好，中文";
 		res.write_json(root);
@@ -209,8 +209,12 @@ int main()
 	});
 
 	server.router<GET, POST>("/oct", [](request& req, response& res) {
-		res.write_string("abc");
-		});
+		auto& file = req.file();
+		json root;
+		root["size"] = file.size();
+		root["url"] = file.url_path();
+		res.write_string(root.dump());
+	});
 
 	Process c;
 	server.router<GET, POST>("/test", &Process::test, c, Test{});

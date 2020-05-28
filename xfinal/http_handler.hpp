@@ -29,8 +29,11 @@ namespace xfinal {
 		nonstd::string_view header(std::string const& key) const noexcept {
 			auto lkey = to_lower(key);
 			if (headers_ != nullptr) {
-				if ((*headers_).find(lkey) != (*headers_).end()) {
-					return (*headers_).at(lkey);
+				for (auto& iter : *headers_) {
+					auto key_str = to_lower(view2str(iter.first));
+					if (key_str == lkey) {
+						return iter.second;
+					}
 				}
 			}
 			return "";
@@ -327,13 +330,11 @@ namespace xfinal {
 		}
 	protected:
 		void init_content_type() noexcept {
-			auto it = headers_->find("content-type");
-			if (it != headers_->end()) {
-				auto& value = it->second;
-				auto view = nonstd::string_view(value.data(), value.size());
-				auto has_op = view.find(';');
+			auto value = header("content-type");
+			if (!value.empty()) {
+				auto has_op = value.find(';');
 				if (has_op == (nonstd::string_view::size_type)nonstd::string_view::npos) {
-					auto key = view2str(view);
+					auto key = view2str(value);
 					if (content_type_str_type_map.count(key) != 0) {
 						content_type_ = content_type_str_type_map[key];
 					}
@@ -342,7 +343,7 @@ namespace xfinal {
 					}
 				}
 				else {
-					auto value_view = view.substr(0, has_op);
+					auto value_view = value.substr(0, has_op);
 					auto key = view2str(value_view);
 					if (content_type_str_type_map.count(key) != 0) {
 						content_type_ = content_type_str_type_map[key];
@@ -356,11 +357,10 @@ namespace xfinal {
 				content_type_ = content_type::unknow;
 			}
 			if (content_type_ == content_type::multipart_form) {
-				auto const& v = it->second;
-				auto f = v.find("boundary");
+				auto f = value.find("boundary");
 				if (f != std::string::npos) {
 					auto pos = f + sizeof("boundary");
-					boundary_key_ = nonstd::string_view{ &(v[pos]),(v.size() - pos) };
+					boundary_key_ = nonstd::string_view{ &(value[pos]),(value.size() - pos) };
 				}
 				else {
 					boundary_key_ = "";
@@ -382,7 +382,6 @@ namespace xfinal {
 			method_ = "";
 			url_ = "";
 			version_ = "";
-			headers_ = nullptr;
 			header_length_ = 0;
 			form_map_.clear();
 			body_ = "";
@@ -392,10 +391,6 @@ namespace xfinal {
 			url_params_.clear();
 			//gbk_decode_params_.clear();
 			boundary_key_ = "";
-			multipart_form_map_ = nullptr;
-			multipart_files_map_ = nullptr;
-			oct_steam_ = nullptr;
-			empty_file_ = nullptr;
 			is_generic_ = false;
 			generic_base_path_ = "";
 			session_ = nullptr;
@@ -408,7 +403,7 @@ namespace xfinal {
 		nonstd::string_view method_;
 		nonstd::string_view url_;
 		nonstd::string_view version_;
-		std::map<std::string, std::string> const* headers_ = nullptr;
+		std::map<nonstd::string_view, nonstd::string_view> const* headers_ = nullptr;
 		std::size_t header_length_;
 		enum content_type content_type_;
 		std::map<nonstd::string_view, nonstd::string_view> form_map_;

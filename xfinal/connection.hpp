@@ -16,6 +16,11 @@ namespace xfinal {
 	public:
 		connection(asio::io_service& io, http_router& router, std::string const& static_path, std::string const& upload_path) :socket_(std::unique_ptr<asio::ip::tcp::socket>(new asio::ip::tcp::socket(io))), io_service_(io), buffers_(expand_buffer_size), router_(router), static_path_(static_path), req_(res_, this), res_(req_, this), upload_path_(upload_path), keep_alive_waiter_(io), read_waiter_(io){
 			left_buffer_size_ = buffers_.size();
+			req_.headers_ = &(request_info_.headers_);
+			req_.multipart_form_map_ = &(request_info_.multipart_form_map_);
+			req_.multipart_files_map_ = &(request_info_.multipart_files_map_);
+			req_.oct_steam_ = &(request_info_.oct_steam_);
+			req_.empty_file_ = &(request_info_.empty_file_);
 		}
 	public:
 		asio::ip::tcp::socket& get_socket() {
@@ -126,18 +131,12 @@ namespace xfinal {
 			write();  //回应请求
 		}
 		void parse_header(http_parser_header& parser) {  //解析请求头
-			auto request = parser.parse_request_header();
-			if (request.first) {
-				request_info = std::move(request.second);
-				req_.method_ = request_info.method_;
-				req_.url_ = request_info.url_;
-				req_.version_ = request_info.version_;
-				req_.headers_ = &(request_info.headers_);
-				req_.header_length_ = parser.get_header_size();
-				req_.multipart_form_map_ = &(request_info.multipart_form_map_);
-				req_.multipart_files_map_ = &(request_info.multipart_files_map_);
-				req_.oct_steam_ = &(request_info.oct_steam_);
-				req_.empty_file_ = &(request_info.empty_file_);
+			auto parse_result = parser.parse_request_header(request_info_);
+			if (parse_result) {
+				req_.method_ = request_info_.method_;
+				req_.url_ = request_info_.url_;
+				req_.version_ = request_info_.version_;
+				req_.header_length_ = request_info_.http_header_str_.size();
 				req_.init_url_params();
 				req_.init_content_type();
 				bool is_general = false;
@@ -149,7 +148,6 @@ namespace xfinal {
 					if (process_interceptor != nullptr) {
 						auto r = process_interceptor(req_, res_);
 						if (!r) {  //终止此次请求
-							//terminate_request();
 							need_terminate_request_ = true;
 							write();
 							return;
@@ -160,7 +158,6 @@ namespace xfinal {
 					current_router_(req_, res_);
 					need_terminate_request_ = true;
 					write();
-					//terminate_request();
 					return;
 				}
 				handle_read();
@@ -256,7 +253,7 @@ namespace xfinal {
 					});
 				}
 				else {  //开始更具content_type 解析数据 并执行路由
-					request_info.body_ = std::string(buffers_.data(), body_length);
+					request_info_.body_ = std::string(buffers_.data(), body_length);
 					handle_body(type, body_length);
 					post_router();  //处理完毕 执行路由
 				}
@@ -281,7 +278,7 @@ namespace xfinal {
 				});
 			}
 			else { //开始更具content_type 解析数据 并执行路由
-				request_info.body_ = std::string(buffers_.data(), body_length);
+				request_info_.body_ = std::string(buffers_.data(), body_length);
 				handle_body(type, body_length);
 				post_router(); //处理完毕 执行路由
 			}
@@ -290,17 +287,17 @@ namespace xfinal {
 
 		void process_url_form(std::size_t body_length) { // 处理application/x-www-form-urlencoded 类型请求
 			//request_info.decode_body_ = request_info.body_;
-			req_.body_ = request_info.body_;
-			http_urlform_parser parser{ request_info.body_,false };
-			parser.parse_data(request_info.form_map_);
-			req_.form_map_ = request_info.form_map_;
+			req_.body_ = request_info_.body_;
+			http_urlform_parser parser{ request_info_.body_,false };
+			parser.parse_data(request_info_.form_map_);
+			req_.form_map_ = request_info_.form_map_;
 			for (auto& iter : req_.form_map_) {
 				req_.decode_form_map_.emplace(view2str(iter.first), url_decode(view2str(iter.second)));
 			}
 		}
 
 		void process_string() {  //处理诸如 json text 等纯文本类型的body
-			req_.body_ = nonstd::string_view(request_info.body_);
+			req_.body_ = nonstd::string_view(request_info_.body_);
 		}
 
 		void process_multipart_form() {
@@ -392,15 +389,15 @@ namespace xfinal {
 			auto f_type_iter = head.find("content-type"); //必须有否则无效
 			if (type != std::string::npos) {  //是文件类型
 				if (f_type_iter != head.end()) {  //只有有content-type的file才是合法的 否则跳过处理
-					auto file = request_info.multipart_files_map_.find(name);
-					if (file != request_info.multipart_files_map_.end()) {
+					auto file = request_info_.multipart_files_map_.find(name);
+					if (file != request_info_.multipart_files_map_.end()) {
 						file->second.add_data(data);
 					}
 					else {
 						auto f_type = head.at("content-type");
 						auto extension = get_extension(f_type);
 						auto t = std::time(nullptr);
-						auto& fileo = request_info.multipart_files_map_[name];
+						auto& fileo = request_info_.multipart_files_map_[name];
 						auto path = upload_path_ + "/" + uuids::uuid_system_generator{}().to_short_str() + view2str(extension);
 						fileo.open(path);
 						auto filename_start = type + sizeof("filename") + 1;
@@ -411,11 +408,11 @@ namespace xfinal {
 				}
 			}
 			else {  //是文本类型
-				request_info.multipart_form_map_[name] += view2str(data);
+				request_info_.multipart_form_map_[name] += view2str(data);
 			}
 			if (data_state == multipart_data_state::is_end) {
 				if (type != std::string::npos) {  //如果是文件 读取完了 就可以关闭文件指针了
-					request_info.multipart_files_map_[name].close();
+					request_info_.multipart_files_map_[name].close();
 				}
 				if (parser.is_end((buffers_.begin() + start_read_pos_ + data.size() + 2), buffers_.begin() + current_use_pos_)) { //判断是否全部接受完毕 回调multipart 路由
 					handle_body(content_type::multipart_form, 0);
@@ -460,8 +457,8 @@ namespace xfinal {
 			std::uint64_t body_size = std::atoll(req_.header("content-length").data());
 			auto header_size = req_.header_length_;
 			if (current_use_pos_ > header_size) {  //是不是读request头的时候 把body也读取进来了 
-				request_info.oct_steam_.open(upload_path_ + "/" + uuids::uuid_system_generator{}().to_short_str());
-				request_info.oct_steam_.add_data(nonstd::string_view{ &(buffers_[header_size]),current_use_pos_ - header_size });
+				request_info_.oct_steam_.open(upload_path_ + "/" + uuids::uuid_system_generator{}().to_short_str());
+				request_info_.oct_steam_.add_data(nonstd::string_view{ &(buffers_[header_size]),current_use_pos_ - header_size });
 				if ((current_use_pos_ - header_size) > body_size) {  //如果已经读完了所有数据
 					handle_body(content_type::octet_stream, (std::size_t)body_size);
 					return;
@@ -474,9 +471,9 @@ namespace xfinal {
 		}
 
 		void process_oct_stream(std::uint64_t body_size) {
-			auto size = request_info.oct_steam_.size();
-			if (request_info.oct_steam_.size() == body_size) {
-				request_info.oct_steam_.close();
+			auto size = request_info_.oct_steam_.size();
+			if (request_info_.oct_steam_.size() == body_size) {
+				request_info_.oct_steam_.close();
 				handle_body(content_type::octet_stream, (std::size_t)body_size);
 				return;
 			}
@@ -489,7 +486,7 @@ namespace xfinal {
 					disconnect();
 					return;
 				}
-				handler->request_info.oct_steam_.add_data(nonstd::string_view{ &(handler->buffers_[0]) ,read_size });
+				handler->request_info_.oct_steam_.add_data(nonstd::string_view{ &(handler->buffers_[0]) ,read_size });
 				handler->process_oct_stream(body_size);
 			});
 		}
@@ -539,9 +536,9 @@ namespace xfinal {
 				handler->set_current_pos(read_size);
 				auto& buffer = handler->get_buffers();
 				//std::cout << handler->get_buffers().data() << std::endl;
-				auto buff_begin = buffer.begin();
+				auto buff_begin = buffer.data();
 				http_parser_header parser{ buff_begin,buff_begin + current_use_pos_ };
-				auto parse_r = parser.is_complete_header();
+				auto parse_r = parser.is_complete_header(request_info_);
 				if (parse_r.first == parse_state::valid) {
 					if (parse_r.second) {
 						handler->parse_header(parser);
@@ -718,7 +715,7 @@ namespace xfinal {
 			need_terminate_request_ = false;
 			req_.reset();
 			res_.reset();
-			request_info.reset();
+			request_info_.reset();
 			buffers_.clear();
 			expand_buffer_size = 1024;
 			left_buffer_size_ = 1024;
@@ -748,7 +745,7 @@ namespace xfinal {
 		std::vector<char> buffers_;
 		std::size_t current_use_pos_ = 0;
 		std::size_t left_buffer_size_;
-		xfinal::request_meta request_info;
+		xfinal::request_meta request_info_;
 		request req_;
 		response res_;
 		http_router& router_;
