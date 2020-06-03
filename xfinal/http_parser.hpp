@@ -404,9 +404,9 @@ namespace xfinal {
 		}
 
 		http_urlform_parser(nonstd::string_view body) {
-			auto begin = body.data();
-			begin_ = begin;
-			end_ = begin + body.size();
+			auto begin = body.begin();
+			begin_ = body.begin();
+			end_ = body.end();
 		}
 
 		void parse_data(std::map<nonstd::string_view, nonstd::string_view>& form) {
