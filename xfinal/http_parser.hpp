@@ -4,6 +4,7 @@
 #include <utility>
 #include <map>
 #include <algorithm>
+#include <functional>
 #include "utils.hpp"
 #include "code_parser.hpp"
 #include "string_view.hpp"
@@ -64,27 +65,54 @@ namespace xfinal {
 		return false;
 	}
 
+	template<typename T,typename U>
+	T my_search(T first, T last, U s_first, U s_last) {
+#ifdef  _MSVC_LANG
+#if _MSVC_LANG >= 201703L
+		return std::search(first, last, std::boyer_moore_searcher(s_first, s_last));
+#else
+		return std::search(first, last, s_first, s_last);
+#endif 
+#else //  _MSVC_LANG
+#if __cplusplus >= 201703L
+		return std::search(first, last, std::boyer_moore_searcher(s_first, s_last));
+#else
+		return std::search(first, last, s_first, s_last);
+#endif
+#endif
+	}
+
 	class http_parser_header final {
 	public:
 		http_parser_header(char const* begin, char const* end):begin_(begin),end_(end) {
 
 		}
 		std::pair<parse_state, bool> is_complete_header(request_meta& request_header) {
-			auto view = nonstd::string_view(begin_, end_ - begin_);
-			auto pos = view.find("\r\n\r\n");
-			auto npos = (nonstd::string_view::size_type)nonstd::string_view::npos;
-			if (pos != npos) {
-				auto invalid_char = view.rfind('\0', pos);
-				if (invalid_char != npos) {
-					return { parse_state::invalid,false };
-				}
-				request_header.http_header_str_ = std::string(begin_, pos + 4);
+			nonstd::string_view key = "\r\n\r\n";
+			auto it = my_search(begin_, end_, key.begin(), key.end());
+			if (it != end_) {
+				request_header.http_header_str_ = std::string(begin_, it + 4);
 				auto begin = request_header.http_header_str_.data();
 				begin_ = begin;
 				end_ = begin + request_header.http_header_str_.size();
 				return { parse_state::valid,true };
 			}
 			return { parse_state::valid,false };
+			//auto view = nonstd::string_view(begin_, end_ - begin_);
+			//auto pos = view.find("\r\n\r\n");
+			//auto npos = (nonstd::string_view::size_type)nonstd::string_view::npos;
+			//if (pos != npos) {
+			//	auto invalid_char = view.rfind('\0', pos);
+			//	if (invalid_char != npos) {
+			//		return { parse_state::invalid,false };
+			//	}
+			//	request_header.http_header_str_ = std::string(begin_, pos + 4);
+			//	auto begin = request_header.http_header_str_.data();
+			//	begin_ = begin;
+			//	end_ = begin + request_header.http_header_str_.size();
+			//	return { parse_state::valid,true };
+			//}
+			//return { parse_state::valid,false };
 		}
 		bool get_method(request_meta& request_header) {
 			auto start = begin_;
