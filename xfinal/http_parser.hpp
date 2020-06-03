@@ -150,11 +150,10 @@ namespace xfinal {
 			}
 			return false;
 		}
-		nonstd::string_view::size_type skip_value_white_space(nonstd::string_view view, nonstd::string_view::size_type pos) {
-			while (*(view.data() + pos) == ' ') {
-				++pos;
+		void skip_value_white_space(const char*& it) {
+			while (*it == ' ') {
+				++it;
 			}
-			return pos;
 		}
 		bool get_header(request_meta& request_header) {
 			if (less_than(begin_, end_, 2) && (*begin_) == '\r' && (*(begin_ + 1)) == '\n') {  //没有键值对
@@ -162,19 +161,42 @@ namespace xfinal {
 				return true;
 			}
 			auto view = nonstd::string_view(begin_, end_ - begin_ - 2);
-			nonstd::string_view::size_type start = 0;
-			auto split = view.find("\r\n");
-			while (split != (nonstd::string_view::size_type)nonstd::string_view::npos) {
-				auto kv_pair = view.substr(start, split - start);
-				auto op_pos = kv_pair.find(':');
-				auto value_pos = skip_value_white_space(kv_pair, op_pos + 1);
-				auto value = kv_pair.substr(value_pos);
-				request_header.headers_.emplace(kv_pair.substr(0, op_pos), value);
+			auto end = end_ - 2;
+			char const* start = begin_;
+			auto key_lr = "\r\n";
+			auto colon = ":";
+			auto split = my_search(start, end, key_lr, key_lr + 2);
+			while (split < end) {
+				auto op_pos = my_search(start, split, colon, colon + 1);
+				auto key_v = nonstd::string_view(start, op_pos - start);
+				auto value_potential = op_pos + 1;
+				skip_value_white_space(value_potential);
+				auto value_v = nonstd::string_view(value_potential, split - value_potential);
+				request_header.headers_.emplace(key_v, value_v);
 				start = split + 2;
-				split = view.find("\r\n", start);
+				split = my_search(start, end, key_lr, key_lr + 2);
 			}
 			return true;
 		}
+		//bool get_header(request_meta& request_header) {
+		//	if (less_than(begin_, end_, 2) && (*begin_) == '\r' && (*(begin_ + 1)) == '\n') {  //没有键值对
+		//		request_header.headers_.clear();
+		//		return true;
+		//	}
+		//	auto view = nonstd::string_view(begin_, end_ - begin_ - 2);
+		//	nonstd::string_view::size_type start = 0;
+		//	auto split = view.find("\r\n");
+		//	while (split != (nonstd::string_view::size_type)nonstd::string_view::npos) {
+		//		auto kv_pair = view.substr(start, split - start);
+		//		auto op_pos = kv_pair.find(':');
+		//		auto value_pos = skip_value_white_space(kv_pair, op_pos + 1);
+		//		auto value = kv_pair.substr(value_pos);
+		//		request_header.headers_.emplace(kv_pair.substr(0, op_pos), value);
+		//		start = split + 2;
+		//		split = view.find("\r\n", start);
+		//	}
+		//	return true;
+		//}
 		bool parse_request_header(request_meta& request_header) {
 			if (get_method(request_header)) {
 				if (get_url(request_header)) {
