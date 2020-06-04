@@ -94,7 +94,7 @@ namespace xfinal {
 					return;
 				}
 				std::stringstream ss;
-				ss << "url: " << req_.raw_url() << "request read/write time out";
+				ss << "url: " << req_.raw_url() << " request read/write time out";
 				router_.trigger_error(ss.str());
 				std::error_code ignore_shutdown_ec;
 				socket_->shutdown(asio::ip::tcp::socket::shutdown_both, ignore_shutdown_ec);
