@@ -103,6 +103,8 @@ int main()
 {
 	auto const thread_number = std::thread::hardware_concurrency();
 	http_server server(thread_number);
+	server.set_wait_read_time(10);
+	server.set_chunk_wait_read_time(300);
 	server.on_error([](std::string const& message) {  //提供用户记录错误日志
 		std::cout << message << std::endl;
 		});
@@ -111,7 +113,6 @@ int main()
 		return 0;
 	}
 
-	server.set_wait_read_time(10);
 	//server.set_upload_path("./myupload");
 	//server.set_not_found_callback([](request& req,response& res) {
 	//	res.write_string("custom not found", true, http_status::bad_request);
@@ -194,7 +195,7 @@ int main()
 
 	server.router<GET, POST>("/chunkedfile", [](request& req, response& res) {
 
-		res.write_file("./data.txt", true);
+		res.write_file("./data.zip", true);
 		});
 
 	server.router<GET, POST>("/video", [](request& req, response& res) {
