@@ -42,7 +42,7 @@ namespace xfinal {
 			return *connecter_;
 		}
 	private:
-		bool is_key_params(nonstd::string_view view) const{
+		bool is_key_params(nonstd::string_view view) const {
 			auto str = view2str(view);
 			std::map<nonstd::string_view, nonstd::string_view> form;
 			http_urlform_parser{ str ,false }.parse_data(form);
@@ -142,7 +142,7 @@ namespace xfinal {
 			return {};
 		}
 
-		std::map<std::string ,std::string> key_params() noexcept { //获取问号键值对的map
+		std::map<std::string, std::string> key_params() noexcept { //获取问号键值对的map
 			return decode_url_params_;
 		}
 
@@ -261,13 +261,29 @@ namespace xfinal {
 			return body_;
 		}
 
-		bool accept_range(std::uint64_t& pos) {
+		bool accept_range(std::int64_t& startpos, std::int64_t& endpos) {
 			auto range = header("range");
 			if (range.empty()) {
 				return false;
 			}
 			auto posv = range.substr(range.find('=') + 1);
-			pos = std::atoll(posv.data());
+			auto line = posv.find('-');
+			auto start = posv.substr(0, line);
+			startpos = std::atoll(start.data());
+			if (line != (nonstd::string_view::size_type)nonstd::string_view::npos) {
+				auto potential_end = posv.substr(line + 1);
+				if (!potential_end.empty()) {
+					if (std::isdigit(potential_end[0])) {
+						endpos = std::atoll(potential_end.data());
+					}
+					else {
+						endpos = -1;
+					}
+				}
+				else {
+					endpos = -1;
+				}
+			}
 			return true;
 		}
 		bool is_keep_alive() {
@@ -477,6 +493,7 @@ namespace xfinal {
 		}
 
 		void write_file(std::string const& filename, bool is_chunked = false, std::string const& conent_type = "") noexcept {
+			using namespace nonstd::literals;
 			if (!filename.empty()) {
 				bool b = file_.open(filename);
 				if (!b) {
@@ -489,28 +506,46 @@ namespace xfinal {
 					else {
 						add_header("Content-Type", conent_type);
 					}
-
+					auto filesize = file_.size();
+					if (req_.method() == "HEAD"_sv) {  //询问是否支持range
+						add_header("Content-Length", std::to_string(filesize));
+						add_header("Accept-Ranges", "bytes");
+						write_type_ = write_type::string;
+						init_start_pos_ = 0;
+						state_ = http_status::ok;
+						is_chunked_ = false;
+						return;
+					}
 					write_type_ = write_type::file;
 					is_chunked_ = is_chunked;
-					if (!is_chunked) {
+					init_start_pos_ = -1;
+					init_end_pos_ = -1;
+					portion_need_size_ = 0;
+					if (!is_chunked) {  //非chunk方式
 						state_ = http_status::ok;
 						file_.read_all(body_);
-						init_start_pos_ = -1;
 					}
 					else {
 						add_header("Transfer-Encoding", "chunked");
 						body_.resize((std::size_t)chunked_size_);
-						std::uint64_t pos = 0;
-						if (req_.accept_range(pos)) {
+						if (req_.accept_range(init_start_pos_, init_end_pos_)) {
 							state_ = http_status::partial_content;
-							init_start_pos_ = pos;
-							auto filesize = file_.size();
-							auto rang_value = std::string("bytes ") + std::to_string(init_start_pos_) + std::string("-") + std::to_string(filesize - 1) + "/" + std::to_string(filesize);
+							std::string rang_value;
+							if (init_end_pos_ == -1) {
+								rang_value = std::string("bytes ") + std::to_string(init_start_pos_) + std::string("-") + std::to_string(filesize - 1) + "/" + std::to_string(filesize);
+								portion_need_size_ = filesize - init_start_pos_;
+							}
+							else {
+								rang_value = std::string("bytes ") + std::to_string(init_start_pos_) + std::string("-") + std::to_string(init_end_pos_) + "/" + std::to_string(filesize);
+								portion_need_size_ = init_end_pos_ - init_start_pos_ + 1;
+							}
 							add_header("Content-Range", rang_value);
 						}
-						else {
+						else {  //普通chunk 非range
 							state_ = http_status::ok;
 							init_start_pos_ = -1;
+							init_end_pos_ = -1;
+							portion_need_size_ = filesize;
 						}
 					}
 				}
@@ -631,44 +666,56 @@ namespace xfinal {
 			return buffers_;
 		}
 
-		std::tuple<bool, std::vector<asio::const_buffer>, std::int64_t> chunked_body(std::int64_t startpos) noexcept {
+		std::tuple<bool, std::vector<asio::const_buffer>> chunked_body() noexcept {
 			std::vector<asio::const_buffer> buffers;
 			switch (write_type_) {
 			case write_type::string: //如果是文本数据
 			{
-				if ((body_.size() - (std::size_t)startpos) <= chunked_size_) {
-					auto size = body_.size() - startpos;
-					chunked_write_size_ = to_hex(size);
+				auto left_size = body_.size() - (std::size_t)init_start_pos_;
+				if (left_size <= chunked_size_) {
+					chunked_write_size_ = to_hex(left_size);
 					buffers.emplace_back(asio::buffer(chunked_write_size_));
 					buffers.emplace_back(asio::buffer(crlf.data(), crlf.size()));
-					buffers.emplace_back(asio::buffer(&body_[(std::size_t)startpos], (std::size_t)size));
+					buffers.emplace_back(asio::buffer(&body_[(std::size_t)init_start_pos_], left_size));
 					buffers.emplace_back(asio::buffer(crlf.data(), crlf.size()));
-					return { true, buffers,0 };
+					return { true, buffers };
 				}
 				else {  //还有超过每次chunked传输的数据大小
-					auto nstart = startpos + chunked_size_;
 					chunked_write_size_ = to_hex(chunked_size_);
 					buffers.emplace_back(asio::buffer(chunked_write_size_));
 					buffers.emplace_back(asio::buffer(crlf.data(), crlf.size()));
-					buffers.emplace_back(asio::buffer(&body_[(std::size_t)startpos], (std::size_t)chunked_size_));
+					buffers.emplace_back(asio::buffer(&body_[(std::size_t)init_start_pos_], (std::size_t)chunked_size_));
 					buffers.emplace_back(asio::buffer(crlf.data(), crlf.size()));
-					return { false,buffers,nstart };
+					init_start_pos_ = init_start_pos_ + chunked_size_;
+					return { false,buffers };
 				}
 			}
 			break;
 			case write_type::file:  //如果是文件数据
 			{
-				auto read_size = file_.read(startpos, &(body_[0]), chunked_size_);
+				bool eof = false;
+				std::uint64_t read_size = 0;
+				if (portion_need_size_ > chunked_size_) {  //请求的rang大小 大于chunked_size_
+					read_size = file_.read(init_start_pos_, &(body_[0]), chunked_size_);
+					portion_need_size_ -= chunked_size_;
+					eof = !(portion_need_size_ > 0);  //还有剩余
+				}
+				else {  //一次chunked_size_就写完了range需要的字节数
+					read_size = file_.read(init_start_pos_, &(body_[0]), portion_need_size_);
+					eof = read_size <= portion_need_size_;
+				}
 				chunked_write_size_ = to_hex(read_size);
 				buffers.emplace_back(asio::buffer(chunked_write_size_));
 				buffers.emplace_back(asio::buffer(crlf.data(), crlf.size()));
 				buffers.emplace_back(asio::buffer(&body_[0], (std::size_t)read_size));
 				buffers.emplace_back(asio::buffer(crlf.data(), crlf.size()));
-				return { (read_size < chunked_size_),buffers, -1 };
+				init_start_pos_ = -1;  //下一次就不需要在重新定位文件
+				init_end_pos_ = -1;
+				return { eof,buffers };
 			}
 			break;
 			default:
-				return { true,buffers ,0 };
+				return { true,buffers };
 				break;
 			}
 		}
@@ -682,6 +729,9 @@ namespace xfinal {
 			chunked_write_size_.clear();
 			file_.close();
 			view_data_.clear();
+			init_start_pos_ = -1;
+			init_end_pos_ = -1;
+			portion_need_size_ = 0;
 		}
 	private:
 		class connection* connecter_;
@@ -695,7 +745,9 @@ namespace xfinal {
 		std::uint64_t chunked_size_;
 		std::string chunked_write_size_;
 		filereader file_;
-		std::int64_t init_start_pos_;
+		std::int64_t init_start_pos_ = -1;
+		std::int64_t init_end_pos_ = -1;
+		std::uint64_t portion_need_size_ = 0;
 		std::unique_ptr<inja::Environment> view_env_;
 		json view_data_;
 	};

@@ -616,35 +616,33 @@ namespace xfinal {
 		void chunked_write() {
 			if (!socket_close_) {
 				auto handler = this->shared_from_this();
-				auto startpos = res_.init_start_pos_;
 				start_read_waiter();  //开启超时
-				asio::async_write(*socket_, res_.header_to_buffer(), [handler, startpos,this](std::error_code const& ec, std::size_t write_size) {
+				asio::async_write(*socket_, res_.header_to_buffer(), [handler,this](std::error_code const& ec, std::size_t write_size) {
 					cancel_read_waiter();
 					if (ec) {
 						disconnect();
 						return;
 					}
-					handler->write_body_chunked(startpos);
+					handler->write_body_chunked();
 				});
 			}
 		}
 
-		void write_body_chunked(std::int64_t startpos) {
+		void write_body_chunked() {
 			if (!socket_close_) {
-				auto tp = res_.chunked_body(startpos);
+				auto tp = res_.chunked_body();
 				std::shared_ptr<std::vector<asio::const_buffer>> buffers(new std::vector<asio::const_buffer>{ std::get<1>(tp) });
 				auto handler = this->shared_from_this();
 				auto eof = std::get<0>(tp);
-				auto pos = std::get<2>(tp);
 				start_read_waiter(true);  //开启超时
-				asio::async_write(*socket_, *buffers, [handler, pos, eof,this, buffers](std::error_code const& ec, std::size_t write_size) {
+				asio::async_write(*socket_, *buffers, [handler,eof,this, buffers](std::error_code const& ec, std::size_t write_size) {
 					cancel_read_waiter();
 					if (ec) {
 						disconnect();
 						return;
 					}
 					if (!eof) {
-						handler->write_body_chunked(pos);
+						handler->write_body_chunked();
 					}
 					else {
 						handler->write_end_chunked();

@@ -103,15 +103,15 @@ int main()
 {
 	auto const thread_number = std::thread::hardware_concurrency();
 	http_server server(thread_number);
-	server.set_wait_read_time(10);
-	server.set_chunk_wait_read_time(300);
-	server.on_error([](std::string const& message) {  //提供用户记录错误日志
-		std::cout << message << std::endl;
-		});
 	bool r = server.listen("0.0.0.0", "8080");
 	if (!r) {
 		return 0;
 	}
+	server.on_error([](std::string const& message) {  //提供用户记录错误日志
+		std::cout << message << std::endl;
+	});
+	server.set_wait_read_time(10);
+	server.set_chunk_wait_read_time(300);
 
 	//server.set_upload_path("./myupload");
 	//server.set_not_found_callback([](request& req,response& res) {
@@ -193,10 +193,10 @@ int main()
 		res.write_string(ss.str(), true);
 		});
 
-	server.router<GET, POST>("/chunkedfile", [](request& req, response& res) {
-
+	server.router<GET, POST,HEAD>("/chunkedfile", [](request& req, response& res) {
+		std::cout << req.method() << "\n";
 		res.write_file("./data.zip", true);
-		});
+	});
 
 	server.router<GET, POST>("/video", [](request& req, response& res) {
 		res.write_file("./test.mp4", true);

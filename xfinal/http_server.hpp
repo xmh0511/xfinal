@@ -31,8 +31,8 @@ namespace xfinal {
 				utils::messageCenter::get().trigger_message(ec.message());
 				return false;
 			}
-			asio::ip::tcp::resolver::query query(ip, port);
-			return listen(query);
+			server_query_ = std::unique_ptr<asio::ip::tcp::resolver::query>(new asio::ip::tcp::resolver::query{ ip, port });
+			return true;
 		}
 	public:
 		void run() {
@@ -47,6 +47,16 @@ namespace xfinal {
 				if (!fs::exists(upload_path_)) {
 					fs::create_directories(upload_path_);
 				}
+			}
+			if (server_query_ != nullptr) {
+				bool r = listen(*server_query_);
+				if (!r) {
+					return;
+				}
+			}
+			else {
+				utils::messageCenter::get().trigger_message("listen fail");
+				return;
 			}
 			ioservice_pool_handler_.run();
 		}
@@ -260,5 +270,6 @@ namespace xfinal {
 		std::time_t wait_chunk_read_time_ = 10;
 		bool disable_auto_create_directories_ = false;
 		std::string default_storage_session_path_ = "./session";
+		std::unique_ptr<asio::ip::tcp::resolver::query> server_query_ = nullptr;
 	};
 }
