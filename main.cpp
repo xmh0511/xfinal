@@ -114,8 +114,8 @@ int main()
 	server.on_error([](std::string const& message) {  //提供用户记录错误日志
 		std::cout << message << std::endl;
 	});
-	server.set_wait_read_time(10);
-	server.set_chunk_wait_read_time(300);
+	server.set_wait_read_time(100);
+	server.set_wait_write_time(300);
 
 	//server.set_upload_path("./myupload");
 	//server.set_not_found_callback([](request& req,response& res) {

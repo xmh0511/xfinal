@@ -60,11 +60,11 @@ namespace xfinal {
 		std::time_t get_wait_read_time() {
 			return wait_read_time_;
 		}
-		void set_chunk_wait_read_time(std::time_t time) {
-			wait_chunk_read_time_ = time;
+		void set_wait_write_time(std::time_t time) {
+			wait_write_time_ = time;
 		}
-		std::time_t get_chunk_wait_read_time() {
-			return wait_chunk_read_time_;
+		std::time_t get_wait_write_time() {
+			return wait_write_time_;
 		}
 	private:
 		std::vector<char>& get_buffers() {
@@ -85,9 +85,9 @@ namespace xfinal {
 			std::error_code ignore_ec;
 			keep_alive_waiter_.cancel(ignore_ec);
 		}
-		void start_read_waiter(bool is_chunk_body = false) {  //如果读写数据超时
+		void start_read_waiter(bool is_wait_write = false) {  //如果读写数据超时
 			auto handler = this->shared_from_this();
-			auto wait_time = is_chunk_body == false ? wait_read_time_ : wait_chunk_read_time_;
+			auto wait_time = is_wait_write == false ? wait_read_time_ : wait_write_time_;
 			read_waiter_.expires_from_now(std::chrono::seconds(wait_time));
 			read_waiter_.async_wait([handler, this](std::error_code const& ec) {
 				if (ec) {
@@ -589,7 +589,7 @@ namespace xfinal {
 		void forward_write(bool is_websokcet = false) {  //直接写 非chunked
 			if (!socket_close_) {
 				auto handler = this->shared_from_this();
-				start_read_waiter();  //开启超时
+				start_read_waiter(true);  //开启超时
 				asio::async_write(*socket_, res_.to_buffers(), [handler, is_websokcet,this](std::error_code const& ec, std::size_t write_size) {
 					cancel_read_waiter();
 					if (ec) {
@@ -616,7 +616,7 @@ namespace xfinal {
 		void chunked_write() {
 			if (!socket_close_) {
 				auto handler = this->shared_from_this();
-				start_read_waiter();  //开启超时
+				start_read_waiter(true);  //开启超时
 				asio::async_write(*socket_, res_.header_to_buffer(), [handler,this](std::error_code const& ec, std::size_t write_size) {
 					cancel_read_waiter();
 					if (ec) {
@@ -652,14 +652,14 @@ namespace xfinal {
 		}
 
 		void write_end_chunked() {
-			std::shared_ptr<std::vector<asio::const_buffer>> buffers(new std::vector<asio::const_buffer>{});
-			res_.chunked_write_size_ = to_hex(0);
-			buffers->emplace_back(asio::buffer(res_.chunked_write_size_));
-			buffers->emplace_back(asio::buffer(crlf.data(), crlf.size()));
-			buffers->emplace_back(asio::buffer(crlf.data(), crlf.size()));
 			if (!socket_close_) {
+				std::shared_ptr<std::vector<asio::const_buffer>> buffers(new std::vector<asio::const_buffer>{});
+				res_.chunked_write_size_ = to_hex(0);
+				buffers->emplace_back(asio::buffer(res_.chunked_write_size_));
+				buffers->emplace_back(asio::buffer(crlf.data(), crlf.size()));
+				buffers->emplace_back(asio::buffer(crlf.data(), crlf.size()));
 				auto handler = this->shared_from_this();
-				start_read_waiter();  //开启超时
+				start_read_waiter(true);  //开启超时
 				asio::async_write(*socket_, *buffers, [handler,this, buffers](std::error_code const& ec, std::size_t write_size) {
 					cancel_read_waiter();
 					if (ec) {
@@ -765,7 +765,7 @@ namespace xfinal {
 		asio::steady_timer keep_alive_waiter_;
 		std::time_t keep_alive_wait_time_ = 30;
 		std::time_t wait_read_time_ = 10;
-		std::time_t wait_chunk_read_time_ = 10;
+		std::time_t wait_write_time_ = 10;
 		asio::steady_timer read_waiter_;
 	};
 }

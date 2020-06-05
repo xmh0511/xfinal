@@ -155,11 +155,11 @@ namespace xfinal {
 		std::time_t wait_read_time() {
 			return wait_read_time_;
 		}
-		void set_chunk_wait_read_time(std::time_t seconds) {
-			wait_chunk_read_time_ = seconds;
+		void set_wait_write_time(std::time_t seconds) {
+			wait_write_time_ = seconds;
 		}
-		std::time_t chunk_wait_read_time() {
-			return wait_chunk_read_time_;
+		std::time_t wait_write_time() {
+			return wait_write_time_;
 		}
 		void set_disable_auto_create_directories(bool flag) {
 			disable_auto_create_directories_ = flag;
@@ -210,7 +210,7 @@ namespace xfinal {
 			connector->set_chunked_size(chunked_size_);
 			connector->set_keep_alive_wait_time(keep_alive_wait_time_);
 			connector->set_wait_read_time(wait_read_time_);
-			connector->set_chunk_wait_read_time(wait_chunk_read_time_);
+			connector->set_wait_write_time(wait_write_time_);
 			acceptor_.async_accept(connector->get_socket(), [this,connector](std::error_code const& ec) {
 				if (!ec) {
 					connector->get_socket().set_option(asio::ip::tcp::no_delay(true));
@@ -267,7 +267,7 @@ namespace xfinal {
 		std::uint64_t chunked_size_ = 1*1024*1024;
 		std::time_t keep_alive_wait_time_ = 30;
 		std::time_t wait_read_time_ = 10;
-		std::time_t wait_chunk_read_time_ = 10;
+		std::time_t wait_write_time_ = 10;
 		bool disable_auto_create_directories_ = false;
 		std::string default_storage_session_path_ = "./session";
 		std::unique_ptr<asio::ip::tcp::resolver::query> server_query_ = nullptr;

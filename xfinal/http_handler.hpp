@@ -539,7 +539,9 @@ namespace xfinal {
 					portion_need_size_ = 0;
 					if (!is_chunked) {  //非chunk方式
 						state_ = http_status::ok;
+						add_header("Content-Length", std::to_string(filesize));
 						file_.read_all(body_);
+						return;
 					}
 					else {
 						add_header("Transfer-Encoding", "chunked");
