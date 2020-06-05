@@ -5,12 +5,16 @@ class Test {
 public:
 	bool before(request& req, response& res) {
 		std::cout << "pre process aop 1" << std::endl;
+		std::shared_ptr<std::string> data{ new std::string("a") };
+		req.set_user_data("tag", data);
 		//res.write_string("aop1 stop");
 		return true;
 	}
 
 	bool after(request& req, response& res) {
 		std::cout << "after process aop 1" << std::endl;
+		auto data = req.get_user_data<std::shared_ptr<std::string>>("tag");
+		std::cout << *data << std::endl;
 		return true;
 	}
 private:
@@ -134,6 +138,9 @@ int main()
 	server.router<GET, POST>("/abc", [](request& req, response& res) {
 		std::cout <<"id: "<< req.query("id") << std::endl;
 		std::cout <<"text: "<< req.query("text") << std::endl;
+		auto data = req.get_user_data<std::shared_ptr<std::string>>("tag");
+		std::cout << *data << "\n";
+		*data = "b";
 		res.write_string("OK");
 		}, Test{}, Base{}, Test2{});
 

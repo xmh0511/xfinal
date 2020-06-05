@@ -11,6 +11,7 @@
 #include <tuple>
 #include "inja.hpp"
 #include "session.hpp"
+#include "any.hpp"
 namespace xfinal {
 
 	class connection;
@@ -303,6 +304,19 @@ namespace xfinal {
 			}
 			return false;
 		}
+
+		template<typename T>
+		void set_user_data(std::string const& key,std::shared_ptr<T> value) {
+			user_data_.emplace(key, value);
+		}
+		template<typename T>
+		T get_user_data(std::string const& key) {
+			auto it = user_data_.find(key);
+			if (it != user_data_.end()) {
+				return nonstd::any_cast<T>(it->second);
+			}
+			return nullptr;//error
+		}
 	public:
 		class session& create_session() {
 			return create_session("XFINAL");
@@ -439,6 +453,7 @@ namespace xfinal {
 		std::shared_ptr<class session> session_;
 		bool is_generic_ = false;
 		std::string generic_base_path_;
+		std::map<std::string, nonstd::any> user_data_;
 	};
 	///响应
 	class response :private nocopyable {
