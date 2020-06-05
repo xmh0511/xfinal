@@ -424,6 +424,7 @@ namespace xfinal {
 			is_generic_ = false;
 			generic_base_path_ = "";
 			session_ = nullptr;
+			user_data_.clear();
 		}
 		void set_generic_path(std::string const& path) {
 			is_generic_ = true;
