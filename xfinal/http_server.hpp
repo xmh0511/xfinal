@@ -224,7 +224,7 @@ namespace xfinal {
 		}
 	private:
 		void register_static_router() {
-			router<GET>(nonstd::string_view{ static_url_.data(),static_url_.size() }, [this](request& req,response& res) {  //静态文件处理
+			router<GET,HEAD>(nonstd::string_view{ static_url_.data(),static_url_.size() }, [this](request& req,response& res) {  //静态文件处理
 				auto url = req.url();
 				auto decode_path = url_decode(view2str(url));
 				auto p = fs::path("."+ decode_path);
