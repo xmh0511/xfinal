@@ -36,7 +36,9 @@ namespace xfinal {
 		}
 	public:
 		void run() {
-			register_static_router(); //注册静态文件处理逻辑
+			if (!disable_auto_register_static_handler_) {
+				register_static_router(); //注册静态文件处理逻辑
+			}
 			auto session_storager = std::unique_ptr<default_session_storage>(new default_session_storage());
 			session_storager->save_dir_ = default_storage_session_path_;
 			set_session_storager(std::move(session_storager));
@@ -173,6 +175,12 @@ namespace xfinal {
 		std::string default_session_save_path() {
 			return default_storage_session_path_;
 		}
+		void set_disable_register_static_handler(bool flag) {
+			disable_auto_register_static_handler_ = flag;
+		}
+		bool disable_register_static_handler() {
+			return disable_auto_register_static_handler_;
+		}
 	private:
 		bool listen(asio::ip::tcp::resolver::query& query) {
 			bool result = false;
@@ -269,6 +277,7 @@ namespace xfinal {
 		std::time_t wait_read_time_ = 10;
 		std::time_t wait_write_time_ = 10;
 		bool disable_auto_create_directories_ = false;
+		bool disable_auto_register_static_handler_ = false;
 		std::string default_storage_session_path_ = "./session";
 		std::unique_ptr<asio::ip::tcp::resolver::query> server_query_ = nullptr;
 	};
