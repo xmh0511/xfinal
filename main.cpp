@@ -114,8 +114,8 @@ int main()
 	server.on_error([](std::string const& message) {  //提供用户记录错误日志
 		std::cout << message << std::endl;
 	});
-	server.set_wait_read_time(100);
-	server.set_wait_write_time(300);
+	server.set_wait_read_time(30);
+	server.set_wait_write_time(30);
 
 	//server.set_upload_path("./myupload");
 	//server.set_not_found_callback([](request& req,response& res) {
@@ -168,6 +168,7 @@ int main()
 			res.write_json(root);
 		}
 		catch (std::exception const& ec) {
+			(void)ec;
 			res.write_string("error", false, http_status::bad_request);
 		}
 		});
