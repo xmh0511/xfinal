@@ -77,7 +77,7 @@ struct limitUpload {
 		//}
 		auto type = req.content_type();
 		if (type == content_type::multipart_form) {
-			res.write_view("./www/test.html", true, http_status::bad_request);
+			res.write_file_view("./www/test.html", true, http_status::bad_request);
 			return false;
 		}
 		return true;
@@ -92,7 +92,7 @@ struct limitRequest {
 		using namespace nonstd::literals;
 		auto id = req.param("id");
 		if (id == "0"_sv) {
-			res.write_view("./www/error.html", true, http_status::bad_request);
+			res.write_file_view("./www/error.html", true, http_status::bad_request);
 			return false;
 		}
 		return true;
@@ -291,8 +291,15 @@ int main()
 		res.set_attr("name", "xfinal");
 		res.set_attr("language", "c++");
 		res.set_attr("str", "1024");
-		res.write_view("./static/test.html");
-		});
+		res.write_file_view("./static/test.html");
+	});
+
+	server.router<GET>("/dataview", [](request& req, response& res) {
+		res.set_attr("name", "xfinal");
+		res.set_attr("language", "c++");
+		res.set_attr("str", "1024");
+		res.write_data_view("<div>@{name}</div><div>@{language}</div><div>@{str}</div>",true);
+	});
 
 	server.router<GET>("/session", [](request& req, response& res) {
 		auto& session = req.create_session();

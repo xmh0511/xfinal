@@ -591,7 +591,7 @@ namespace xfinal {
 			}
 		}
 
-		void write_view(std::string const& filename, bool is_chunked = false, http_status state = http_status::ok) noexcept {
+		void write_file_view(std::string const& filename, bool is_chunked = false, http_status state = http_status::ok) noexcept {
 			std::string extension = "text/plain";
 			auto path = fs::path(filename);
 			if (path.has_extension()) {
@@ -609,9 +609,23 @@ namespace xfinal {
 			}
 		}
 
-		void write_view(std::string const& filename, json const& json, bool is_chunked = false, http_status state = http_status::ok) noexcept {
+		void write_file_view(std::string const& filename, json const& json, bool is_chunked = false, http_status state = http_status::ok) noexcept {
 			view_data_ = json;
-			write_view(filename, is_chunked, state);
+			write_file_view(filename, is_chunked, state);
+		}
+
+		void write_data_view(std::string const& data, bool is_chunked = false, http_status state = http_status::ok,std::string const& content_type="text/plain") noexcept {
+			try {
+				write_string(view_env_->render(data, view_data_), is_chunked, state, content_type);
+			}
+			catch (std::runtime_error const& ec) {
+				write_string(ec.what(), false, http_status::bad_request);
+			}
+		}
+
+		void write_data_view(std::string const& data, json const& json, bool is_chunked = false, http_status state = http_status::ok, std::string const& content_type = "text/plain") noexcept {
+			view_data_ = json;
+			write_data_view(data, is_chunked, state, content_type);
 		}
 
 		void redirect(nonstd::string_view url, bool is_temporary = true) noexcept {
