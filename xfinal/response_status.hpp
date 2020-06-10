@@ -18,6 +18,7 @@ namespace xfinal {
 		unauthorized = 401,
 		forbidden = 403,
 		not_found = 404,
+		too_large = 413,
 		internal_server_error = 500,
 		not_implemented = 501,
 		bad_gateway = 502,
@@ -44,6 +45,7 @@ namespace xfinal {
 	static const nonstd::string_view rep_not_implemented = "501 Not Implemented\r\n";
 	static const nonstd::string_view rep_bad_gateway = "502 Bad Gateway\r\n";
 	static const nonstd::string_view rep_service_unavailable = "503 Service Unavailable\r\n";
+	static const nonstd::string_view rep_request_too_large = "413 Request Entity Too Large\r\n";
 
 	inline asio::const_buffer http_state_to_buffer(http_status status) {
 		switch (status) {
@@ -83,6 +85,8 @@ namespace xfinal {
 			return asio::buffer(rep_bad_gateway.data(), rep_bad_gateway.length());
 		case http_status::service_unavailable:
 			return asio::buffer(rep_service_unavailable.data(), rep_service_unavailable.length());
+		case http_status::too_large:
+			return asio::buffer(rep_request_too_large.data(), rep_request_too_large.length());
 		default:
 			return asio::buffer(rep_internal_server_error.data(), rep_internal_server_error.length());
 		}

@@ -181,6 +181,12 @@ namespace xfinal {
 		bool disable_register_static_handler() {
 			return disable_auto_register_static_handler_;
 		}
+		void set_max_body_size(std::size_t size) {
+			max_body_size_ = size;
+		}
+		std::size_t max_body_size() {
+			return max_body_size_;
+		}
 	private:
 		bool listen(asio::ip::tcp::resolver::query& query) {
 			bool result = false;
@@ -214,7 +220,7 @@ namespace xfinal {
 		}
 	private:
 		void start_acceptor() {
-			auto connector = std::make_shared<connection>(ioservice_pool_handler_.get_io(), http_router_, static_path_, upload_path_);
+			auto connector = std::make_shared<connection>(ioservice_pool_handler_.get_io(), http_router_, static_path_, upload_path_, max_body_size_);
 			connector->set_chunked_size(chunked_size_);
 			connector->set_keep_alive_wait_time(keep_alive_wait_time_);
 			connector->set_wait_read_time(wait_read_time_);
@@ -273,6 +279,7 @@ namespace xfinal {
 		std::string upload_path_;
 		std::string static_url_;
 		std::uint64_t chunked_size_ = 1*1024*1024;
+		std::size_t max_body_size_ = 3 * 1024 * 1024;
 		std::time_t keep_alive_wait_time_ = 30;
 		std::time_t wait_read_time_ = 10;
 		std::time_t wait_write_time_ = 10;

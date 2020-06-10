@@ -14,7 +14,7 @@ namespace xfinal {
 	class connection final :public std::enable_shared_from_this<connection> {
 		friend class http_server;
 	public:
-		connection(asio::io_service& io, http_router& router, std::string const& static_path, std::string const& upload_path) :socket_(std::unique_ptr<asio::ip::tcp::socket>(new asio::ip::tcp::socket(io))), io_service_(io), buffers_(expand_buffer_size), router_(router), static_path_(static_path), req_(res_, this), res_(req_, this), upload_path_(upload_path), keep_alive_waiter_(io), read_waiter_(io){
+		connection(asio::io_service& io, http_router& router, std::string const& static_path, std::string const& upload_path,std::size_t max_body_size) :socket_(std::unique_ptr<asio::ip::tcp::socket>(new asio::ip::tcp::socket(io))), io_service_(io), buffers_(expand_buffer_size), router_(router), static_path_(static_path), req_(res_, this), res_(req_, this), upload_path_(upload_path), keep_alive_waiter_(io), read_waiter_(io), max_buffer_size_(max_body_size){
 			left_buffer_size_ = buffers_.size();
 			req_.headers_ = &(request_info_.headers_);
 			req_.multipart_form_map_ = &(request_info_.multipart_form_map_);
@@ -156,16 +156,14 @@ namespace xfinal {
 					if (process_interceptor != nullptr) {
 						auto r = process_interceptor(req_, res_);
 						if (!r) {  //终止此次请求
-							need_terminate_request_ = true;
-							write();
+							terminate_write();
 							return;
 						}
 					}
 				}
 				else {  //无效请求
 					current_router_(req_, res_);
-					need_terminate_request_ = true;
-					write();
+					terminate_write();
 					return;
 				}
 				handle_read();
@@ -515,6 +513,7 @@ namespace xfinal {
 			if (is_expand) {
 				bool b = expand_size(is_multipart);
 				if (!b) {
+					request_error("request body too large",http_status::too_large);
 					return;
 				}
 			}
@@ -562,10 +561,15 @@ namespace xfinal {
 			});
 		}
 
-		void request_error(std::string&& what_error) {
+		void request_error(std::string&& what_error, http_status state = http_status::bad_request) {
 			router_.trigger_error(what_error);
-			res_.write_string(std::move(what_error), false, http_status::bad_request);
+			res_.write_string(std::move(what_error), false, state);
 			//req_.is_validate_request_ = false;
+			need_terminate_request_ = true;
+			write();
+		}
+
+		void terminate_write() {
 			need_terminate_request_ = true;
 			write();
 		}

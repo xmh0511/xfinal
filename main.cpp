@@ -116,6 +116,7 @@ int main()
 	});
 	server.set_wait_read_time(30);
 	server.set_wait_write_time(30);
+	//server.set_max_body_size(3*1024*1024);
 
 	//server.set_upload_path("./myupload");
 	//server.set_not_found_callback([](request& req,response& res) {
