@@ -7,6 +7,7 @@
 #include "http_router.hpp"
 #include "session.hpp"
 #include "message_handler.hpp"
+#include "nanolog.hpp"
 namespace xfinal {
 	constexpr http_method GET = http_method::GET;
 	constexpr http_method POST = http_method::POST;
@@ -186,6 +187,14 @@ namespace xfinal {
 		}
 		std::size_t max_body_size() {
 			return max_body_size_;
+		}
+		void init_nanolog(std::string const& log_directory,std::string const& prefix_file_name,std::uint32_t file_roll_size /*MB*/) {
+			if (!disable_auto_create_directories_) {
+				if (!log_directory.empty() && !fs::exists(log_directory)) {
+					fs::create_directories(log_directory);
+				}
+			}
+			nanolog::Logger::initialize(nanolog::GuaranteedLogger(), log_directory, prefix_file_name, file_roll_size);
 		}
 	private:
 		bool listen(asio::ip::tcp::resolver::query& query) {

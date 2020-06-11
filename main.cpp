@@ -111,6 +111,7 @@ int main()
 	if (!r) {
 		return 0;
 	}
+	server.init_nanolog("./logs/", "server_log", 1);
 	server.on_error([](std::string const& message) {  //提供用户记录错误日志
 		std::cout << message << std::endl;
 	});
@@ -147,7 +148,7 @@ int main()
 
 	server.router<GET, POST>("/", [](request& req, response& res) {
 		res.write_string(std::string("hello world"), false);
-		});
+	});
 
 	server.router<GET, POST>("/ip", [](request& req, response& res) {
 		auto ip = res.connection().remote_ip();
@@ -360,6 +361,7 @@ int main()
 				});
 		server.router("/ws", event);
 
+		LOG_INFO << std::string("server start");
 
 		server.run();
 		std::cout << "server end" << std::endl;

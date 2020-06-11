@@ -22,7 +22,7 @@ namespace xfinal {
 		friend class connection;
 		friend class response;
 		friend class http_router;
-	public:
+	private:
 		request(response& res, class connection* connect_) :connecter_(connect_), res_(res) {
 
 		}
@@ -80,7 +80,7 @@ namespace xfinal {
 			return url_;
 		}
 
-		nonstd::string_view param(nonstd::string_view key) noexcept {  //获取问号后的键值对参数值
+		nonstd::string_view param(nonstd::string_view key) const noexcept {  //获取问号后的键值对参数值
 			auto key_str = view2str(key);
 			auto it = decode_url_params_.find(key_str);
 			if (it != decode_url_params_.end()) {
@@ -89,7 +89,7 @@ namespace xfinal {
 			return  "";
 		}
 
-		nonstd::string_view param(std::size_t index) noexcept {  //获取url参数类型的参数值
+		nonstd::string_view param(std::size_t index) const noexcept {  //获取url参数类型的参数值
 			if (is_generic_) {
 				auto pos = generic_base_path_.size();
 				auto url_fix = url();
@@ -129,7 +129,7 @@ namespace xfinal {
 			return "";
 		}
 
-		std::vector<nonstd::string_view> url_params() noexcept {  //获取url类型参数的数组
+		std::vector<nonstd::string_view> url_params() const noexcept {  //获取url类型参数的数组
 			if (is_generic_) {
 				auto pos = generic_base_path_.size();
 				auto url_fix = url();
@@ -143,7 +143,7 @@ namespace xfinal {
 			return {};
 		}
 
-		std::map<std::string, std::string> key_params() noexcept { //获取问号键值对的map
+		std::map<std::string, std::string> key_params() const noexcept { //获取问号键值对的map
 			return decode_url_params_;
 		}
 
@@ -287,7 +287,7 @@ namespace xfinal {
 			}
 			return true;
 		}
-		bool is_keep_alive() {
+		bool is_keep_alive() const {
 			auto c = to_lower(view2str(header("connection")));
 			using namespace nonstd::string_view_literals;
 			if (c.empty()) {
@@ -467,7 +467,7 @@ namespace xfinal {
 			file,
 			no_body
 		};
-	public:
+	private:
 		response(request& req, class connection* connect_) :connecter_(connect_), req_(req), view_env_(new inja::Environment()) {
 			//初始化view 配置
 			view_env_->set_expression("@{", "}");
