@@ -83,7 +83,49 @@ namespace xfinal {
 		std::unordered_map<std::string, websocket_event> events_;
 		std::unordered_map<nonstd::string_view, std::shared_ptr<websocket>> websockets_;
 	};
+
+	struct send_message {
+		std::shared_ptr<websocket> websocket_;
+		std::shared_ptr<std::string> message_;
+	};
+
+	class websocket_hub {
+	public:
+		websocket_hub& get() {
+			static websocket_hub instance;
+			return instance;
+		}
+	public:
+		void add(send_message const& message) {
+			std::unique_lock<std::mutex> lock(list_mutex_);
+			message_list_.push_back(message);
+		}
+		void send() {
+			std::unique_lock<std::mutex> lock(list_mutex_);
+			auto one = message_list_.front();
+			message_list_.pop_front();
+			if (!one.websocket_->is_writing_) {
+				auto buff = asio::buffer(one.message_->data(), one.message_->size());
+				one.websocket_->is_writing_ = true;
+				auto websocket = one.websocket_;
+				auto message = one.message_;
+				asio::async_write(*one.websocket_->socket_, buff, [websocket, message](std::error_code const& ec, std::size_t size) {
+					//websocket->
+				});
+			}
+			else {
+				message_list_.push_back(one);
+			}
+		}
+	private:
+		websocket_hub() = default;
+	private:
+		std::mutex list_mutex_;
+		std::list<send_message> message_list_;
+	};
+
 	class websocket final :public std::enable_shared_from_this<websocket> {
+		friend class websocket_hub;
 		friend class connection;
 		template<typename T>
 		friend void close_ws(websocket& ws);
@@ -418,6 +460,7 @@ namespace xfinal {
 		//std::unique_ptr<asio::steady_timer> ping_pong_timer_;
 		unsigned char message_opcode = 0;
 		std::atomic_bool socket_is_open_{ false };
+		std::atomic_bool is_writing_{ false };
 	};
 
 	template<typename T>
