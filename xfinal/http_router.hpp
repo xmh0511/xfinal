@@ -198,6 +198,13 @@ namespace xfinal {
 		MemberClass* that_;
 	};
 
+	enum class router_type:std::uint16_t {
+		specify,
+		general,
+		ws,
+		unknow
+	};
+
 	class http_router {
 		friend class http_server;
 		template<typename Methods, typename Function, typename MemberClass>
@@ -210,17 +217,30 @@ namespace xfinal {
 		using router_function = std::function<void(request&, response&)>;
 		using interceptor_function = std::function<bool(request&, response&)>;
 	public:
-		http_router() :timer_(io_) {
+		http_router() :timer_(io_), websocket_hub_instance_(websocket_hub::get()){
 			check_session_expires();
 			thread_ = std::move(std::unique_ptr<std::thread>(new std::thread([](asio::io_service& io) {
 				io.run();
 				}, std::ref(io_))));
+			websocket_hub_thread_ = std::move(std::unique_ptr<std::thread>(new std::thread([this]() {
+				run_hub_send();
+			})));
 		}
 		~http_router() {
 			io_.stop();
 			if (thread_->joinable()) {
 				thread_->join();
 			}
+			websocket_hub_instance_.end_thread_ = true;
+			websocket_hub_instance_.add({ nullptr,nullptr });
+			websocket_hub_instance_.condtion_.notify_all();
+			if (websocket_hub_thread_->joinable()) {
+				websocket_hub_thread_->join();
+			}
+		}
+	private:
+		void run_hub_send() {
+			websocket_hub_instance_.send();
 		}
 	private:
 		template<typename Array, typename Bind,typename Interceptor>
@@ -293,7 +313,7 @@ namespace xfinal {
 
 		///lambda or regular function  process --start
 		template<typename Function, typename Tuple>
-		void pre_handler(request& req, response& res, Function& function, Tuple& tp) {  //lambda or regular function
+		void pre_handler(request& req, response& res, Function& function, Tuple& tp) const {  //lambda or regular function
 			auto_params_lambda<Function> lambda{ req ,res ,function };
 			lambda(tp);
 		}
@@ -301,7 +321,7 @@ namespace xfinal {
 
 		///class member function process   --start
 		template<typename Function, typename Class, typename Tuple>
-		void pre_handler_member_function(request& req, response& res, Function& function, Class* that, Tuple& tp) {
+		void pre_handler_member_function(request& req, response& res, Function& function, Class* that, Tuple& tp) const {
 			auto_params_lambda<Function, Class> lambda{ req ,res ,that ,function };
 			lambda(tp);
 		}
@@ -310,7 +330,7 @@ namespace xfinal {
 
 		///controller process --start
 		template<typename Class, typename Tuple>
-		void pre_handler_controller(request& req, response& res, void(Class::* memberfunc)(), Class* that, Tuple& tp) {
+		void pre_handler_controller(request& req, response& res, void(Class::* memberfunc)(), Class* that, Tuple& tp) const {
 			auto_params_lambda<void(Class::*)(), Class> lambda{ req ,res ,that ,memberfunc };
 			lambda(tp);
 		}
@@ -394,7 +414,7 @@ namespace xfinal {
 		//		file.remove();
 		//	}
 		//}
-		std::pair<std::string,router_function> pre_router(request& req, response& res,bool& is_general) {
+		std::pair<std::string,router_function> pre_router(request& req, response& res, router_type& rtype) const {
 			auto url = req.url();
 			if (url.size() > 1) {  //确保这里不是 / 根路由
 				std::size_t back = 0;
@@ -403,27 +423,15 @@ namespace xfinal {
 				}
 				if (back > 0) {  //如果url不是规范的url 则重定向跳转
 					url = url.substr(0, url.size() - back);
-					//if (url_redirect_) {
-					//	auto url_str = view2str(url.substr(0, url.size() - back));
-					//	auto params = req.raw_key_params();
-					//	if (!params.empty()) {
-					//		url_str += "?";
-					//	}
-					//	url_str += view2str(params);
-					//	res.redirect(url_str);
-					//	return;
-					//}
-					//else {
-					//	url = url.substr(0, url.size() - back);
-					//}
 				}
 			}
-			auto key = view2str(req.method()) + view2str(url);
+			auto url_str = view2str(url);
+			auto key = view2str(req.method()) + url_str;
 			auto&& common_iter = router_map_.find(key);
 			if (common_iter != router_map_.end()) {
 				//auto& it = router_map_.at(key);
 				set_view_method(res);
-				is_general = false;
+				rtype = router_type::specify;
 				return *common_iter;
 			}
 			else {
@@ -448,8 +456,13 @@ namespace xfinal {
 					else {
 						req.set_generic_path(url.substr(pos, url.size() - pos));
 					}
-					is_general = true;
+					rtype = router_type::general;
 					return iter ;
+				}
+				auto wb_iter = websocket_router_map_.find(url_str);
+				if (wb_iter != websocket_router_map_.end()) {
+					rtype = router_type::ws;
+					return { url_str ,nullptr };
 				}
 			}
 			//if (req.content_type() == content_type::multipart_form) {
@@ -462,7 +475,7 @@ namespace xfinal {
 			//	auto& file = req.file();
 			//	file.remove();
 			//}
-			is_general = false;
+			rtype = router_type::unknow;
 			if (not_found_callback_ != nullptr) {
 				return { "",not_found_callback_ };
 			}
@@ -475,7 +488,7 @@ namespace xfinal {
 			}
 		}
 	public:
-		interceptor_function get_interceptors_process(std::string const& key,bool is_general) {
+		interceptor_function get_interceptors_process(std::string const& key,bool is_general) const {
 			if (!is_general) {
 				auto iter = interceptor_map_.find(key);
 				if (iter != interceptor_map_.end()) {
@@ -495,7 +508,7 @@ namespace xfinal {
 			utils::messageCenter::get().trigger_message(err);
 		}
 	private:
-		void set_view_method(response& res) {
+		void set_view_method(response& res) const {
 			if (!view_method_map_.empty()) {
 				for (auto& iter : view_method_map_) {
 					res.view_env_->add_callback(iter.first, (unsigned int)iter.second.first, iter.second.second);
@@ -526,13 +539,16 @@ namespace xfinal {
 		std::unordered_map<std::string, router_function> genera_router_map_;
 		std::unordered_map<std::string, interceptor_function> interceptor_map_;
 		std::unordered_map<std::string, interceptor_function> genera_interceptor_map_;
+		std::unordered_map<std::string, router_function> websocket_router_map_;
 		std::unordered_map<std::string, std::pair<std::size_t, inja::CallbackFunction>> view_method_map_;
 		asio::io_service io_;
 		asio::steady_timer timer_;
 		std::unique_ptr<std::thread> thread_;
+		std::unique_ptr<std::thread> websocket_hub_thread_;
 		std::time_t check_session_time_ = 10;
 		class websockets websockets_;
 		bool url_redirect_ = true;
 		std::function<void(request&, response&)> not_found_callback_ = nullptr;
+		websocket_hub& websocket_hub_instance_;
 	};
 }

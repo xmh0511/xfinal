@@ -147,12 +147,12 @@ namespace xfinal {
 				req_.header_length_ = request_info_.http_header_str_.size();
 				req_.init_url_params();
 				req_.init_content_type();
-				bool is_general = false;
-				auto router_iter = router_.pre_router(req_, res_, is_general);
+				router_type rtype;
+				auto router_iter = router_.pre_router(req_, res_, rtype);
 				auto&& url_key = router_iter.first;
 				current_router_ = std::move(router_iter.second);
-				if (!url_key.empty()) {
-					auto process_interceptor = router_.get_interceptors_process(url_key, is_general);
+				if (rtype== router_type::specify || rtype== router_type::general) {
+					auto process_interceptor = router_.get_interceptors_process(url_key, rtype== router_type::general);
 					if (process_interceptor != nullptr) {
 						auto r = process_interceptor(req_, res_);
 						if (!r) {  //终止此次请求
@@ -161,7 +161,7 @@ namespace xfinal {
 						}
 					}
 				}
-				else {  //无效请求
+				else if(rtype== router_type::unknow){  //无效请求
 					current_router_(req_, res_);
 					terminate_write();
 					return;

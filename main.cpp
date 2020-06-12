@@ -344,6 +344,7 @@ int main()
 		res.write_string("ok");
 	}, limitRequest{});
 
+	std::shared_ptr<websocket> other_socket;
 
 	websocket_event event;
 	event.on("message", [](websocket& ws) {
@@ -354,14 +355,59 @@ int main()
 			message.append(std::to_string(i));
 		}
 		ws.write_string(message);
-		}).on("open", [](websocket& ws) {
+		}).on("open", [&other_socket](websocket& ws) {
+			other_socket = ws.shared_from_this();
 			std::cout << "open"<<ws.is_open() << std::endl;
-			}).on("close", [](websocket& ws) {
+		}).on("close", [](websocket& ws) {
 				std::cout << "close" << std::endl;
-				});
+		});
 		server.router("/ws", event);
 
+
+		websocket_event event2;
+		event2.on("message", [](websocket& ws) {
+
+		}).on("open", [&other_socket](websocket& ws) {
+			if (other_socket) {
+				std::thread t1([other_socket]() {
+					while (true) {
+						other_socket->write_string("1 "+std::to_string(std::time(nullptr)));
+						std::this_thread::sleep_for(std::chrono::seconds(1));
+					}
+				});
+				t1.detach();
+			}
+		}).on("close", [](websocket& ws) {
+					std::cout << "close" << std::endl;
+		 });
+		server.router("/other", event2);
+
+
+		websocket_event event3;
+		event3.on("message", [](websocket& ws) {
+
+			}).on("open", [&other_socket](websocket& ws) {
+				if (other_socket) {
+					std::thread t1([other_socket]() {
+						while (true) {
+							other_socket->write_string("2 " + std::to_string(std::time(nullptr)));
+							std::this_thread::sleep_for(std::chrono::seconds(1));
+						}
+						});
+					t1.detach();
+				}
+				}).on("close", [](websocket& ws) {
+					std::cout << "close" << std::endl;
+					});
+				server.router("/other2", event3);
+
 		LOG_INFO << std::string("server start");
+
+		//std::thread endth([&server]() {
+		//	std::this_thread::sleep_for(std::chrono::seconds(20));
+		//	server.stop();
+		//});
+		//endth.detach();
 
 		server.run();
 		std::cout << "server end" << std::endl;

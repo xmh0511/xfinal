@@ -12,6 +12,7 @@
 #include "md5.hpp"
 #include <queue>
 #include <random>
+#include <list>
 namespace xfinal {
 	struct frame_info {
 		frame_info() = default;
@@ -89,40 +90,7 @@ namespace xfinal {
 		std::shared_ptr<std::string> message_;
 	};
 
-	class websocket_hub {
-	public:
-		websocket_hub& get() {
-			static websocket_hub instance;
-			return instance;
-		}
-	public:
-		void add(send_message const& message) {
-			std::unique_lock<std::mutex> lock(list_mutex_);
-			message_list_.push_back(message);
-		}
-		void send() {
-			std::unique_lock<std::mutex> lock(list_mutex_);
-			auto one = message_list_.front();
-			message_list_.pop_front();
-			if (!one.websocket_->is_writing_) {
-				auto buff = asio::buffer(one.message_->data(), one.message_->size());
-				one.websocket_->is_writing_ = true;
-				auto websocket = one.websocket_;
-				auto message = one.message_;
-				asio::async_write(*one.websocket_->socket_, buff, [websocket, message](std::error_code const& ec, std::size_t size) {
-					//websocket->
-				});
-			}
-			else {
-				message_list_.push_back(one);
-			}
-		}
-	private:
-		websocket_hub() = default;
-	private:
-		std::mutex list_mutex_;
-		std::list<send_message> message_list_;
-	};
+	inline void send_to_hub(send_message const&);
 
 	class websocket final :public std::enable_shared_from_this<websocket> {
 		friend class websocket_hub;
@@ -176,9 +144,69 @@ namespace xfinal {
 			return message_opcode;
 		}
 	public:
+		//void write(std::string const& message, unsigned char opcode) {
+		//	auto message_size = message.size();
+		//	auto offset = 0;
+		//	if (message_size < 126) {
+		//		unsigned char frame_head = 128;
+		//		frame_head = frame_head | opcode;
+		//		unsigned char c2 = 0;
+		//		c2 = c2 | ((unsigned char)message_size);
+		//		std::string a_frame;
+		//		a_frame.push_back(frame_head);
+		//		a_frame.push_back(c2);
+		//		a_frame.append(message);
+		//		write_frame_queue_.emplace(std::unique_ptr<std::string>(new std::string(std::move(a_frame))));
+		//	}
+		//	else if (message_size >= 126) {
+		//		auto counts = message_size / frame_data_size_;
+		//		if ((message_size % frame_data_size_) != 0) {
+		//			counts++;
+		//		}
+		//		std::size_t read_pos = 0;
+		//		for (std::size_t i = 0; i < counts; ++i) {
+		//			std::int64_t left_size = std::int64_t(message_size) - std::int64_t(frame_data_size_);
+		//			unsigned short write_data_size = (unsigned short)frame_data_size_;
+		//			unsigned char frame_head = 0;
+		//			std::string a_frame;
+		//			if (left_size <= 0) {
+		//				frame_head = 128;
+		//				write_data_size = (unsigned short)message_size;
+		//				//frame_head = frame_head | opcode;
+		//			}
+		//			if (i == 0) {
+		//				frame_head = frame_head | opcode;
+		//			}
+		//			a_frame.push_back(frame_head);
+		//			unsigned char c2 = 0;
+		//			if (write_data_size >= 126) {
+		//				unsigned char tmp_c = 126;
+		//				c2 = c2 | tmp_c;
+		//				a_frame.push_back(c2);
+		//				auto data_length = l_to_netendian(write_data_size);
+		//				a_frame.append(data_length);
+		//			}
+		//			else if (write_data_size < 126) {
+		//				unsigned char tmp_c = (unsigned char)write_data_size;
+		//				c2 = c2 | tmp_c;
+		//				a_frame.push_back(c2);
+		//			}
+		//			a_frame.append(std::string(&message[read_pos], write_data_size));
+		//			read_pos += write_data_size;
+		//			message_size = (std::size_t)left_size;
+		//			write_frame_queue_.emplace(std::unique_ptr<std::string>(new std::string(std::move(a_frame))));
+		//		}
+		//	}
+		//	write_frame();
+		//}
+
 		void write(std::string const& message, unsigned char opcode) {
 			auto message_size = message.size();
+			if (message_size == 0) {
+				return;
+			}
 			auto offset = 0;
+			std::shared_ptr<std::string> write_data(new std::string());
 			if (message_size < 126) {
 				unsigned char frame_head = 128;
 				frame_head = frame_head | opcode;
@@ -188,7 +216,8 @@ namespace xfinal {
 				a_frame.push_back(frame_head);
 				a_frame.push_back(c2);
 				a_frame.append(message);
-				write_frame_queue_.emplace(std::unique_ptr<std::string>(new std::string(std::move(a_frame))));
+				write_data->append(a_frame);
+				/*write_frame_queue_.emplace(std::unique_ptr<std::string>(new std::string(std::move(a_frame))));*/
 			}
 			else if (message_size >= 126) {
 				auto counts = message_size / frame_data_size_;
@@ -226,10 +255,14 @@ namespace xfinal {
 					a_frame.append(std::string(&message[read_pos], write_data_size));
 					read_pos += write_data_size;
 					message_size = (std::size_t)left_size;
-					write_frame_queue_.emplace(std::unique_ptr<std::string>(new std::string(std::move(a_frame))));
+					//write_frame_queue_.emplace(std::unique_ptr<std::string>(new std::string(std::move(a_frame))));
+					write_data->append(a_frame);
 				}
 			}
-			write_frame();
+			/*write_frame();*/
+			reset_time();
+			send_message send_msg = { this->shared_from_this() ,write_data };
+			send_to_hub(send_msg);
 		}
 	public:
 		void write_string(std::string const& message) {
@@ -239,30 +272,30 @@ namespace xfinal {
 			write(message, 2);
 		}
 	private:
-		void write_frame() {
-			if (write_frame_queue_.empty()) {
-				return;
-			}
-			while (!write_frame_queue_.empty()) {
-				reset_time();
-				auto frame = std::move(write_frame_queue_.front());
-				write_frame_queue_.pop();
-				asio::const_buffer buffers(frame->data(), frame->size());
-				std::error_code ingore_ec;
-				asio::write(*socket_, buffers, ingore_ec);
-				if (ingore_ec) {
-					auto clear = std::queue<std::unique_ptr<std::string>>{};
-					write_frame_queue_.swap(clear);
-					break;
-				}
-			}
-			// asio::async_write(*socket_,buffers, [frame = std::move(frame),handler = this->shared_from_this()](std::error_code const& ec,std::size_t size) {
-			// 	if (ec) {
-			// 		return;
-			// 	}
-			// 	handler->write_frame();
-			// });
-		}
+		//void write_frame() {
+		//	if (write_frame_queue_.empty()) {
+		//		return;
+		//	}
+		//	while (!write_frame_queue_.empty()) {
+		//		reset_time();
+		//		auto frame = std::move(write_frame_queue_.front());
+		//		write_frame_queue_.pop();
+		//		asio::const_buffer buffers(frame->data(), frame->size());
+		//		std::error_code ingore_ec;
+		//		asio::write(*socket_, buffers, ingore_ec);
+		//		if (ingore_ec) {
+		//			auto clear = std::queue<std::unique_ptr<std::string>>{};
+		//			write_frame_queue_.swap(clear);
+		//			break;
+		//		}
+		//	}
+		//	// asio::async_write(*socket_,buffers, [frame = std::move(frame),handler = this->shared_from_this()](std::error_code const& ec,std::size_t size) {
+		//	// 	if (ec) {
+		//	// 		return;
+		//	// 	}
+		//	// 	handler->write_frame();
+		//	// });
+		//}
 	public:
 		void reset_time() {
 			wait_timer_->expires_from_now(std::chrono::seconds(pong_wait_time_));
@@ -462,6 +495,69 @@ namespace xfinal {
 		std::atomic_bool socket_is_open_{ false };
 		std::atomic_bool is_writing_{ false };
 	};
+
+	class websocket_hub {
+		friend class http_router;
+	public:
+		static websocket_hub& get() {
+			static websocket_hub instance;
+			return instance;
+		}
+	public:
+		void add(send_message const& message) {
+			std::unique_lock<std::mutex> lock(list_mutex_);
+			message_list_.push_back(message);
+			lock.unlock();
+			condtion_.notify_all();
+		}
+	private:
+		void write_ok(std::shared_ptr<websocket> const& websocket) {
+			websocket->is_writing_ = false;
+		}
+		void close_socket(std::shared_ptr<websocket> const& websocket) {
+			websocket->close();
+		}
+	private:
+		void send() {
+			std::unique_lock<std::mutex> lock(list_mutex_);
+			condtion_.wait(lock, [this]() {
+				return message_list_.empty() == false;
+			});
+			if (end_thread_ == true) {
+				return;
+			}
+			auto one = message_list_.front();
+			message_list_.pop_front();
+			auto websocket = one.websocket_;
+			auto message = one.message_;
+			if (!websocket->is_writing_ && websocket->socket_is_open_ == true) {
+				auto buff = asio::buffer(message->data(), message->size());
+				one.websocket_->is_writing_ = true;
+				asio::async_write(*one.websocket_->socket_, buff, [websocket, message, this](std::error_code const& ec, std::size_t size) {
+					if (ec) {
+						close_socket(websocket);
+					}
+					write_ok(websocket);
+				});
+			}
+			else if(websocket->is_writing_ == true && websocket->socket_is_open_ == true){
+				message_list_.push_back(one);
+			}
+			lock.unlock();
+			send();
+		}
+	private:
+		websocket_hub() = default;
+	private:
+		std::mutex list_mutex_;
+		std::condition_variable condtion_;
+		std::list<send_message> message_list_;
+		std::atomic_bool end_thread_{ false };
+	};
+
+	inline void send_to_hub(send_message const& message) {
+		websocket_hub::get().add(message);
+	}
 
 	template<typename T>
 	void close_ws(websocket& ws)
