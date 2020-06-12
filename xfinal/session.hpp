@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "utils.hpp"
 #include <string>
 #include "json.hpp"
