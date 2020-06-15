@@ -519,32 +519,32 @@ namespace xfinal {
 		}
 	private:
 		void send() {
-			std::unique_lock<std::mutex> lock(list_mutex_);
-			condtion_.wait(lock, [this]() {
-				return message_list_.empty() == false;
-			});
-			if (end_thread_ == true) {
-				return;
-			}
-			auto one = message_list_.front();
-			message_list_.pop_front();
-			auto websocket = one.websocket_;
-			auto message = one.message_;
-			if (!websocket->is_writing_ && websocket->socket_is_open_ == true) {
-				auto buff = asio::buffer(message->data(), message->size());
-				one.websocket_->is_writing_ = true;
-				asio::async_write(*one.websocket_->socket_, buff, [websocket, message, this](std::error_code const& ec, std::size_t size) {
-					if (ec) {
-						close_socket(websocket);
-					}
-					write_ok(websocket);
+			while (true) {
+				std::unique_lock<std::mutex> lock(list_mutex_);
+				condtion_.wait(lock, [this]() {
+					return message_list_.empty() == false;
 				});
+				if (end_thread_ == true) {
+					return;
+				}
+				auto one = message_list_.front();
+				message_list_.pop_front();
+				auto websocket = one.websocket_;
+				auto message = one.message_;
+				if (!websocket->is_writing_ && websocket->socket_is_open_ == true) {
+					auto buff = asio::buffer(message->data(), message->size());
+					websocket->is_writing_ = true;
+					asio::async_write(*websocket->socket_, buff, [websocket, message, this](std::error_code const& ec, std::size_t size) {
+						if (ec) {
+							close_socket(websocket);
+						}
+						write_ok(websocket);
+					});
+				}
+				else if (websocket->is_writing_ == true && websocket->socket_is_open_ == true) {
+					message_list_.push_back(one);
+				}
 			}
-			else if(websocket->is_writing_ == true && websocket->socket_is_open_ == true){
-				message_list_.push_back(one);
-			}
-			lock.unlock();
-			send();
 		}
 	private:
 		websocket_hub() = default;

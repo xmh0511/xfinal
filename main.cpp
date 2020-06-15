@@ -369,8 +369,12 @@ int main()
 
 		}).on("open", [&other_socket](websocket& ws) {
 			if (other_socket) {
-				std::thread t1([other_socket]() {
+				auto self = ws.shared_from_this();
+				std::thread t1([other_socket, self]() {
 					while (true) {
+						if (!self->is_open()) {
+							return;
+						}
 						other_socket->write_string("1 "+std::to_string(std::time(nullptr)));
 						std::this_thread::sleep_for(std::chrono::seconds(1));
 					}
@@ -388,8 +392,12 @@ int main()
 
 			}).on("open", [&other_socket](websocket& ws) {
 				if (other_socket) {
-					std::thread t1([other_socket]() {
+					auto self = ws.shared_from_this();
+					std::thread t1([other_socket, self]() {
 						while (true) {
+							if (!self->is_open()) {
+								return;
+							}
 							other_socket->write_string("2 " + std::to_string(std::time(nullptr)));
 							std::this_thread::sleep_for(std::chrono::seconds(1));
 						}
