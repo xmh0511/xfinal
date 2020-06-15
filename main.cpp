@@ -117,6 +117,8 @@ int main()
 	});
 	server.set_wait_read_time(30);
 	server.set_wait_write_time(30);
+	server.set_websocket_check_read_alive_time(20);
+	server.set_websocket_check_write_alive_time(20);
 	//server.set_max_body_size(3*1024*1024);
 
 	//server.set_upload_path("./myupload");
@@ -357,9 +359,9 @@ int main()
 		ws.write_string(message);
 		}).on("open", [&other_socket](websocket& ws) {
 			other_socket = ws.shared_from_this();
-			std::cout << "open"<<ws.is_open() << std::endl;
+			std::cout << ws.uuid() << " open" << std::endl;
 		}).on("close", [](websocket& ws) {
-				std::cout << "close" << std::endl;
+				std::cout << ws.uuid()<< " close" << std::endl;
 		});
 		server.router("/ws", event);
 
@@ -368,6 +370,7 @@ int main()
 		event2.on("message", [](websocket& ws) {
 
 		}).on("open", [&other_socket](websocket& ws) {
+			std::cout << ws.uuid() << " open" << std::endl;
 			if (other_socket) {
 				auto self = ws.shared_from_this();
 				std::thread t1([other_socket, self]() {
@@ -382,7 +385,7 @@ int main()
 				t1.detach();
 			}
 		}).on("close", [](websocket& ws) {
-					std::cout << "close" << std::endl;
+					std::cout << ws.uuid() << " close" << std::endl;
 		 });
 		server.router("/other", event2);
 
@@ -391,6 +394,7 @@ int main()
 		event3.on("message", [](websocket& ws) {
 
 			}).on("open", [&other_socket](websocket& ws) {
+				std::cout << ws.uuid() << " open" << std::endl;
 				if (other_socket) {
 					auto self = ws.shared_from_this();
 					std::thread t1([other_socket, self]() {
@@ -405,7 +409,7 @@ int main()
 					t1.detach();
 				}
 				}).on("close", [](websocket& ws) {
-					std::cout << "close" << std::endl;
+					std::cout << ws.uuid() << " close" << std::endl;
 					});
 				server.router("/other2", event3);
 

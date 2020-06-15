@@ -13,6 +13,7 @@
 #include <queue>
 #include <random>
 #include <list>
+#include "message_handler.hpp"
 namespace xfinal {
 	struct frame_info {
 		frame_info() = default;
@@ -116,9 +117,9 @@ namespace xfinal {
 			socket_ = std::move(socket);
 			socket_is_open_ = true;
 			auto& io = static_cast<asio::io_service&>(socket_->get_executor().context());
-			wait_timer_ = std::move(std::unique_ptr<asio::steady_timer>(new asio::steady_timer(io)));
+			wait_read_timer_ = std::move(std::unique_ptr<asio::steady_timer>(new asio::steady_timer(io)));
+			wait_write_timer_ = std::move(std::unique_ptr<asio::steady_timer>(new asio::steady_timer(io)));
 			websocket_event_manager.trigger(url_, "open", *this);
-			reset_time(); //开始开启空连接超时 从当前时间算起
 			start_read();
 		}
 	private:
@@ -127,12 +128,13 @@ namespace xfinal {
 			std::memset(frame, 0, sizeof(frame));
 			std::memset(&frame_info_, 0, sizeof(frame_info_));
 			auto handler = this->shared_from_this();
-			socket_->async_read_some(asio::buffer(&frame[read_pos_], 2), [handler](std::error_code const& ec, std::size_t read_size) {
+			reset_time(); //开始开启空连接超时 从当前时间算起
+			socket_->async_read_some(asio::buffer(&frame[read_pos_], 2), [handler,this](std::error_code const& ec, std::size_t read_size) {
 				if (ec) {
 					handler->close();
 					return;
 				}
-				handler->reset_time();
+				cancel_read_time();
 				handler->frame_parser();
 			});
 		}
@@ -298,15 +300,42 @@ namespace xfinal {
 		//}
 	public:
 		void reset_time() {
-			wait_timer_->expires_from_now(std::chrono::seconds(pong_wait_time_));
+			wait_read_timer_->expires_from_now(std::chrono::seconds(wait_read_time_));
 			auto handler = this->shared_from_this();
-			wait_timer_->async_wait([handler](std::error_code const& ec) {
+			wait_read_timer_->async_wait([handler,this](std::error_code const& ec) {
 				if (ec) {
 					return;
 				}
+				std::stringstream ss;
+				ss << "websocket id: "<< socket_uid_<< " read no data during " << wait_read_time_ << " seconds";
+				utils::messageCenter::get().trigger_message(ss.str());
 				handler->close();
 			});
 		}
+		void cancel_read_time() {
+			std::error_code ignore;
+			wait_read_timer_->cancel(ignore);
+		}
+
+		void start_write_timeout() {
+			wait_write_timer_->expires_from_now(std::chrono::seconds(wait_write_time_));
+			auto handler = this->shared_from_this();
+			wait_write_timer_->async_wait([handler,this](std::error_code const& ec) {
+				if (ec) {
+					return;
+				}
+				std::stringstream ss;
+				ss << "websocket id: " << socket_uid_ << " couldn't write data during " << wait_write_time_ << " seconds";
+				utils::messageCenter::get().trigger_message(ss.str());
+				handler->close();
+			});
+		}
+
+		void cancel_write_time() {
+			std::error_code ignore;
+			wait_write_timer_->cancel(ignore);
+		}
+
 		void ping() {
 			//ping_pong_timer_->expires_from_now(std::chrono::seconds(ping_pong_time_));
 			//ping_pong_timer_->async_wait([handler = this->shared_from_this()](std::error_code const& ec) {
@@ -336,7 +365,7 @@ namespace xfinal {
 				return;
 			}
 			if (frame_info_.opcode == 10) {  //pong
-				reset_time();
+				cancel_read_time();
 				return;
 			}
 			unsigned char c2 = frame[1];
@@ -352,23 +381,25 @@ namespace xfinal {
 			}
 			else if (c2 == 126) { //后续2个字节 unsigned
 				auto handler = this->shared_from_this();
-				asio::async_read(*socket_, asio::buffer(&frame[read_pos_], 2), [handler](std::error_code const& ec, std::size_t read_size) {
+				reset_time();
+				asio::async_read(*socket_, asio::buffer(&frame[read_pos_], 2), [handler,this](std::error_code const& ec, std::size_t read_size) {
 					if (ec) {
 						handler->close();
 						return;
 					}
-					handler->reset_time();
+					cancel_read_time();
 					handler->handle_payload_length(2);
 				});
 			}
 			else if (c2 == 127) {  //后续8个字节 unsigned
 				auto handler = this->shared_from_this();
-				asio::async_read(*socket_, asio::buffer(&frame[read_pos_], 8), [handler](std::error_code const& ec, std::size_t read_size) {
+				reset_time();
+				asio::async_read(*socket_, asio::buffer(&frame[read_pos_], 8), [handler,this](std::error_code const& ec, std::size_t read_size) {
 					if (ec) {
 						handler->close();
 						return;
 					}
-					handler->reset_time();
+					cancel_read_time();
 					handler->handle_payload_length(8);
 				});
 			}
@@ -386,12 +417,13 @@ namespace xfinal {
 			}
 			if (frame_info_.mask == 1) {  //应该必须等于1
 				auto handler = this->shared_from_this();
-				asio::async_read(*socket_, asio::buffer(&frame_info_.mask_key[0], 4), [handler](std::error_code const& ec, std::size_t read_size) {
+				reset_time();
+				asio::async_read(*socket_, asio::buffer(&frame_info_.mask_key[0], 4), [handler,this](std::error_code const& ec, std::size_t read_size) {
 					if (ec) {
 						handler->close();
 						return;
 					}
-					handler->reset_time();
+					cancel_read_time();
 					handler->read_data();
 				});
 			}
@@ -399,12 +431,13 @@ namespace xfinal {
 		void read_data() {
 			expand_buffer(frame_info_.payload_length);
 			auto handler = this->shared_from_this();
-			asio::async_read(*socket_, asio::buffer(&buffers_[data_current_pos_], (std::size_t)frame_info_.payload_length), [handler](std::error_code const& ec, std::size_t read_size) {
+			reset_time();
+			asio::async_read(*socket_, asio::buffer(&buffers_[data_current_pos_], (std::size_t)frame_info_.payload_length), [handler,this](std::error_code const& ec, std::size_t read_size) {
 				if (ec) {
 					handler->close();
 					return;
 				}
-				handler->reset_time();
+				cancel_read_time();
 				handler->set_current_pos(read_size);
 				handler->decode_data(read_size);
 			});
@@ -443,10 +476,13 @@ namespace xfinal {
 		}
 	public:
 		void set_check_alive_time(std::time_t seconds) {
-			pong_wait_time_ = seconds;
+			wait_read_time_ = seconds;
 		}
 		void set_frame_data_size(std::size_t size) {
 			frame_data_size_ = size;
+		}
+		void set_check_write_alive_time(std::time_t seconds) {
+			wait_write_time_ = seconds;
 		}
 	public:
 		void close() {
@@ -455,7 +491,8 @@ namespace xfinal {
 			std::error_code ec0;
 			socket_->close(ec0);
 			socket_is_open_ = false;
-			wait_timer_->cancel();
+			cancel_read_time();
+			cancel_write_time();
 			//ping_pong_timer_->cancel();
 			websocket_event_manager.trigger(url_, "close", *this);  //关闭事件
 			websocket_event_manager.remove(nonstd::string_view(socket_uid_.data(), socket_uid_.size()));
@@ -470,7 +507,8 @@ namespace xfinal {
 			std::error_code ec0;
 			socket_->close(ec0);
 			socket_is_open_ = false;
-			wait_timer_->cancel();
+			cancel_read_time();
+			cancel_write_time();
 			//ping_pong_timer_->cancel();
 			websocket_event_manager.remove(nonstd::string_view(socket_uid_.data(), socket_uid_.size()));
 		}
@@ -488,8 +526,10 @@ namespace xfinal {
 		std::queue<std::unique_ptr<std::string>> write_frame_queue_;
 		std::size_t frame_data_size_ = 65535;//256
 		//std::time_t ping_pong_time_ = 30 * 60 * 60;
-		std::time_t pong_wait_time_ = 30 * 60;
-		std::unique_ptr<asio::steady_timer> wait_timer_;
+		std::time_t wait_read_time_ = 30 * 60;
+		std::time_t wait_write_time_ = 30 * 60;
+		std::unique_ptr<asio::steady_timer> wait_read_timer_;
+		std::unique_ptr<asio::steady_timer> wait_write_timer_;
 		//std::unique_ptr<asio::steady_timer> ping_pong_timer_;
 		unsigned char message_opcode = 0;
 		std::atomic_bool socket_is_open_{ false };
@@ -534,10 +574,12 @@ namespace xfinal {
 				if (!websocket->is_writing_ && websocket->socket_is_open_ == true) {
 					auto buff = asio::buffer(message->data(), message->size());
 					websocket->is_writing_ = true;
+					websocket->start_write_timeout();
 					asio::async_write(*websocket->socket_, buff, [websocket, message, this](std::error_code const& ec, std::size_t size) {
 						if (ec) {
 							close_socket(websocket);
 						}
+						websocket->cancel_write_time();
 						write_ok(websocket);
 					});
 				}
@@ -574,7 +616,8 @@ namespace xfinal {
 	public:
 		std::shared_ptr<websocket> start_webscoket(std::string const& url) { //有多线程竞争
 			auto ws = std::make_shared<websocket>(websocket_event_map_, url);
-			ws->set_check_alive_time(websocket_check_alive_time_);
+			ws->set_check_alive_time(websocket_check_read_alive_time_);
+			ws->set_check_write_alive_time(websocket_check_write_time_);
 			ws->set_frame_data_size(frame_data_size_);
 			auto& uuid = ws->uuid();
 			websocket_event_map_.add(nonstd::string_view{ uuid.data(),uuid.size() }, ws);
@@ -584,14 +627,23 @@ namespace xfinal {
 			websocket_event_map_.events_.insert(std::make_pair(url, websocket_event_));
 		}
 	public:
-		void set_check_alive_time(std::time_t seconds) {
+		void set_check_read_alive_time(std::time_t seconds) {
 			if (seconds <= 0) {
 				return;
 			}
-			websocket_check_alive_time_ = seconds;
+			websocket_check_read_alive_time_ = seconds;
 		}
-		std::time_t get_check_alive_time() {
-			return websocket_check_alive_time_;
+		std::time_t get_check_read_alive_time() {
+			return websocket_check_read_alive_time_;
+		}
+		void set_check_write_alive_time(std::time_t seconds) {
+			if (seconds <= 0) {
+				return;
+			}
+			websocket_check_write_time_ = seconds;
+		}
+		std::time_t get_check_write_alive_time() {
+			return websocket_check_write_time_;
 		}
 		void set_frame_data_size(std::size_t size) {
 			if (size <= 0) {
@@ -641,7 +693,8 @@ namespace xfinal {
 		nonstd::string_view sec_webSocket_key_;
 		nonstd::string_view sec_websocket_version_;
 		websocket_event_map websocket_event_map_;
-		std::time_t websocket_check_alive_time_ = 30*60;
+		std::time_t websocket_check_read_alive_time_ = 30*60;
+		std::time_t websocket_check_write_time_ = 30 * 60;
 		std::size_t frame_data_size_ = 65535;
 	};
 

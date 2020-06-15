@@ -128,11 +128,17 @@ namespace xfinal {
 		//bool url_redirect() {
 		//	return http_router_.url_redirect_;
 		//}
-		void set_websocket_check_alive_time(std::time_t seconds) {
-			http_router_.websokcets().set_check_alive_time(seconds);
+		void set_websocket_check_read_alive_time(std::time_t seconds) {
+			http_router_.websokcets().set_check_read_alive_time(seconds);
 		}
-		std::time_t websocket_check_alive_time() {
-			return http_router_.websokcets().get_check_alive_time();
+		std::time_t websocket_check_read_alive_time() {
+			return http_router_.websokcets().get_check_read_alive_time();
+		}
+		void set_websocket_check_write_alive_time(std::time_t seconds) {
+			http_router_.websokcets().set_check_write_alive_time(seconds);
+		}
+		std::time_t websocket_check_write_alive_time() {
+			return http_router_.websokcets().get_check_write_alive_time();
 		}
 		void set_websocket_frame_size(std::size_t size) {
 			http_router_.websokcets().set_frame_data_size(size);
