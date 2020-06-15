@@ -89,7 +89,7 @@ namespace xfinal {
 
 	struct send_message {
 		std::shared_ptr<websocket> websocket_;
-		std::shared_ptr<std::string> message_;
+		std::shared_ptr<std::queue<std::shared_ptr<std::string>>> message_queue;
 	};
 
 	inline void send_to_hub(send_message const&);
@@ -129,7 +129,7 @@ namespace xfinal {
 			std::memset(frame, 0, sizeof(frame));
 			std::memset(&frame_info_, 0, sizeof(frame_info_));
 			auto handler = this->shared_from_this();
-			reset_time(); //开始开启空连接超时 从当前时间算起
+			start_read_timeout(); //开始开启空连接超时 从当前时间算起
 			socket_->async_read_some(asio::buffer(&frame[read_pos_], 2), [handler,this](std::error_code const& ec, std::size_t read_size) {
 				if (ec) {
 					handler->close();
@@ -209,17 +209,19 @@ namespace xfinal {
 				return;
 			}
 			auto offset = 0;
-			std::shared_ptr<std::string> write_data(new std::string());
+			//std::shared_ptr<std::string> write_data(new std::string());
+			std::shared_ptr<std::queue<std::shared_ptr<std::string>>> write_queue{ new std::queue<std::shared_ptr<std::string>> {} };
 			if (message_size < 126) {
 				unsigned char frame_head = 128;
 				frame_head = frame_head | opcode;
 				unsigned char c2 = 0;
 				c2 = c2 | ((unsigned char)message_size);
-				std::string a_frame;
-				a_frame.push_back(frame_head);
-				a_frame.push_back(c2);
-				a_frame.append(message);
-				write_data->append(a_frame);
+				std::shared_ptr<std::string> a_frame{new std::string()};
+				a_frame->push_back(frame_head);
+				a_frame->push_back(c2);
+				a_frame->append(message);
+				write_queue->emplace(a_frame);
+				//write_data->append(a_frame);
 				/*write_frame_queue_.emplace(std::unique_ptr<std::string>(new std::string(std::move(a_frame))));*/
 			}
 			else if (message_size >= 126) {
@@ -232,7 +234,7 @@ namespace xfinal {
 					std::int64_t left_size = std::int64_t(message_size) - std::int64_t(frame_data_size_);
 					unsigned short write_data_size = (unsigned short)frame_data_size_;
 					unsigned char frame_head = 0;
-					std::string a_frame;
+					std::shared_ptr<std::string> a_frame{ new std::string() };
 					if (left_size <= 0) {
 						frame_head = 128;
 						write_data_size = (unsigned short)message_size;
@@ -241,30 +243,30 @@ namespace xfinal {
 					if (i == 0) {
 						frame_head = frame_head | opcode;
 					}
-					a_frame.push_back(frame_head);
+					a_frame->push_back(frame_head);
 					unsigned char c2 = 0;
 					if (write_data_size >= 126) {
 						unsigned char tmp_c = 126;
 						c2 = c2 | tmp_c;
-						a_frame.push_back(c2);
+						a_frame->push_back(c2);
 						auto data_length = l_to_netendian(write_data_size);
-						a_frame.append(data_length);
+						a_frame->append(data_length);
 					}
 					else if (write_data_size < 126) {
 						unsigned char tmp_c = (unsigned char)write_data_size;
 						c2 = c2 | tmp_c;
-						a_frame.push_back(c2);
+						a_frame->push_back(c2);
 					}
-					a_frame.append(std::string(&message[read_pos], write_data_size));
+					a_frame->append(std::string(&message[read_pos], write_data_size));
 					read_pos += write_data_size;
 					message_size = (std::size_t)left_size;
+					write_queue->emplace(a_frame);
 					//write_frame_queue_.emplace(std::unique_ptr<std::string>(new std::string(std::move(a_frame))));
-					write_data->append(a_frame);
+					//write_data->append(a_frame);
 				}
 			}
 			/*write_frame();*/
-			reset_time();
-			send_message send_msg = { this->shared_from_this() ,write_data };
+			send_message send_msg = { this->shared_from_this() ,write_queue };
 			send_to_hub(send_msg);
 		}
 	public:
@@ -312,7 +314,7 @@ namespace xfinal {
 		//	// });
 		//}
 	public:
-		void reset_time() {
+		void start_read_timeout() {
 			wait_read_timer_->expires_from_now(std::chrono::seconds(wait_read_time_));
 			auto handler = this->shared_from_this();
 			wait_read_timer_->async_wait([handler,this](std::error_code const& ec) {
@@ -394,7 +396,7 @@ namespace xfinal {
 			}
 			else if (c2 == 126) { //后续2个字节 unsigned
 				auto handler = this->shared_from_this();
-				reset_time();
+				start_read_timeout();
 				asio::async_read(*socket_, asio::buffer(&frame[read_pos_], 2), [handler,this](std::error_code const& ec, std::size_t read_size) {
 					if (ec) {
 						handler->close();
@@ -406,7 +408,7 @@ namespace xfinal {
 			}
 			else if (c2 == 127) {  //后续8个字节 unsigned
 				auto handler = this->shared_from_this();
-				reset_time();
+				start_read_timeout();
 				asio::async_read(*socket_, asio::buffer(&frame[read_pos_], 8), [handler,this](std::error_code const& ec, std::size_t read_size) {
 					if (ec) {
 						handler->close();
@@ -430,7 +432,7 @@ namespace xfinal {
 			}
 			if (frame_info_.mask == 1) {  //应该必须等于1
 				auto handler = this->shared_from_this();
-				reset_time();
+				start_read_timeout();
 				asio::async_read(*socket_, asio::buffer(&frame_info_.mask_key[0], 4), [handler,this](std::error_code const& ec, std::size_t read_size) {
 					if (ec) {
 						handler->close();
@@ -444,7 +446,7 @@ namespace xfinal {
 		void read_data() {
 			expand_buffer(frame_info_.payload_length);
 			auto handler = this->shared_from_this();
-			reset_time();
+			start_read_timeout();
 			asio::async_read(*socket_, asio::buffer(&buffers_[data_current_pos_], (std::size_t)frame_info_.payload_length), [handler,this](std::error_code const& ec, std::size_t read_size) {
 				if (ec) {
 					handler->close();
@@ -505,6 +507,7 @@ namespace xfinal {
 				std::error_code ec0;
 				socket_->close(ec0);
 				socket_is_open_ = false;
+				is_writing_ = false;
 				cancel_read_time();
 				cancel_write_time();
 				//ping_pong_timer_->cancel();
@@ -522,6 +525,7 @@ namespace xfinal {
 			std::error_code ec0;
 			socket_->close(ec0);
 			socket_is_open_ = false;
+			is_writing_ = false;
 			cancel_read_time();
 			cancel_write_time();
 			//ping_pong_timer_->cancel();
@@ -538,7 +542,7 @@ namespace xfinal {
 		std::size_t data_current_pos_ = 0;
 		std::string message_;
 		std::string const url_;
-		std::queue<std::unique_ptr<std::string>> write_frame_queue_;
+		//std::queue<std::unique_ptr<std::string>> write_frame_queue_;
 		std::size_t frame_data_size_ = 65535;//256
 		//std::time_t ping_pong_time_ = 30 * 60 * 60;
 		std::time_t wait_read_time_ = 30 * 60;
@@ -562,16 +566,35 @@ namespace xfinal {
 	public:
 		void add(send_message const& message) {
 			std::unique_lock<std::mutex> lock(list_mutex_);
-			message_list_.push_back(message);
+			message_list_.emplace_back(message);
 			lock.unlock();
 			condtion_.notify_all();
 		}
 	private:
-		void write_ok(std::shared_ptr<websocket> const& websocket) {
+		void write_ok(std::shared_ptr<websocket> const& websocket) const {
 			websocket->is_writing_ = false;
 		}
-		void close_socket(std::shared_ptr<websocket> const& websocket) {
+		void close_socket(std::shared_ptr<websocket> const& websocket) const {
 			websocket->close();
+		}
+	private:
+		void write_frame(std::shared_ptr<websocket> const& websocket, std::shared_ptr<std::queue<std::shared_ptr<std::string>>> const& frame_queue) const {
+			if (frame_queue->empty() || !websocket->is_open()) {
+				write_ok(websocket);
+				return;
+			}
+			auto a_frame = frame_queue->front();
+			frame_queue->pop();
+			auto buff = asio::buffer(a_frame->data(), a_frame->size());
+			websocket->start_write_timeout();
+			asio::async_write(*websocket->socket_, buff, [websocket, a_frame, frame_queue, this](std::error_code const& ec, std::size_t size) {
+				websocket->cancel_write_time();
+				if (ec) {
+					close_socket(websocket);
+					return;
+				}
+				write_frame(websocket, frame_queue);
+			});
 		}
 	private:
 		void send() {
@@ -586,20 +609,12 @@ namespace xfinal {
 				auto one = message_list_.front();
 				message_list_.pop_front();
 				auto websocket = one.websocket_;
-				auto message = one.message_;
-				if (!websocket->is_writing_ && websocket->socket_is_open_ == true) {
-					auto buff = asio::buffer(message->data(), message->size());
+				auto message = one.message_queue;
+				if (websocket->socket_is_open_ == true && websocket->is_writing_ == false) {
 					websocket->is_writing_ = true;
-					websocket->start_write_timeout();
-					asio::async_write(*websocket->socket_, buff, [websocket, message, this](std::error_code const& ec, std::size_t size) {
-						if (ec) {
-							close_socket(websocket);
-						}
-						websocket->cancel_write_time();
-						write_ok(websocket);
-					});
+					write_frame(websocket, message);
 				}
-				else if (websocket->is_writing_ == true && websocket->socket_is_open_ == true) {
+				else if (websocket->socket_is_open_ == true && websocket->is_writing_ == true) {
 					message_list_.push_back(one);
 				}
 			}

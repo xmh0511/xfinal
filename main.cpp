@@ -117,8 +117,8 @@ int main()
 	});
 	server.set_wait_read_time(30);
 	server.set_wait_write_time(30);
-	server.set_websocket_check_read_alive_time(20);
-	server.set_websocket_check_write_alive_time(20);
+	server.set_websocket_check_read_alive_time(200);
+	server.set_websocket_check_write_alive_time(200);
 	//server.set_max_body_size(3*1024*1024);
 
 	//server.set_upload_path("./myupload");
@@ -353,8 +353,8 @@ int main()
 		std::cout << view2str(ws.messages()) << std::endl;
 		std::cout << (int)ws.message_code() << std::endl;
 		std::string message;
-		for (auto i = 0; i <= 400; ++i) {
-			message.append(std::to_string(i));
+		for (auto i = 0; i <= 18000; ++i) {
+			message.append(std::to_string(i)+",");
 		}
 		ws.write_string(message);
 		}).on("open", [&other_socket](websocket& ws) {
