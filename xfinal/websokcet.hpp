@@ -14,6 +14,7 @@
 #include <random>
 #include <list>
 #include "message_handler.hpp"
+#include "any.hpp"
 namespace xfinal {
 	struct frame_info {
 		frame_info() = default;
@@ -272,6 +273,18 @@ namespace xfinal {
 		}
 		void write_binary(std::string const& message) {
 			write(message, 2);
+		}
+		template<typename T>
+		void set_user_data(std::string const& key,std::shared_ptr<T> const& value){
+			user_data_.emplace(key, value);
+		}
+		template<typename T>
+		T get_user_data(std::string const& key) {
+			auto it = user_data_.find(key);
+			if (it != user_data_.end()) {
+				return nonstd::any_cast<T>(it->second);
+			}
+			return nullptr;//error
 		}
 	private:
 		//void write_frame() {
@@ -536,6 +549,7 @@ namespace xfinal {
 		unsigned char message_opcode = 0;
 		std::atomic_bool socket_is_open_{ false };
 		std::atomic_bool is_writing_{ false };
+		std::map<std::string, nonstd::any> user_data_;
 	};
 
 	class websocket_hub {

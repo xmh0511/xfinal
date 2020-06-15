@@ -306,7 +306,7 @@ namespace xfinal {
 		}
 
 		template<typename T>
-		void set_user_data(std::string const& key,std::shared_ptr<T> value) {
+		void set_user_data(std::string const& key,std::shared_ptr<T> const& value) {
 			user_data_.emplace(key, value);
 		}
 		template<typename T>
