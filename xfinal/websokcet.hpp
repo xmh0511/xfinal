@@ -486,16 +486,18 @@ namespace xfinal {
 		}
 	public:
 		void close() {
-			std::error_code ec;
-			socket_->shutdown(asio::ip::tcp::socket::shutdown_both, ec);
-			std::error_code ec0;
-			socket_->close(ec0);
-			socket_is_open_ = false;
-			cancel_read_time();
-			cancel_write_time();
-			//ping_pong_timer_->cancel();
-			websocket_event_manager.trigger(url_, "close", *this);  //关闭事件
-			websocket_event_manager.remove(nonstd::string_view(socket_uid_.data(), socket_uid_.size()));
+			if (socket_is_open_) {
+				std::error_code ec;
+				socket_->shutdown(asio::ip::tcp::socket::shutdown_both, ec);
+				std::error_code ec0;
+				socket_->close(ec0);
+				socket_is_open_ = false;
+				cancel_read_time();
+				cancel_write_time();
+				//ping_pong_timer_->cancel();
+				websocket_event_manager.trigger(url_, "close", *this);  //关闭事件
+				websocket_event_manager.remove(nonstd::string_view(socket_uid_.data(), socket_uid_.size()));
+			}
 		}
 		void shutdown() {
 			null_close();
