@@ -173,11 +173,11 @@ namespace xfinal {
 		//	}
 		//}
 
-		std::map<std::string, xfinal::filewriter> const& files() const noexcept {
+		std::map<std::string, xfinal::XFile> const& files() const noexcept {
 			return *multipart_files_map_;
 		}
 
-		filewriter const& file(nonstd::string_view filename) const noexcept {
+		XFile const& file(nonstd::string_view filename) const noexcept {
 			if (multipart_files_map_ != nullptr) {
 				auto it = multipart_files_map_->find(view2str(filename));
 				if (it != multipart_files_map_->end()) {
@@ -187,7 +187,7 @@ namespace xfinal {
 			return *empty_file_;
 		}
 
-		filewriter const& file() const noexcept {  //获取octstrem 文件
+		XFile const& file() const noexcept {  //获取octstrem 文件
 			return *oct_steam_;
 		}
 
@@ -446,9 +446,9 @@ namespace xfinal {
 		//std::map<std::string, std::string> gbk_decode_params_;
 		nonstd::string_view boundary_key_;
 		std::map<std::string, std::string> const* multipart_form_map_ = nullptr;
-		std::map<std::string, xfinal::filewriter> const* multipart_files_map_ = nullptr;
-		xfinal::filewriter* oct_steam_ = nullptr;
-		xfinal::filewriter* empty_file_ = nullptr;
+		std::map<std::string, xfinal::XFile> const* multipart_files_map_ = nullptr;
+		xfinal::XFile* oct_steam_ = nullptr;
+		xfinal::XFile* empty_file_ = nullptr;
 		class connection* connecter_;
 		response& res_;
 		std::shared_ptr<class session> session_;
@@ -491,8 +491,30 @@ namespace xfinal {
 			else {
 				add_header("Transfer-Encoding", "chunked");
 			}
-			add_header("Content-Type", conent_type);
+			if (!exist_header("Content-Type")) {
+				add_header("Content-Type", conent_type);
+			}
 			is_chunked_ = is_chunked;
+		}
+	public:
+		bool exist_header(std::string const& k) {
+			auto key = to_lower(k);
+			for (auto& iter : header_map_) {
+				if (to_lower(iter.first) == key) {
+					return true;
+				}
+			}
+			return false;
+		}
+		void remove_header(std::string const& k) {
+			auto key = to_lower(k);
+			for (auto iter = header_map_.begin(); iter != header_map_.end();) {
+				if (to_lower(iter->first) == key) {
+					header_map_.erase(iter);
+					return;
+				}
+				++iter;
+			}
 		}
 	public:
 		void write_state(http_status state = http_status::ok) {
@@ -508,7 +530,7 @@ namespace xfinal {
 			init_start_pos_ = 0;
 		}
 
-		void write_file(std::string const& filename, bool is_chunked = false, std::string const& conent_type = "") noexcept {
+		void write_file(std::string const& filename, bool is_chunked = false) noexcept {
 			using namespace nonstd::literals;
 			if (!filename.empty()) {
 				bool b = file_.open(filename);
@@ -516,11 +538,8 @@ namespace xfinal {
 					write_string("", false, http_status::bad_request);
 				}
 				else {
-					if (conent_type.empty()) {  //do not specify content_type
+					if (!exist_header("Content - Type")) { //have not specified content_type
 						add_header("Content-Type", view2str(file_.content_type()));
-					}
-					else {
-						add_header("Content-Type", conent_type);
 					}
 					auto filesize = file_.size();
 					if (req_.method() == "HEAD"_sv) {  //询问是否支持range
@@ -776,7 +795,7 @@ namespace xfinal {
 		write_type write_type_ = write_type::string;
 		std::uint64_t chunked_size_;
 		std::string chunked_write_size_;
-		filereader file_;
+		XFile file_;
 		std::int64_t init_start_pos_ = -1;
 		std::int64_t init_end_pos_ = -1;
 		std::uint64_t portion_need_size_ = 0;

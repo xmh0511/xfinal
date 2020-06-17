@@ -405,7 +405,7 @@ namespace xfinal {
 						auto t = std::time(nullptr);
 						auto& fileo = request_info_.multipart_files_map_[name];
 						auto path = upload_path_ + "/" + uuids::uuid_system_generator{}().to_short_str() + view2str(extension);
-						fileo.open(path);
+						fileo.open(path,true);
 						auto filename_start = type + sizeof("filename") + 1;
 						auto original_name = value.substr(filename_start, value.find('\"', filename_start) - filename_start);
 						fileo.set_original_name(std::move(original_name));
@@ -463,7 +463,7 @@ namespace xfinal {
 			std::uint64_t body_size = std::atoll(req_.header("content-length").data());
 			auto header_size = req_.header_length_;
 			if (current_use_pos_ > header_size) {  //是不是读request头的时候 把body也读取进来了 
-				request_info_.oct_steam_.open(upload_path_ + "/" + uuids::uuid_system_generator{}().to_short_str());
+				request_info_.oct_steam_.open(upload_path_ + "/" + uuids::uuid_system_generator{}().to_short_str(),true);
 				request_info_.oct_steam_.add_data(nonstd::string_view{ &(buffers_[header_size]),current_use_pos_ - header_size });
 				if ((current_use_pos_ - header_size) > body_size) {  //如果已经读完了所有数据
 					handle_body(content_type::octet_stream, (std::size_t)body_size);

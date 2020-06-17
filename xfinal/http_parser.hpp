@@ -39,8 +39,8 @@ namespace xfinal {
 			multipart_files_map_.clear();
 			oct_steam_.close();
 			empty_file_.close();
-			oct_steam_ = filewriter{};
-			empty_file_ = filewriter{};
+			oct_steam_ = XFile{};
+			empty_file_ = XFile{};
 		}
 	public:
 		std::string http_header_str_;
@@ -52,9 +52,9 @@ namespace xfinal {
 		std::string body_;
 		//std::string decode_body_;
 		std::map<std::string, std::string> multipart_form_map_;
-		std::map<std::string, filewriter> multipart_files_map_;
-		filewriter oct_steam_;
-		filewriter empty_file_;
+		std::map<std::string, XFile> multipart_files_map_;
+		XFile oct_steam_;
+		XFile empty_file_;
 	};
 
 	template<typename T, typename U>

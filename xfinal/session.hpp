@@ -318,7 +318,7 @@ namespace xfinal {
 			auto iter = fs::directory_iterator(save_dir_);
 			for (; iter != fs::directory_iterator(); ++iter) {
 				if (!fs::is_directory(iter->path())) {  //session 文件
-					filereader reader;
+					XFile reader;
 					reader.open(iter->path().string());
 					std::string buffer;
 					reader.read_all(buffer);

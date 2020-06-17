@@ -149,6 +149,23 @@ int main()
 		}, Test{}, Base{}, Test2{});
 
 	server.router<GET, POST>("/", [](request& req, response& res) {
+		XFile file;
+		file.open("./data.dll",true);
+		file.add_data("abc");
+		file.add_data("1");
+		res.write_string(std::string("hello world"), false);
+	});
+
+
+	server.router<GET, POST>("/readfile", [](request& req, response& res) {
+		XFile file;
+		file.open("./data.dll");
+		char arr[2] = {0};
+		auto s1 = file.read(-1, arr, 2);
+		char arr2[2] = {0};
+		auto s2 = file.read(1, arr2, 2);
+		char arr3[2] = { 0 };
+		auto s3 = file.read(3, arr3, 2);
 		res.write_string(std::string("hello world"), false);
 	});
 
