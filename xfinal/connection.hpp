@@ -81,16 +81,36 @@ namespace xfinal {
 				if (ready_defer_write_) {
 					auto p = ready_defer_write_->get_future();
 					if (p.get()) {
+						need_defer_ = false;
 						write();
 					}
 				}
 			}
 		}
 
-		std::shared_ptr<connection> defer() {
+		class defer_guarder {
+		public:
+			defer_guarder() = default;
+			defer_guarder(std::shared_ptr<connection> const& smarter) :conn_(smarter) {
+
+			}
+		public:
+			~defer_guarder() {
+				if (conn_ != nullptr && conn_->need_defer_ == true) {
+					conn_->defer_write();
+				}
+			}
+			std::shared_ptr<connection> operator ->() {
+				return conn_;
+			}
+		private:
+			std::shared_ptr<connection> conn_ = nullptr;
+		};
+
+		std::shared_ptr<defer_guarder> defer() {
 			need_defer_ = true;
 			ready_defer_write_ = std::unique_ptr<std::promise<bool>>(new std::promise<bool>{});
-			return this->shared_from_this();
+			return std::shared_ptr<defer_guarder>{ new defer_guarder{ this->shared_from_this() }};
 		}
 	private:
 		std::vector<char>& get_buffers() {
@@ -826,4 +846,5 @@ namespace xfinal {
 		std::atomic_bool need_defer_{ false };
 		std::unique_ptr<std::promise<bool>> ready_defer_write_ = nullptr;
 	};
+
 }
