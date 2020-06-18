@@ -78,7 +78,12 @@ namespace xfinal {
 		void defer_write() {
 			if (res_.need_defer_ == true) {
 				cancel_defer_waiter();
-				write();
+				if (res_.ready_defer_write_) {
+					auto p = res_.ready_defer_write_->get_future();
+					if (p.get()) {
+						write();
+					}
+				}
 			}
 		}
 	private:
@@ -174,6 +179,9 @@ namespace xfinal {
 			}
 			if (res_.need_defer_ == true) {
 				start_defer_waiter(); //开启延迟写计时器
+				if (res_.ready_defer_write_) {
+					res_.ready_defer_write_->set_value(true);
+				}
 				return;
 			}
 			write();  //回应请求

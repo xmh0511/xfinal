@@ -276,10 +276,31 @@ int main()
 				return;
 			}
 			std::cout << res.get_content() << std::endl;
-			});
+		});
 		client.run();
 		res.write_string("OK");
+	});
+
+	server.router<GET>("/ttt", [](request& req, response& res) {
+		auto connection = res.connection().shared_from_this();
+		std::shared_ptr<http_client> client(new http_client("www.baidu.com"));
+		client->request<GET>("/", [client, connection,&res](http_client::client_response const& cres, std::error_code const& ec) {
+			if (ec) {
+				return;
+			}
+			auto content = cres.get_content();
+			//std::cout << cres.get_content() << std::endl;
+			res.write_string(std::move(content));
+			connection->defer_write();
 		});
+		res.defer();
+		std::thread t1 = std::thread([client]() {
+			client->run();
+		});
+		t1.detach();
+		std::cout << "end" << std::endl;
+	});
+
 
 	server.router<GET>("/client_post", [](request& req, response& res) {
 		try {

@@ -660,6 +660,7 @@ namespace xfinal {
 
 		void defer(bool need = true) {
 			need_defer_ = need;
+			ready_defer_write_ = std::unique_ptr<std::promise<bool>>(new std::promise<bool>{});
 		}
 	public:
 		inja::Environment& view_environment() {
@@ -777,6 +778,7 @@ namespace xfinal {
 	private:
 		void reset() {
 			need_defer_ = false;
+			ready_defer_write_ = nullptr;
 			header_map_.clear();
 			body_.clear();
 			is_chunked_ = false;
@@ -807,6 +809,7 @@ namespace xfinal {
 		std::unique_ptr<inja::Environment> view_env_;
 		json view_data_;
 		std::atomic_bool need_defer_{ false };
+		std::unique_ptr<std::promise<bool>> ready_defer_write_ = nullptr;
 	};
 
 	class Controller :private nocopyable {
