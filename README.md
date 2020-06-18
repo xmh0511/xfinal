@@ -611,7 +611,7 @@ server.on_error([](std::string const& message) {  //提供用户记录错误日�
 });
 ````
 ### 设置全局404处理方法
->可以提供用户自己处理404需要返回的内容，如404个性化页面等
+>可以提供用户自己处理400需要返回的内容，如400个性化页面等
 ````cpp
 server.set_not_found_callback([](request& req,response& res) {
 	res.write_string("custom not found", true, http_status::bad_request);
