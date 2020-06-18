@@ -380,9 +380,14 @@ namespace xfinal {
 	}
 
 	inline std::string to_base64(std::string const& src) {
-		char buff[1024];
-		auto size = base64_encode(buff,src.data(), src.size(), 0);
-		return std::string(buff, size);
+		auto src_size = src.size();
+		std::size_t desc_size = 0;
+		if ((src_size % 3)) {
+			desc_size = 1;
+		}
+		std::string result((src_size / 3 + desc_size) * 4, '\0');
+		auto size = base64_encode(&result[0],src.data(), src.size(), 0);
+		return result;
 	}
 
 	inline bool is_bigendian(){
