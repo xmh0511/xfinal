@@ -258,7 +258,7 @@ int main()
    serve.router<GET>("/view",[](request& req,response& res){
        res.set_attr("name", "xfinal");
        res.set_attr("language", "c++");
-       res.write_view("./static/test.html");
+       res.write_file_view("./static/test.html");/*也可以写内存中的模板 res.write_data_view("@{name}")*/
    });
    serve.run();
 }
