@@ -31,7 +31,7 @@ sudo yum install libuuid-devel.x86_64
 sudo apt-get install uuid  
 sudo apt-get install uuid-dev
 
-## 生成编译
+## 项目生成
 mkdir build  
 cd build  
 cmake ..  
@@ -70,22 +70,6 @@ int main()
 }
 ````
 
-## GBK的支持
-````cpp
-#include <xfinal.hpp>
-using namespace xfinal;
-int main()
-{
-   http_server serve(4); //线程数
-   serve.listen("0.0.0.0","8080");
-   serve.router<GET,POST>("/url",[](request& req,response& res){
-      auto id = req.param<GBK>("id"); /*提供GBK转码的支持*/
-      auto name = req.query<GBK>("name"); /*提供GBK转码的支持*/
-      res.write_string("GBK support");
-   });
-   serve.run();
-}
-````
 ## URL 重定向
 ````cpp
 #include <xfinal.hpp>
@@ -281,6 +265,7 @@ int main()
 ````
 
 ## 文件请求
+### 支持多线程下载
 ````cpp
 #include <xfinal.hpp>
 using namespace xfinal;
@@ -367,6 +352,7 @@ int main()
 }
 ````
 ## xfinal 为你的接口提供拦截器
+### 切面
 ````cpp
 #include <xfinal.hpp>
 using namespace xfinal;
@@ -523,11 +509,7 @@ int main()
 ````
 # 功能配置
 >如果没有特殊说明,默认在run方法调用前进行设置
-### 设置是否重定向url
-> 在url请求中,请求的地址是 http://1270.0.1:8080/abc/ 如果`server.set_url_redirect(true);`将会重新跳转，将地址设置为`http://127.0.0.1:8080/abc`
-````cpp
-server.set_url_redirect(false);
-````
+
 ### 设置静态文件读取路径（会自动设置upload路径到当前静态路径的upload文件夹中）
 > 调用此接口后，请求的地址 http://127.0.0.1:8080/x/y/somefile.abc 就会自动到该目录下读取对应的文件
 ````cpp
@@ -538,32 +520,71 @@ server.set_static_path("./x/y");
 ````cpp
 server.set_upload_path("./myupload");
 ````
-### 设置socket读写超时时间
+### 设置http读写超时时间
 >单位: 秒 超时关闭当前socket连接
 ````cpp
 server.set_wait_read_time(10);
+server.set_wait_write_time(10);
 ````
 ### keep-alivek空闲时长
 >单位:秒  超时自动断开
 ````cpp
 server.set_keep_alive_wait_time(5);
 ````
-### 设置session有效速率（每个x秒检测session是否有效）
+
+### 设置检测session有效速率（每隔x秒检测session是否有效）
 >单位:秒
 ````cpp
 server.set_check_session_rate(10);
 ````
+
 ### 设置websocket返回数据每帧大小
 >单位：字节
 ````cpp
-server.set_websocket_frame_size(1024 * 1024);
+server.set_websocket_frame_size(1024 * 1024); //最大65535
 ````
-### 设置websocket空闲时长
+
+### 设置websocket读写超时时长
 >单位：秒 超时自动断开
 ````cpp
-set_websocket_check_alive_time(3600)
+server.set_websocket_check_read_alive_time(3600)
+server.set_websocket_check_write_alive_time(3600)
 ````
-#### 以上方法去除set_ 就能获取对应的配置数据
+
+### 设置是否禁止xfinal自动创建静态文件目录和sesssion保存目录
+````cpp
+server.set_disable_auto_create_directories(true)  // 禁止自动创建
+````
+### 设置session保存目录
+````cpp
+server.set_default_session_save_path("./session");
+````
+### 禁止xfinal开启静态服务
+````cpp
+server.set_disable_register_static_handler(true);
+````
+### 设置xfinal最大可接受body大小
+>针对除multipart_form的post请求 （单位:字节）
+````cpp
+server.set_max_body_size(1024*1024); 
+````
+
+### 设置延迟回应的超时时间
+>（单位:秒）
+````cpp
+server.set_defer_write_max_wait_time(60);
+````
+
+### 初始化nanolog日志
+>参数：
+>> 1. 保存目录
+>> 2. 文件名前缀
+>> 3. 单个文件大小（mb）
+````cpp
+server.init_nanolog("./directory/","mylog",2);
+````
+
+#### 以上方法去除set_前缀就能获取对应的配置数据
 
 ### 设置服务器错误信息的处理
 >需要在listen方法调用前设置  
