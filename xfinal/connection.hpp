@@ -14,7 +14,7 @@ namespace xfinal {
 	class connection final :public std::enable_shared_from_this<connection> {
 		friend class http_server;
 	public:
-		connection(asio::io_service& io, http_router& router, std::string const& static_path, std::string const& upload_path,std::size_t max_body_size) :socket_(std::unique_ptr<asio::ip::tcp::socket>(new asio::ip::tcp::socket(io))), io_service_(io), buffers_(expand_buffer_size), router_(router), static_path_(static_path), req_(res_, this), res_(req_, this), upload_path_(upload_path), keep_alive_waiter_(io), read_waiter_(io), max_buffer_size_(max_body_size){
+		connection(asio::io_service& io, http_router& router, std::string const& static_path, std::string const& upload_path,std::size_t max_body_size) :socket_(std::unique_ptr<asio::ip::tcp::socket>(new asio::ip::tcp::socket(io))), io_service_(io), buffers_(expand_buffer_size), router_(router), static_path_(static_path), req_(res_, this), res_(req_, this), upload_path_(upload_path), keep_alive_waiter_(io), read_waiter_(io), max_buffer_size_(max_body_size), defer_write_waiter_(io){
 			left_buffer_size_ = buffers_.size();
 			req_.headers_ = &(request_info_.headers_);
 			req_.multipart_form_map_ = &(request_info_.multipart_form_map_);
@@ -66,6 +66,21 @@ namespace xfinal {
 		std::time_t get_wait_write_time() {
 			return wait_write_time_;
 		}
+
+		void set_defer_write_max_wait_time(std::time_t seconds) {
+			defer_write_max_time_ = seconds;
+		}
+
+		std::time_t defer_write_max_wait_time() {
+			return defer_write_max_time_;
+		}
+
+		void defer_write() {
+			if (res_.need_defer_ == true) {
+				cancel_defer_waiter();
+				write();
+			}
+		}
 	private:
 		std::vector<char>& get_buffers() {
 			return buffers_;
@@ -106,6 +121,27 @@ namespace xfinal {
 			std::error_code ignore_ec;
 			read_waiter_.cancel(ignore_ec);
 		}
+
+		void start_defer_waiter() {
+			auto handler = this->shared_from_this();
+			defer_write_waiter_.expires_from_now(std::chrono::seconds(defer_write_max_time_));
+			defer_write_waiter_.async_wait([handler, this](std::error_code const& ec) {
+				if (ec) {
+					return;
+				}
+				std::stringstream ss;
+				ss << "url: " << req_.raw_url() << " defer write time out";
+				router_.trigger_error(ss.str());
+				std::error_code ignore_shutdown_ec;
+				socket_->shutdown(asio::ip::tcp::socket::shutdown_both, ignore_shutdown_ec);
+				std::error_code ignore_close_ec;
+				socket_->close(ignore_close_ec);
+			});
+		}
+		void cancel_defer_waiter() {
+			std::error_code ignore_ec;
+			defer_write_waiter_.cancel(ignore_ec);
+		}
 	private:
 		bool expand_size(bool is_multipart_data) {
 			expand_buffer_size += expand_buffer_size;
@@ -135,6 +171,10 @@ namespace xfinal {
 			need_terminate_request_ = false;
 			if (current_router_ != nullptr) {
 				current_router_(req_, res_);
+			}
+			if (res_.need_defer_ == true) {
+				start_defer_waiter(); //开启延迟写计时器
+				return;
 			}
 			write();  //回应请求
 		}
@@ -761,8 +801,8 @@ namespace xfinal {
 		response res_;
 		http_router& router_;
 		std::function<void(request&, response&)> current_router_ = nullptr;
-		bool socket_close_ = false;
-		bool need_terminate_request_ = false;
+		std::atomic_bool socket_close_{ false };
+		std::atomic_bool need_terminate_request_{ false };
 		std::string const& static_path_;
 		std::string const& upload_path_;
 		std::size_t start_read_pos_ = 0;
@@ -770,6 +810,8 @@ namespace xfinal {
 		std::time_t keep_alive_wait_time_ = 30;
 		std::time_t wait_read_time_ = 10;
 		std::time_t wait_write_time_ = 10;
+		std::time_t defer_write_max_time_ = 60;
 		asio::steady_timer read_waiter_;
+		asio::steady_timer defer_write_waiter_;
 	};
 }

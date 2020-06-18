@@ -194,6 +194,12 @@ namespace xfinal {
 		std::size_t max_body_size() {
 			return max_body_size_;
 		}
+		void set_defer_write_max_wait_time(std::time_t seconds) {
+			defer_write_max_time_ = seconds;
+		}
+		std::time_t defer_write_max_wait_time() {
+			return defer_write_max_time_;
+		}
 		void init_nanolog(std::string const& log_directory,std::string const& prefix_file_name,std::uint32_t file_roll_size /*MB*/) {
 			if (!disable_auto_create_directories_) {
 				if (!log_directory.empty() && !fs::exists(log_directory)) {
@@ -242,6 +248,7 @@ namespace xfinal {
 			connector->set_keep_alive_wait_time(keep_alive_wait_time_);
 			connector->set_wait_read_time(wait_read_time_);
 			connector->set_wait_write_time(wait_write_time_);
+			connector->set_defer_write_max_wait_time(defer_write_max_time_);
 			acceptor_.async_accept(connector->get_socket(), [this,connector](std::error_code const& ec) {
 				if (!ec) {
 					connector->get_socket().set_option(asio::ip::tcp::no_delay(true));
@@ -300,6 +307,7 @@ namespace xfinal {
 		std::time_t keep_alive_wait_time_ = 30;
 		std::time_t wait_read_time_ = 10;
 		std::time_t wait_write_time_ = 10;
+		std::time_t defer_write_max_time_ = 60;
 		bool disable_auto_create_directories_ = false;
 		bool disable_auto_register_static_handler_ = false;
 		std::string default_storage_session_path_ = "./session";

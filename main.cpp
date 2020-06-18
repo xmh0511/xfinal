@@ -119,6 +119,7 @@ int main()
 	server.set_wait_write_time(30);
 	server.set_websocket_check_read_alive_time(200);
 	server.set_websocket_check_write_alive_time(200);
+	server.set_defer_write_max_wait_time(10);
 	//server.set_max_body_size(3*1024*1024);
 
 	//server.set_upload_path("./myupload");
@@ -362,6 +363,20 @@ int main()
 	server.router<GET, POST>("/performance", [](request& req, response& res) {
 		res.write_string("ok");
 	}, limitRequest{});
+
+
+	server.router<GET>("/deferresponse", [](request& req, response& res) {
+		auto time = req.param("time");
+		auto time_i = std::atoi(time.data());
+		auto connection = res.connection().shared_from_this();
+		std::thread t1 = std::thread([connection,&res, time_i]() {
+			std::this_thread::sleep_for(std::chrono::seconds(time_i));
+			res.write_string("OK");
+			connection->defer_write();
+		});
+		t1.detach();
+		res.defer();
+	});
 
 	std::shared_ptr<websocket> other_socket;
 

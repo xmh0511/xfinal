@@ -435,8 +435,8 @@ namespace xfinal {
 		nonstd::string_view url_;
 		nonstd::string_view version_;
 		std::map<nonstd::string_view, nonstd::string_view> const* headers_ = nullptr;
-		std::size_t header_length_;
-		enum content_type content_type_;
+		std::size_t header_length_ = 0;
+		enum content_type content_type_ = content_type::unknow;
 		std::map<nonstd::string_view, nonstd::string_view> form_map_;
 		std::map<std::string, std::string> decode_form_map_;
 		nonstd::string_view body_;
@@ -657,6 +657,10 @@ namespace xfinal {
 				state_ = http_status::moved_permanently;
 			}
 		}
+
+		void defer(bool need = true) {
+			need_defer_ = need;
+		}
 	public:
 		inja::Environment& view_environment() {
 			return *view_env_;
@@ -772,6 +776,7 @@ namespace xfinal {
 		}
 	private:
 		void reset() {
+			need_defer_ = false;
 			header_map_.clear();
 			body_.clear();
 			is_chunked_ = false;
@@ -789,11 +794,11 @@ namespace xfinal {
 		request& req_;
 		std::unordered_multimap<std::string, std::string> header_map_;
 		std::string body_;
-		http_status state_;
+		http_status state_ = http_status::init;
 		bool is_chunked_ = false;
 		std::string http_version_;
 		write_type write_type_ = write_type::string;
-		std::uint64_t chunked_size_;
+		std::uint64_t chunked_size_ = 1 * 1024 * 1024;
 		std::string chunked_write_size_;
 		XFile file_;
 		std::int64_t init_start_pos_ = -1;
@@ -801,6 +806,7 @@ namespace xfinal {
 		std::uint64_t portion_need_size_ = 0;
 		std::unique_ptr<inja::Environment> view_env_;
 		json view_data_;
+		std::atomic_bool need_defer_{ false };
 	};
 
 	class Controller :private nocopyable {
