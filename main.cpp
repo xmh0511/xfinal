@@ -282,18 +282,16 @@ int main()
 	});
 
 	server.router<GET>("/ttt", [](request& req, response& res) {
-		auto connection = res.connection().shared_from_this();
+		auto connection = res.connection().defer();
 		std::shared_ptr<http_client> client(new http_client("www.baidu.com"));
 		client->request<GET>("/", [client, connection,&res](http_client::client_response const& cres, std::error_code const& ec) {
 			if (ec) {
 				return;
 			}
 			auto content = cres.get_content();
-			//std::cout << cres.get_content() << std::endl;
 			res.write_string(std::move(content));
 			connection->defer_write();
 		});
-		res.defer();
 		std::thread t1 = std::thread([client]() {
 			client->run();
 		});
@@ -389,14 +387,13 @@ int main()
 	server.router<GET>("/deferresponse", [](request& req, response& res) {
 		auto time = req.param("time");
 		auto time_i = std::atoi(time.data());
-		auto connection = res.connection().shared_from_this();
+		auto connection = res.connection().defer();
 		std::thread t1 = std::thread([connection,&res, time_i]() {
 			std::this_thread::sleep_for(std::chrono::seconds(time_i));
 			res.write_string("OK");
 			connection->defer_write();
 		});
 		t1.detach();
-		res.defer();
 	});
 
 	std::shared_ptr<websocket> other_socket;

@@ -76,15 +76,21 @@ namespace xfinal {
 		}
 
 		void defer_write() {
-			if (res_.need_defer_ == true) {
+			if (need_defer_ == true) {
 				cancel_defer_waiter();
-				if (res_.ready_defer_write_) {
-					auto p = res_.ready_defer_write_->get_future();
+				if (ready_defer_write_) {
+					auto p = ready_defer_write_->get_future();
 					if (p.get()) {
 						write();
 					}
 				}
 			}
+		}
+
+		std::shared_ptr<connection> defer() {
+			need_defer_ = true;
+			ready_defer_write_ = std::unique_ptr<std::promise<bool>>(new std::promise<bool>{});
+			return this->shared_from_this();
 		}
 	private:
 		std::vector<char>& get_buffers() {
@@ -116,10 +122,7 @@ namespace xfinal {
 				std::stringstream ss;
 				ss << "url: " << req_.raw_url() << " request read/write time out";
 				router_.trigger_error(ss.str());
-				std::error_code ignore_shutdown_ec;
-				socket_->shutdown(asio::ip::tcp::socket::shutdown_both, ignore_shutdown_ec);
-				std::error_code ignore_close_ec;
-				socket_->close(ignore_close_ec);
+				disconnect();
 			});
 		}
 		void cancel_read_waiter() {
@@ -137,10 +140,7 @@ namespace xfinal {
 				std::stringstream ss;
 				ss << "url: " << req_.raw_url() << " defer write time out";
 				router_.trigger_error(ss.str());
-				std::error_code ignore_shutdown_ec;
-				socket_->shutdown(asio::ip::tcp::socket::shutdown_both, ignore_shutdown_ec);
-				std::error_code ignore_close_ec;
-				socket_->close(ignore_close_ec);
+				disconnect();
 			});
 		}
 		void cancel_defer_waiter() {
@@ -177,10 +177,10 @@ namespace xfinal {
 			if (current_router_ != nullptr) {
 				current_router_(req_, res_);
 			}
-			if (res_.need_defer_ == true) {
+			if (need_defer_ == true) {
 				start_defer_waiter(); //开启延迟写计时器
-				if (res_.ready_defer_write_) {
-					res_.ready_defer_write_->set_value(true);
+				if (ready_defer_write_) {
+					ready_defer_write_->set_value(true);
 				}
 				return;
 			}
@@ -770,6 +770,8 @@ namespace xfinal {
 		}
 	private:
 		void reset() {
+			need_defer_ = false;
+			ready_defer_write_ = nullptr;
 			current_router_ = nullptr;
 			need_terminate_request_ = false;
 			req_.reset();
@@ -821,5 +823,7 @@ namespace xfinal {
 		std::time_t defer_write_max_time_ = 60;
 		asio::steady_timer read_waiter_;
 		asio::steady_timer defer_write_waiter_;
+		std::atomic_bool need_defer_{ false };
+		std::unique_ptr<std::promise<bool>> ready_defer_write_ = nullptr;
 	};
 }
