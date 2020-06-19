@@ -26,11 +26,12 @@ namespace xfinal {
 		nocopyable& operator=(nocopyable const&) = delete;
 	};
 
-	inline std::string to_lower(std::string str) {
-		std::for_each(str.begin(), str.end(), [](char& c) {
-			c = std::tolower(c);
+	inline std::string to_lower(std::string const& str) {
+		std::string lower;
+		std::for_each(str.begin(), str.end(), [&lower](char const& c) {
+			lower.push_back( std::tolower(c));
 		});
-		return str;
+		return lower;
 	}
 
 	enum  class http_method:std::uint8_t

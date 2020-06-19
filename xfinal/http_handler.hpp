@@ -363,24 +363,20 @@ namespace xfinal {
 			auto value = header("content-type");
 			if (!value.empty()) {
 				auto has_op = value.find(';');
+				std::string key;
 				if (has_op == (nonstd::string_view::size_type)nonstd::string_view::npos) {
-					auto key = view2str(value);
-					if (content_type_str_type_map.count(key) != 0) {
-						content_type_ = content_type_str_type_map[key];
-					}
-					else {
-						content_type_ = content_type::string;
-					}
+					key = to_lower(view2str(value));
 				}
 				else {
 					auto value_view = value.substr(0, has_op);
-					auto key = view2str(value_view);
-					if (content_type_str_type_map.count(key) != 0) {
-						content_type_ = content_type_str_type_map[key];
-					}
-					else {
-						content_type_ = content_type::string;
-					}
+					key = to_lower(view2str(value_view));
+				}
+				auto iter = content_type_str_type_map.find(key);
+				if (iter != content_type_str_type_map.end()) {
+					content_type_ = iter->second;
+				}
+				else {
+					content_type_ = content_type::string;
 				}
 			}
 			else {
