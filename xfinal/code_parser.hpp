@@ -9,8 +9,8 @@
 #include <clocale>
 #include <cstdlib>
 namespace xfinal {
-	const char* hex_chars = "0123456789ABCDEF";
 	static std::string url_encode(const std::string& value) noexcept {
+		const char* const hex_chars = "0123456789ABCDEF";
 		std::string result;
 		result.reserve(value.size()); // Minimum size of result
 
