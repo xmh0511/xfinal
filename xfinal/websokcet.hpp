@@ -104,7 +104,7 @@ namespace xfinal {
 
 		}
 	public:
-		std::string& uuid() {
+		std::string const& uuid() {
 			return socket_uid_;
 		}
 		bool is_open() {
