@@ -421,11 +421,13 @@ namespace xfinal {
 		}
 
 		void pre_process_multipart_data(std::pair<std::size_t, std::map<std::string, std::string>> const& pr, http_multipart_parser const& parser) { //是否需要过滤掉mutipart head
+			auto multipart_head = pr.second;
+			auto data_info = multipart_head_parser::parse(multipart_head);
 			if (pr.first != 0) {
 				if (current_use_pos_ > pr.first) {  //读取multipart head的时候 也读取了部分数据 处理数据的时候 把之前的头给移除了
 					start_read_pos_ += pr.first;
 					left_buffer_size_ = buffers_.size() - current_use_pos_;
-					process_multipart_data(pr.second, parser);
+					process_multipart_data(data_info,multipart_head, parser);
 				}
 				else {  //读multipart head的时候没有读取到multipart的data部分 就可以清除了 因为之前的头已经解析过了
 					buffers_.clear();
@@ -433,60 +435,50 @@ namespace xfinal {
 					current_use_pos_ = 0;
 					left_buffer_size_ = 1024;
 					start_read_pos_ = 0;
-					auto head = pr.second;
 					auto  handler = this->shared_from_this();
-					continue_read_data([parser, head, handler]() {
-						handler->process_multipart_data(head, parser);
+					continue_read_data([parser, data_info, multipart_head, handler]() {
+						handler->process_multipart_data(data_info,multipart_head, parser);
 					}, false, true);
 				}
 			}
 		}
 
-		void process_multipart_data(std::map<std::string, std::string> const& head, http_multipart_parser const& parser) {
+		void process_multipart_data(multipart_data_info const& data_info,std::map<std::string, std::string> const& head, http_multipart_parser const& parser) {
 			auto dpr = parser.is_end_part_data(buffers_.data() + start_read_pos_, current_use_pos_ - start_read_pos_);
 			if (dpr.first == multipart_data_state::is_end) { //如果已经是完整的数据了("\r\n--boundary_char")
-				record_mutlipart_data(head, nonstd::string_view(buffers_.data() + start_read_pos_, dpr.second), parser, dpr.first);
+				record_mutlipart_data(data_info,head, nonstd::string_view(buffers_.data() + start_read_pos_, dpr.second), parser, dpr.first);
 			}
 			else if (dpr.first == multipart_data_state::maybe_end) {  //或许是数据部分结束了 可能标识符\r
-				record_mutlipart_data(head, nonstd::string_view(buffers_.data() + start_read_pos_, dpr.second), parser, dpr.first);
+				record_mutlipart_data(data_info,head, nonstd::string_view(buffers_.data() + start_read_pos_, dpr.second), parser, dpr.first);
 			}
 			else if (dpr.first == multipart_data_state::all_part_data) { //buffer中都是数据部分
-				record_mutlipart_data(head, nonstd::string_view(buffers_.data() + start_read_pos_, current_use_pos_ - start_read_pos_), parser, dpr.first);
+				record_mutlipart_data(data_info,head, nonstd::string_view(buffers_.data() + start_read_pos_, current_use_pos_ - start_read_pos_), parser, dpr.first);
 			}
 		}
 
-		void record_mutlipart_data(std::map<std::string, std::string> const& head, nonstd::string_view data, http_multipart_parser const& parser, multipart_data_state data_state) {
-			auto value = head.at("content-disposition");
-			auto pos_name = value.find("name") + sizeof("name") + 1;
-			auto name = value.substr(pos_name, value.find('\"', pos_name) - pos_name);
-			auto type = value.find("filename");
-			auto f_type_iter = head.find("content-type"); //必须有否则无效
-			if (type != std::string::npos) {  //是文件类型
-				if (f_type_iter != head.end()) {  //只有有content-type的file才是合法的 否则跳过处理
-					auto file = request_info_.multipart_files_map_.find(name);
-					if (file != request_info_.multipart_files_map_.end()) {
-						file->second.add_data(data);
-					}
-					else {
-						auto f_type = head.at("content-type");
-						auto extension = get_extension(f_type);
-						auto t = std::time(nullptr);
-						auto& fileo = request_info_.multipart_files_map_[name];
-						auto path = upload_path_ + "/" + uuids::uuid_system_generator{}().to_short_str() + view2str(extension);
-						fileo.open(path,true);
-						auto filename_start = type + sizeof("filename") + 1;
-						auto original_name = value.substr(filename_start, value.find('\"', filename_start) - filename_start);
-						fileo.set_original_name(std::move(original_name));
-						fileo.add_data(data);
-					}
+		void record_mutlipart_data(multipart_data_info const& data_info, std::map<std::string, std::string> const& head, nonstd::string_view data, http_multipart_parser const& parser, multipart_data_state data_state) {
+			if (data_info.data_type == multipart_data_type::File) {  //是文件类型
+				auto file = request_info_.multipart_files_map_.find(data_info.name);
+				if (file != request_info_.multipart_files_map_.end()) {
+					file->second.add_data(data);
+				}
+				else {
+					auto extension = get_extension(data_info.content_type);
+					auto t = std::time(nullptr);
+					auto& fileo = request_info_.multipart_files_map_[data_info.name];
+					auto path = upload_path_ + "/" + uuids::uuid_system_generator{}().to_short_str() + view2str(extension);
+					fileo.open(path, true);
+					auto file_name = data_info.file_name;
+					fileo.set_original_name(std::move(file_name));
+					fileo.add_data(data);
 				}
 			}
 			else {  //是文本类型
-				request_info_.multipart_form_map_[name] += view2str(data);
+				request_info_.multipart_form_map_[data_info.name] += view2str(data);
 			}
 			if (data_state == multipart_data_state::is_end) {
-				if (type != std::string::npos) {  //如果是文件 读取完了 就可以关闭文件指针了
-					request_info_.multipart_files_map_[name].close();
+				if (data_info.data_type == multipart_data_type::File) {  //如果是文件 读取完了 就可以关闭文件指针了
+					request_info_.multipart_files_map_[data_info.name].close();
 				}
 				if (parser.is_end((buffers_.begin() + start_read_pos_ + data.size() + 2), buffers_.begin() + current_use_pos_)) { //判断是否全部接受完毕 回调multipart 路由
 					handle_body(content_type::multipart_form, 0);
@@ -510,8 +502,8 @@ namespace xfinal {
 				start_read_pos_ = 0;
 				left_buffer_size_ = buffers_.size() - current_use_pos_;
 				auto handler = this->shared_from_this();
-				continue_read_data([handler, head, parser]() {
-					handler->process_multipart_data(head, parser);
+				continue_read_data([handler, data_info, head, parser]() {
+					handler->process_multipart_data(data_info,head, parser);
 				}, true, true);
 			}
 			else if (data_state == multipart_data_state::all_part_data) {  //buffers中所有的数据都是mulitpart 的数据 （不包含multipart头）所以可以清除
@@ -519,8 +511,8 @@ namespace xfinal {
 				start_read_pos_ = 0;
 				current_use_pos_ = 0;
 				auto handler = this->shared_from_this();
-				continue_read_data([handler, head, parser]() {
-					handler->process_multipart_data(head, parser);
+				continue_read_data([handler, data_info,head, parser]() {
+					handler->process_multipart_data(data_info,head, parser);
 				}, true, true);
 			}
 		}

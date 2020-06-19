@@ -23,6 +23,12 @@ namespace xfinal {
 		maybe_end
 	};
 
+	enum class multipart_data_type :std::uint8_t {
+		Text,
+		File,
+		Unknow
+	};
+
 	class request_meta :private nocopyable {
 	public:
 		request_meta() = default;
@@ -560,5 +566,50 @@ namespace xfinal {
 	private:
 		std::string boundary_start_key_;
 		std::string boundary_end_key_;
+	};
+
+	struct multipart_data_info {
+		std::string name;
+		std::string content_type;
+		std::string file_name;
+		multipart_data_type data_type = multipart_data_type::Unknow;
+	};
+
+	class multipart_head_parser final {
+	public:
+		static multipart_data_info parse(std::map<std::string, std::string> const& head_pairs) {
+			auto value = head_pairs.find("content-disposition");
+			if (value != head_pairs.end()) {
+				auto name_info = value->second;
+				std::string key = "name";
+				auto it = my_search(name_info.begin(), name_info.end(), key.begin(), key.end());
+				if (it != name_info.end()) {
+					multipart_data_info data_info;
+					auto name_start_pos = (it - name_info.begin()) + key.size() + 2; // "\"="
+					auto end_pos = name_info.find('\"', name_start_pos);
+					data_info.name = name_info.substr(name_start_pos, end_pos - name_start_pos);
+					std::string file_key_str = "filename";
+					auto file_key_start = name_info.find(file_key_str);
+					if (file_key_start != std::string::npos) {
+						auto f_type_iter = head_pairs.find("content-type"); //必须有否则无效
+						if (f_type_iter != head_pairs.end()) {
+							data_info.content_type = f_type_iter->second;
+							data_info.data_type = multipart_data_type::File;
+							auto file_name_start = file_key_start + file_key_str.size() + 2;  // "\"="
+							auto file_key_end = name_info.find('\"', file_name_start);
+							data_info.file_name = name_info.substr(file_name_start, file_key_end - file_name_start);
+						}
+						else {
+							data_info.data_type = multipart_data_type::Unknow;
+						}
+					}
+					else {
+						data_info.data_type = multipart_data_type::Text;
+					}
+					return data_info;
+				}
+			}
+			return multipart_data_info{};
+		}
 	};
 }

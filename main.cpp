@@ -204,14 +204,26 @@ int main()
 	});
 
 	server.router<POST>("/upload", [](request& req, response& res) {
-		std::cout << "text: " << req.query("text") << std::endl;
-		auto& file = req.file("img");
-		std::cout << file.size() << std::endl;
 		json data;
-		data["name"] = file.original_name();
-		data["text"] = view2str(req.query("text"));
-		data["url"] = file.url_path();
-		data["file_path"] = file.path();
+		auto& files = req.files();
+		for (auto& file : files) {
+			json file_info;
+			file_info["name"] = file.second.original_name();
+			file_info["size"] = file.second.size();
+			file_info["file_path"] = file.second.path();
+			file_info["url"] = file.second.url_path();
+			file_info["key"] = file.first;
+			data["files"].push_back(file_info);
+		}
+		auto& texts = req.multipart_form();
+		for (auto& iter : texts) {
+			json text_info;
+			text_info["text"] = iter.second;
+			text_info["key"] = iter.first;
+			data["texts"].push_back(text_info);
+		}
+		auto& file = req.file("img");
+		auto text = req.query("text");
 		data["success"] = true;
 		res.write_json(data);
 		});
