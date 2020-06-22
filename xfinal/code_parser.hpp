@@ -8,6 +8,9 @@
 #include <string>
 #include <clocale>
 #include <cstdlib>
+#ifdef _WIN32
+#include <Windows.h>
+#endif
 namespace xfinal {
 	static std::string url_encode(const std::string& value) noexcept {
 		const char* const hex_chars = "0123456789ABCDEF";
@@ -54,36 +57,57 @@ namespace xfinal {
 	}
 
 
+//	static std::string utf8_to_gbk(std::string const& u8str) {
+//		std::setlocale(LC_ALL, "en_US.utf8");
+//		auto size = std::mbstowcs(nullptr, u8str.c_str(), 0);
+//		std::wstring wstr(size, '\0');
+//		std::mbstowcs(&wstr[0], u8str.c_str(), size);
+//#if _MSC_VER
+//		std::setlocale(LC_ALL, ".936");
+//#else
+//		std::setlocale(LC_ALL, "zh_CN.GBK");
+//#endif 
+//		auto msize = std::wcstombs(nullptr, wstr.c_str(), 0);
+//		std::string str(msize, '\0');
+//		std::wcstombs(&str[0], wstr.c_str(), msize);
+//		return str;
+//	}
+//
+//	static std::string gbk_to_utf8(std::string const& gbkstr) {
+//#if _MSC_VER
+//		std::setlocale(LC_ALL, ".936");
+//#else
+//		std::setlocale(LC_ALL, "zh_CN.GBK");
+//#endif 
+//		auto size = std::mbstowcs(nullptr, gbkstr.c_str(), 0);
+//		std::wstring wstr(size, '\0');
+//		std::mbstowcs(&wstr[0], gbkstr.c_str(), size);
+//		std::setlocale(LC_ALL, "en_US.utf8");
+//		auto msize = std::wcstombs(nullptr, wstr.c_str(), 0);
+//		std::string str(msize, '\0');
+//		std::wcstombs(&str[0], wstr.c_str(), msize);
+//		return str;
+//	}
+#ifdef _WIN32
 	static std::string utf8_to_gbk(std::string const& u8str) {
-		std::setlocale(LC_ALL, "en_US.utf8");
-		auto size = std::mbstowcs(nullptr, u8str.c_str(), 0);
-		std::wstring wstr(size, '\0');
-		std::mbstowcs(&wstr[0], u8str.c_str(), size);
-#if _MSC_VER
-		std::setlocale(LC_ALL, ".936");
-#else
-		std::setlocale(LC_ALL, "zh_CN.GBK");
-#endif 
-		auto msize = std::wcstombs(nullptr, wstr.c_str(), 0);
-		std::string str(msize, '\0');
-		std::wcstombs(&str[0], wstr.c_str(), msize);
-		return str;
+		auto size = MultiByteToWideChar(CP_UTF8, 0, u8str.c_str(), -1, nullptr, 0);
+		std::wstring wstr((std::size_t)size-1, '\0');
+		MultiByteToWideChar(CP_UTF8, 0, u8str.c_str(), -1, &wstr[0], size-1);
+		size = WideCharToMultiByte(CP_ACP, 0, wstr.c_str(), -1, NULL, 0, NULL, NULL);
+		std::string result((std::size_t)size -1, '\0');
+		WideCharToMultiByte(CP_ACP, 0, wstr.c_str(), -1, &result[0], size -1, NULL, NULL);
+		return result;
 	}
 
 	static std::string gbk_to_utf8(std::string const& gbkstr) {
-#if _MSC_VER
-		std::setlocale(LC_ALL, ".936");
-#else
-		std::setlocale(LC_ALL, "zh_CN.GBK");
-#endif 
-		auto size = std::mbstowcs(nullptr, gbkstr.c_str(), 0);
-		std::wstring wstr(size, '\0');
-		std::mbstowcs(&wstr[0], gbkstr.c_str(), size);
-		std::setlocale(LC_ALL, "en_US.utf8");
-		auto msize = std::wcstombs(nullptr, wstr.c_str(), 0);
-		std::string str(msize, '\0');
-		std::wcstombs(&str[0], wstr.c_str(), msize);
-		return str;
+		auto size = MultiByteToWideChar(CP_ACP, 0, gbkstr.c_str(), -1, NULL, 0);
+		std::wstring wstr((std::size_t)size-1, '\0');
+		MultiByteToWideChar(CP_ACP, 0, gbkstr.c_str(), -1, &wstr[0], size-1);
+		size = WideCharToMultiByte(CP_UTF8, 0, wstr.c_str(), -1, NULL, 0, NULL, NULL);
+		std::string result((std::size_t)size -1, '\0');
+		WideCharToMultiByte(CP_UTF8, 0, wstr.c_str(), -1, &result[0], size -1, NULL, NULL);
+		return result;
 	}
+#endif
 }
 #endif //CPPWEBSERVER_URL_ENCODE_DECODE_HPP

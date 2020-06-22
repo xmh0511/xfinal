@@ -501,7 +501,7 @@ namespace xfinal {
 	}
 
 	static nonstd::string_view get_content_type(std::string const& key) {
-		auto it = mime_map.find(key);
+		auto it = mime_map.find(nonstd::string_view(key.data(),key.size()));
 		if (it != mime_map.end()) {
 			return it->second;
 		}

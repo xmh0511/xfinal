@@ -534,7 +534,7 @@ namespace xfinal {
 					write_string("", false, http_status::bad_request);
 				}
 				else {
-					if (!exist_header("Content - Type")) { //have not specified content_type
+					if (!exist_header("Content-Type")) { //have not specified content_type
 						add_header("Content-Type", view2str(file_.content_type()));
 					}
 					auto filesize = file_.size();

@@ -196,7 +196,7 @@ namespace xfinal {
 				file_handle_->seekg(begin);
 				auto pt = fs::path(filename);
 				if (pt.has_extension()) {
-					content_type_ = get_content_type(pt.extension());
+					content_type_ = get_content_type(pt.extension().u8string());
 				}
 				else {
 					content_type_ = unknow_file;
