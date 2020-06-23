@@ -268,16 +268,24 @@ namespace xfinal {
 				auto p = fs::path("."+ decode_path);
 				auto content_type = get_content_type(p.extension());
 				auto ab = fs::absolute(p);
-				if (ab.parent_path() == fs::current_path()) { //目录到了程序文件的目录 视为不合法请求
-					res.write_string("", false, http_status::bad_request, view2str(content_type));
-				}
-				else {
+				try {
+					if (!fs::exists(p) || (ab.parent_path() == fs::current_path())) { //目录到了程序文件的目录 视为不合法请求
+						res.write_string("", false, http_status::bad_request, view2str(content_type));
+					}
+					else {
 #ifdef _WIN32
-					auto native_path = utf8_to_gbk(p.string());
+						auto native_path = utf8_to_gbk(p.string());
 #else // _WIN32
-					auto native_path = p.string();
+						auto native_path = p.string();
 #endif
-					res.write_file(native_path, true); //默认使用chunked方式返回文件数据
+						res.write_file(native_path, true); //默认使用chunked方式返回文件数据
+					}
+				}
+				catch (std::exception const& ec) {
+					std::stringstream ss;
+					ss << req.raw_url() << " request invalid cause: " << ec.what();
+					utils::messageCenter::get().trigger_message(ss.str());
+					res.write_string("", false, http_status::bad_request, view2str(content_type));
 				}
 			});
 		}

@@ -113,7 +113,11 @@ int main()
 	}
 	server.init_nanolog("./logs/", "server_log", 1);
 	server.on_error([](std::string const& message) {  //提供用户记录错误日志
+#ifdef _WIN32
+		std::cout << utf8_to_gbk(message) << std::endl;
+#else 
 		std::cout << message << std::endl;
+#endif 
 	});
 	server.set_wait_read_time(30);
 	server.set_wait_write_time(30);
