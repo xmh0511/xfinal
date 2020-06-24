@@ -14,7 +14,7 @@ namespace xfinal {
 	class connection final :public std::enable_shared_from_this<connection> {
 		friend class http_server;
 	public:
-		connection(asio::io_service& io, http_router& router, std::string const& static_path, std::string const& upload_path,std::size_t max_body_size) :socket_(std::unique_ptr<asio::ip::tcp::socket>(new asio::ip::tcp::socket(io))), io_service_(io), buffers_(expand_buffer_size), router_(router), static_path_(static_path), req_(res_, this), res_(req_, this), upload_path_(upload_path), keep_alive_waiter_(io), read_waiter_(io), max_buffer_size_(max_body_size), defer_write_waiter_(io){
+		connection(asio::io_service& io, http_router& router, std::string const& static_path, std::string const& upload_path,std::size_t max_body_size) :socket_(std::unique_ptr<asio::ip::tcp::socket>(new asio::ip::tcp::socket(io))), io_service_(io), buffers_(expand_buffer_size), router_(router), static_path_(static_path), req_(this), res_(req_, this), upload_path_(upload_path), keep_alive_waiter_(io), read_waiter_(io), max_buffer_size_(max_body_size), defer_write_waiter_(io){
 			left_buffer_size_ = buffers_.size();
 			req_.headers_ = &(request_info_.headers_);
 			req_.multipart_form_map_ = &(request_info_.multipart_form_map_);

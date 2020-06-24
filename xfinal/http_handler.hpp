@@ -23,7 +23,7 @@ namespace xfinal {
 		friend class response;
 		friend class http_router;
 	private:
-		request(response& res, class connection* connect_) :connecter_(connect_), res_(res) {
+		request(class connection* connect_) :connecter_(connect_) {
 
 		}
 	public:
@@ -446,7 +446,6 @@ namespace xfinal {
 		xfinal::XFile* oct_steam_ = nullptr;
 		xfinal::XFile* empty_file_ = nullptr;
 		class connection* connecter_;
-		response& res_;
 		std::shared_ptr<class session> session_;
 		bool is_generic_ = false;
 		std::string generic_base_path_;
