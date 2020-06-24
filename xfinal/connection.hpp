@@ -13,6 +13,8 @@
 namespace xfinal {
 	class connection final :public std::enable_shared_from_this<connection> {
 		friend class http_server;
+		template<typename T>
+		friend class defer_guarder;
 	public:
 		connection(asio::io_service& io, http_router& router, std::string const& static_path, std::string const& upload_path,std::size_t max_body_size) :socket_(std::unique_ptr<asio::ip::tcp::socket>(new asio::ip::tcp::socket(io))), io_service_(io), buffers_(expand_buffer_size), router_(router), static_path_(static_path), req_(this), res_(req_, this), upload_path_(upload_path), keep_alive_waiter_(io), read_waiter_(io), max_buffer_size_(max_body_size), defer_write_waiter_(io){
 			left_buffer_size_ = buffers_.size();
@@ -75,43 +77,24 @@ namespace xfinal {
 			return defer_write_max_time_;
 		}
 
-		void defer_write() {
-			if (need_defer_ == true) {
-				cancel_defer_waiter();
-				if (ready_defer_write_) {
-					auto p = ready_defer_write_->get_future();
-					if (p.get()) {
-						need_defer_ = false;
-						write();
-					}
-				}
-			}
-		}
+		//void defer_write() {
+		//	if (need_defer_ == true) {
+		//		cancel_defer_waiter();
+		//		if (ready_defer_write_) {
+		//			auto p = ready_defer_write_->get_future();
+		//			if (p.get()) {
+		//				need_defer_ = false;
+		//				write();
+		//			}
+		//		}
+		//	}
+		//}
 
-		class defer_guarder {
-		public:
-			defer_guarder() = default;
-			defer_guarder(std::shared_ptr<connection> const& smarter) :conn_(smarter) {
 
-			}
-		public:
-			~defer_guarder() {
-				if (conn_ != nullptr && conn_->need_defer_ == true) {
-					conn_->defer_write();
-				}
-			}
-			std::shared_ptr<connection> operator ->() {
-				return conn_;
-			}
-		private:
-			std::shared_ptr<connection> conn_ = nullptr;
-		};
-
-		std::shared_ptr<defer_guarder> defer() {
-			need_defer_ = true;
-			ready_defer_write_ = std::unique_ptr<std::promise<bool>>(new std::promise<bool>{});
-			return std::shared_ptr<defer_guarder>{ new defer_guarder{ this->shared_from_this() }};
-		}
+		//std::shared_ptr<defer_guarder> write_guarder() {
+		//	ready_defer_write_ = std::unique_ptr<std::promise<bool>>(new std::promise<bool>{});
+		//	return std::shared_ptr<defer_guarder>{ new defer_guarder{ this->shared_from_this() }};
+		//}
 	private:
 		std::vector<char>& get_buffers() {
 			return buffers_;
@@ -194,17 +177,13 @@ namespace xfinal {
 		void post_router() {
 			//router_.post_router(req_, res_);
 			need_terminate_request_ = false;
+			auto write_guarder = std::shared_ptr<defer_guarder<connection>>{ new defer_guarder<connection>{ this->shared_from_this() } };
+			res_.defer_guarder_ = write_guarder;
+			start_defer_waiter();
 			if (current_router_ != nullptr) {
 				current_router_(req_, res_);
 			}
-			if (need_defer_ == true) {
-				start_defer_waiter(); //开启延迟写计时器
-				if (ready_defer_write_) {
-					ready_defer_write_->set_value(true);
-				}
-				return;
-			}
-			write();  //回应请求
+			//write();  //回应请求
 		}
 		void parse_header(http_parser_header& parser) {  //解析请求头
 			auto parse_result = parser.parse_request_header(request_info_);
@@ -635,6 +614,7 @@ namespace xfinal {
 		}
 
 		void write() {
+			cancel_defer_waiter();
 			if (need_terminate_request_ == true) {
 				auto it = res_.header_map_.find("Connection");
 				if (it == res_.header_map_.end()) {
@@ -782,8 +762,6 @@ namespace xfinal {
 		}
 	private:
 		void reset() {
-			need_defer_ = false;
-			ready_defer_write_ = nullptr;
 			current_router_ = nullptr;
 			need_terminate_request_ = false;
 			req_.reset();
@@ -835,8 +813,6 @@ namespace xfinal {
 		std::time_t defer_write_max_time_ = 60;
 		asio::steady_timer read_waiter_;
 		asio::steady_timer defer_write_waiter_;
-		std::atomic_bool need_defer_{ false };
-		std::unique_ptr<std::promise<bool>> ready_defer_write_ = nullptr;
 	};
 
 }

@@ -298,7 +298,7 @@ int main()
 	});
 
 	server.router<GET>("/ttt", [](request& req, response& res) {
-		auto guarder = res.connection().defer();
+		auto guarder = res.defer();
 		std::shared_ptr<http_client> client(new http_client("www.baidu.com"));
 		client->request<GET>("/", [client, guarder,&res](http_client::client_response const& cres, std::error_code const& ec) {
 			if (ec) {
@@ -402,11 +402,10 @@ int main()
 	server.router<GET>("/deferresponse", [](request& req, response& res) {
 		auto time = req.param("time");
 		auto time_i = std::atoi(time.data());
-		auto guard = res.connection().defer();
+		auto guard = res.defer();
 		std::thread t1 = std::thread([guard,&res, time_i]() {
 			std::this_thread::sleep_for(std::chrono::seconds(time_i));
 			res.write_string("OK");
-			(*guard)->defer_write();
 		});
 		t1.detach();
 	});

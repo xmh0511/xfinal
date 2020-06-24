@@ -452,6 +452,26 @@ namespace xfinal {
 		std::map<std::string, nonstd::any> user_data_;
 	};
 	///响应
+	template<typename Connection>
+	class defer_guarder {
+	public:
+		defer_guarder() = default;
+		defer_guarder(std::shared_ptr<Connection> const& smarter) :conn_(smarter) {
+
+		}
+	public:
+		~defer_guarder() {
+			if (conn_ != nullptr) {
+				conn_->write(); //回应请求
+			}
+		}
+		std::shared_ptr<Connection> operator ->() {
+			return conn_;
+		}
+	private:
+		std::shared_ptr<Connection> conn_ = nullptr;
+	};
+
 	class response :private nocopyable {
 		friend class connection;
 		friend class http_router;
@@ -683,6 +703,9 @@ namespace xfinal {
 			}
 		}
 
+		std::shared_ptr<defer_guarder<class connection>> defer() {
+			return defer_guarder_.lock();
+		}
 	public:
 		inja::Environment& view_environment() {
 			return *view_env_;
@@ -796,6 +819,7 @@ namespace xfinal {
 				break;
 			}
 		}
+	public:
 	private:
 		void reset() {
 			header_map_.clear();
@@ -809,6 +833,7 @@ namespace xfinal {
 			init_start_pos_ = -1;
 			init_end_pos_ = -1;
 			portion_need_size_ = 0;
+			defer_guarder_.reset();
 		}
 	private:
 		class connection* connecter_;
@@ -827,6 +852,7 @@ namespace xfinal {
 		std::uint64_t portion_need_size_ = 0;
 		std::unique_ptr<inja::Environment> view_env_;
 		json view_data_;
+		std::weak_ptr<defer_guarder<class connection>> defer_guarder_;
 	};
 
 	class Controller :private nocopyable {
