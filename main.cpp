@@ -411,6 +411,30 @@ int main()
 		t1.detach();
 	});
 
+
+	server.router<GET, POST>("/httppackage", [](request& req, response& res) {
+		struct CustomeResult :public response::http_package {
+			CustomeResult(std::string&& content) {
+				body_souce_ = std::move(content);
+				state_ = http_status::ok;
+				write_type_ = response::write_type::string;
+			}
+		};
+		res.write_http_package(CustomeResult{ "OK" });
+	});
+
+	server.router<GET, POST>("/httppackagefile", [](request& req, response& res) {
+		struct CustomeResult :public response::http_package {
+			CustomeResult(std::string&& content) {
+				body_souce_ = std::move(content);
+				state_ = http_status::ok;
+				write_type_ = response::write_type::file;
+				is_chunked_ = true;
+			}
+		};
+		res.write_http_package(CustomeResult{ "./static/a.mp4" });
+	});
+
 	std::shared_ptr<websocket> other_socket;
 
 	websocket_event event;

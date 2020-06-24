@@ -457,11 +457,24 @@ namespace xfinal {
 		friend class connection;
 		friend class http_router;
 		friend class request;
-	protected:
+	public:
 		enum class write_type {
 			string,
 			file,
 			no_body
+		};
+	public:
+		class http_package {
+			friend class response;
+		protected:
+			http_package() = default;
+			virtual ~http_package() = default;
+		protected:
+			http_status state_ = http_status::init;
+			std::unordered_multimap<std::string, std::string> header_map_;
+			bool is_chunked_ = false;
+			write_type write_type_ = write_type::string;
+			std::string body_souce_;
 		};
 	private:
 		response(request& req, class connection* connect_) :connecter_(connect_), req_(req), view_env_(new inja::Environment()) {
@@ -641,6 +654,23 @@ namespace xfinal {
 		void write_data_view(std::string const& data, json const& json, bool is_chunked = false, http_status state = http_status::ok, std::string const& content_type = "text/plain") noexcept {
 			view_data_ = json;
 			write_data_view(data, is_chunked, state, content_type);
+		}
+
+		void write_http_package(http_package&& package) {
+			for (auto& iter : package.header_map_) {
+				if (!exist_header(iter.first)) {
+					add_header(iter.first, iter.second);
+				}
+			}
+			if (package.write_type_ == write_type::string) {
+				write_string(std::move(package.body_souce_), package.is_chunked_, package.state_);
+			}
+			else if (package.write_type_ == write_type::no_body) {
+				write_state(package.state_);
+			}
+			else if (package.write_type_ == write_type::file) {
+				write_file(package.body_souce_, package.is_chunked_);
+			}
 		}
 
 		void redirect(nonstd::string_view url, bool is_temporary = true) noexcept {
