@@ -462,6 +462,7 @@ namespace xfinal {
 	public:
 		~defer_guarder() {
 			if (conn_ != nullptr) {
+				conn_->do_after();
 				conn_->write(); //回应请求
 			}
 		}
@@ -476,6 +477,10 @@ namespace xfinal {
 		friend class connection;
 		friend class http_router;
 		friend class request;
+		template<typename...Args>
+		friend struct auto_params_lambda;
+		template<typename Connection>
+		friend class defer_guarder;
 	public:
 		enum class write_type {
 			string,
@@ -834,6 +839,7 @@ namespace xfinal {
 			init_end_pos_ = -1;
 			portion_need_size_ = 0;
 			defer_guarder_.reset();
+			after_excutor_ = nullptr;
 		}
 	private:
 		class connection* connecter_;
@@ -853,6 +859,7 @@ namespace xfinal {
 		std::unique_ptr<inja::Environment> view_env_;
 		json view_data_;
 		std::weak_ptr<defer_guarder<class connection>> defer_guarder_;
+		std::function<void(bool&, request&, response&)> after_excutor_ = nullptr;
 	};
 
 	class Controller :private nocopyable {

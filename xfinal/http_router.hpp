@@ -81,8 +81,11 @@ namespace xfinal {
 			if (!b) {
 				return;
 			}
+			using aop_type = typename std::remove_reference<decltype(aop_tp)>::type;
+			auto excutor = std::bind(&router_caller<std::tuple_size<aop_type>::value>::template apply<c11_auto_lambda_aop_after, aop_type&>, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::ref(aop_tp));
+			res_.after_excutor_ = excutor;
 			func_(req_, res_);
-			router_caller<std::tuple_size<typename std::remove_reference<decltype(aop_tp)>::type>::value>::template apply<c11_auto_lambda_aop_after>(b, req_, res_, aop_tp);
+			//router_caller<std::tuple_size<typename std::remove_reference<decltype(aop_tp)>::type>::value>::template apply<c11_auto_lambda_aop_after>(b, req_, res_, aop_tp);
 		}
 		Function& func_;
 		request& req_;
@@ -102,13 +105,16 @@ namespace xfinal {
 			if (!b) {
 				return;
 			}
+			using aop_type = typename std::remove_reference<decltype(aop_tp)>::type;
+			auto excutor = std::bind(&router_caller<std::tuple_size<aop_type>::value>::template apply<c11_auto_lambda_aop_after, aop_type&>, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::ref(aop_tp));
+			res_.after_excutor_ = excutor;
 			if (obj_ != nullptr) {
 				(obj_->*func_)(req_, res_);
 			}
 			else {
 				(Object{}.*func_)(req_, res_);
 			}
-			router_caller<std::tuple_size<typename std::remove_reference<decltype(aop_tp)>::type>::value>::template apply<c11_auto_lambda_aop_after>(b, req_, res_, aop_tp);
+			//router_caller<std::tuple_size<typename std::remove_reference<decltype(aop_tp)>::type>::value>::template apply<c11_auto_lambda_aop_after>(b, req_, res_, aop_tp);
 		}
 		Object* obj_;
 		Function func_;
@@ -129,6 +135,9 @@ namespace xfinal {
 			if (!b) {
 				return;
 			}
+			using aop_type = typename std::remove_reference<decltype(aop_tp)>::type;
+			auto excutor = std::bind(&router_caller<std::tuple_size<aop_type>::value>::template apply<c11_auto_lambda_aop_after, aop_type&>, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::ref(aop_tp));
+			res_.after_excutor_ = excutor;
 			if (obj_ != nullptr) {
 				obj_->req_ = &req_;
 				obj_->res_ = &res_;
@@ -140,7 +149,7 @@ namespace xfinal {
 				c.res_ = &res_;
 				(c.*func_)();
 			}
-			router_caller<std::tuple_size<typename std::remove_reference<decltype(aop_tp)>::type>::value>::template apply<c11_auto_lambda_aop_after>(b, req_, res_, aop_tp);
+			//router_caller<std::tuple_size<typename std::remove_reference<decltype(aop_tp)>::type>::value>::template apply<c11_auto_lambda_aop_after>(b, req_, res_, aop_tp);
 		}
 		Object* obj_;
 		void(Class::* func_)();

@@ -613,6 +613,13 @@ namespace xfinal {
 			write();
 		}
 
+		void do_after() {
+			if (res_.after_excutor_ != nullptr) {
+				bool b = true;
+				res_.after_excutor_(b, req_, res_);
+			}
+		}
+
 		void write() {
 			cancel_defer_waiter();
 			if (need_terminate_request_ == true) {

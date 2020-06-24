@@ -405,10 +405,11 @@ int main()
 		auto guard = res.defer();
 		std::thread t1 = std::thread([guard,&res, time_i]() {
 			std::this_thread::sleep_for(std::chrono::seconds(time_i));
+			std::cout << "command\n";
 			res.write_string("OK");
 		});
 		t1.detach();
-	});
+		}, Test{});
 
 
 	server.router<GET, POST>("/httppackage", [](request& req, response& res) {
