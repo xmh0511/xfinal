@@ -293,7 +293,7 @@ int main()
 server.router<GET>("/deferresponse", [](request& req, response& res) {
 	auto time = req.param("time");
 	auto time_i = std::atoi(time.data());
-	auto guard = res.connection().defer();  //需要有connection所有权
+	auto guard = res.defer();  //需要有connection所有权
 	std::thread t1 = std::thread([guard,&res, time_i]() {
 	      std::this_thread::sleep_for(std::chrono::seconds(time_i));
 	      res.write_string("OK");
