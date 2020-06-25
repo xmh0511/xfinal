@@ -778,7 +778,7 @@ namespace nanolog
 		std::thread m_thread;
 	};
 
-	// ¶ÔÍâ½Ó¿ÚÀà
+	// å¯¹å¤–æ¥å£ç±»
 	class Logger
 	{
 	public:
