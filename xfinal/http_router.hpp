@@ -227,13 +227,6 @@ namespace xfinal {
 		using interceptor_function = std::function<bool(request&, response&)>;
 	public:
 		http_router() :timer_(io_), websocket_hub_instance_(websocket_hub::get()){
-			check_session_expires();
-			thread_ = std::move(std::unique_ptr<std::thread>(new std::thread([](asio::io_service& io) {
-				io.run();
-				}, std::ref(io_))));
-			websocket_hub_thread_ = std::move(std::unique_ptr<std::thread>(new std::thread([this]() {
-				run_hub_send();
-			})));
 		}
 		~http_router() {
 			io_.stop();
@@ -248,6 +241,15 @@ namespace xfinal {
 			}
 		}
 	private:
+		void run() {
+			check_session_expires();
+			thread_ = std::move(std::unique_ptr<std::thread>(new std::thread([](asio::io_service& io) {
+				io.run();
+			}, std::ref(io_))));
+			websocket_hub_thread_ = std::move(std::unique_ptr<std::thread>(new std::thread([this]() {
+				run_hub_send();
+			})));
+		}
 		void run_hub_send() {
 			websocket_hub_instance_.send();
 		}

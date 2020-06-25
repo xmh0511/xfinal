@@ -40,9 +40,6 @@ namespace xfinal {
 			if (!disable_auto_register_static_handler_) {
 				register_static_router(); //注册静态文件处理逻辑
 			}
-			auto session_storager = std::unique_ptr<default_session_storage>(new default_session_storage());
-			session_storager->save_dir_ = default_storage_session_path_;
-			set_session_storager(std::move(session_storager));
 			if (!disable_auto_create_directories_) {
 				if (!fs::exists(static_path_)) {
 					fs::create_directories(static_path_);
@@ -50,6 +47,9 @@ namespace xfinal {
 				if (!fs::exists(upload_path_)) {
 					fs::create_directories(upload_path_);
 				}
+			}
+			if (!has_set_session_storager_) {
+				set_default_session_storager();
 			}
 			if (server_query_ != nullptr) {
 				bool r = listen(*server_query_);
@@ -61,10 +61,18 @@ namespace xfinal {
 				utils::messageCenter::get().trigger_message("listen fail");
 				return;
 			}
+			http_router_.run();
 			ioservice_pool_handler_.run();
 		}
 		void stop() {
 			ioservice_pool_handler_.stop();
+		}
+	private:
+		void set_default_session_storager() {
+			auto session_storager = std::unique_ptr<default_session_storage>(new default_session_storage());
+			session_storager->save_dir_ = default_storage_session_path_;
+			session_manager<class session>::get().set_storage(std::move(session_storager));
+			session_manager<class session>::get().get_storage().init();  //初始化 
 		}
 	public:
 		///只能设置为相对当前程序运行目录的路径  "./xxx/xxx"
@@ -113,6 +121,7 @@ namespace xfinal {
 			static_assert(std::is_base_of<session_storage, T>::value, "set storage is not base on session_storage!");
 			session_manager<class session>::get().set_storage(std::move(handler));
 			session_manager<class session>::get().get_storage().init();  //初始化 
+			has_set_session_storager_ = true;
 		}
 
 		void set_check_session_rate(std::time_t seconds) {
@@ -320,5 +329,6 @@ namespace xfinal {
 		bool disable_auto_register_static_handler_ = false;
 		std::string default_storage_session_path_ = "./session";
 		std::unique_ptr<asio::ip::tcp::resolver::query> server_query_ = nullptr;
+		bool has_set_session_storager_ = false;
 	};
 }
