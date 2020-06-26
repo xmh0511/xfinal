@@ -117,7 +117,10 @@ namespace xfinal {
 		}
 		void add_session(std::string const& id, std::weak_ptr<SessionType> session) {
 			std::unique_lock<std::mutex> lock(mutex_);
-			session_map_[id] = session.lock();
+			auto it = session_map_.find(id);
+			if (it == session_map_.end()) {
+				session_map_.emplace(id, session.lock());
+			}
 		}
 		auto remove_session(std::string const& id)->decltype(session_map_.find(id)) {
 			std::unique_lock<std::mutex> lock(mutex_);
