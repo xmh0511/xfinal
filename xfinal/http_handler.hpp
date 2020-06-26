@@ -358,6 +358,19 @@ namespace xfinal {
 		class session& session() {
 			return session("XFINAL");
 		}
+
+		void set_session(std::weak_ptr<class session> weak) {
+			auto handler = weak.lock();
+			if (handler != nullptr) {
+				session_ = handler;
+				session_manager<class session>::get().add_session(handler->get_id(), handler);
+			}
+		}
+
+		class session& session_by_id(std::string const& sessionId) {
+			session_ = session_manager<class session>::get().validata(sessionId);//验证session的有效性并返回
+			return *session_;
+		}
 	protected:
 		void init_content_type() noexcept {
 			auto value = header("content-type");
