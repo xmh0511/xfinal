@@ -329,6 +329,7 @@ namespace xfinal {
 			session_manager<class session>::get().add_session(session_->get_id(), session_);
 			return *session_;
 		}
+
 		class session& session(std::string const& name) {
 			if (session_ != nullptr && !session_->empty()) {
 				auto cookie_name = session_->get_cookie().name();
@@ -371,6 +372,11 @@ namespace xfinal {
 			session_ = session_manager<class session>::get().validata(sessionId);//验证session的有效性并返回
 			return *session_;
 		}
+
+		class session_manager<class session>& get_session_manager() {
+			return session_manager<class session>::get();
+		}
+
 	protected:
 		void init_content_type() noexcept {
 			auto value = header("content-type");
