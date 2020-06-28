@@ -9,7 +9,7 @@
 3. 跨平台
 4. 支持拦截器功能
 5. 支持session/cookie （持久化,默认保存到磁盘。用户可以自定义持久化介质）
-6. 支持websocket 
+6. 支持websocket(无锁write,高效的数据写出能力) 
 7. 易用的客户端(http client/ https client 可以通过CMakeList.txt中的ENABLE_CLIENT_SSL ON开启)
 
 # 目录
