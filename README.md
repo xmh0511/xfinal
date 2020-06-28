@@ -287,17 +287,41 @@ int main()
    serve.run();
 }
 ````
+## http包回应
+> 简化回应api的调用方式
+````cpp
+	server.router<GET, POST>("/httppackage", [](request& req, response& res) {
+		struct CustomeResult :public response::http_package {
+			CustomeResult(std::string&& content) {
+				body_souce_ = std::move(content);
+				state_ = http_status::ok;
+				write_type_ = response::write_type::string;
+			}
+		};
+		res.write_http_package(CustomeResult{ "OK" });
+	});
 
+	server.router<GET, POST>("/httppackagefile", [](request& req, response& res) {
+		struct CustomeResult :public response::http_package {
+			CustomeResult(std::string&& content) {
+				body_souce_ = std::move(content);
+				state_ = http_status::ok;
+				write_type_ = response::write_type::file;
+				is_chunked_ = true;
+			}
+		};
+		res.write_http_package(CustomeResult{ "./static/a.mp4" });
+	});
+````
 ## 延迟响应
 ````cpp
 server.router<GET>("/deferresponse", [](request& req, response& res) {
 	auto time = req.param("time");
 	auto time_i = std::atoi(time.data());
-	auto guard = res.defer();  //需要有connection所有权
+	auto guard = res.defer();  //拥有connection所有权
 	std::thread t1 = std::thread([guard,&res, time_i]() {
 	      std::this_thread::sleep_for(std::chrono::seconds(time_i));
 	      res.write_string("OK");
-         //立即回写，如果是和当前请求是一个线程会出现死锁
 	});
 	t1.detach();
 });
