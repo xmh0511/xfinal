@@ -363,7 +363,7 @@ int main()
 {
    http_server serve(4); //线程数
    serve.listen("0.0.0.0","8080");
-   serve.set_session_storager<sql_storage>(); /*设置session存储方式*/
+   serve.set_session_storager(st::unique_ptr<sql_storage>(new sql_storage{})); /*设置session存储方式*/
    serve.run();
 }
 ````
