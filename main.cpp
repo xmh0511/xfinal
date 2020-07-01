@@ -91,6 +91,7 @@ struct limitRequest {
 	bool prehandle(request& req, response& res) {
 		using namespace nonstd::literals;
 		auto id = req.param("id");
+		auto info = req.url_params();
 		if (id == "0"_sv) {
 			res.write_file_view("./www/error.html", true, http_status::bad_request);
 			return false;
@@ -453,6 +454,24 @@ int main()
 				std::cout << ws.uuid()<< " close" << std::endl;
 		});
 		server.router("/ws", event, limitRequest {});
+
+
+		websocket_event eventpath;
+		eventpath.on("message", [](websocket& ws) {
+			std::cout << view2str(ws.messages()) << std::endl;
+			std::cout << (int)ws.message_code() << std::endl;
+			std::string message;
+			for (auto i = 0; i <= 18000; ++i) {
+				message.append(std::to_string(i) + ",");
+			}
+			ws.write_string(message);
+			}).on("open", [&other_socket](websocket& ws) {
+				other_socket = ws.shared_from_this();
+				std::cout << ws.uuid() << " open" << std::endl;
+				}).on("close", [](websocket& ws) {
+					std::cout << ws.uuid() << " close" << std::endl;
+					});
+				server.router("/pathinfo/*", eventpath, limitRequest {});
 
 
 		websocket_event event2;

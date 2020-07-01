@@ -195,9 +195,12 @@ namespace xfinal {
 				req_.init_url_params();
 				req_.init_content_type();
 				router_type rtype;
-				auto router_iter = router_.pre_router(req_, res_, rtype);
+				auto is_websocket = router_.websokcets().is_websocket(req_);
+				req_.is_websocket_ = is_websocket;
+				auto router_iter = router_.pre_router(req_, res_, rtype, is_websocket);
 				auto&& url_key = router_iter.first;
 				current_router_ = std::move(router_iter.second);
+				req_.event_index_str_ = url_key;
 				if (rtype== router_type::specify || rtype== router_type::general || rtype == router_type::ws) {
 					auto process_interceptor = router_.get_interceptors_process(url_key, rtype);
 					if (process_interceptor != nullptr) {
@@ -220,6 +223,10 @@ namespace xfinal {
 			//http request error;
 		}
 		void handle_read() {  //读取请求头完毕后 开始下一步处理
+			if (req_.is_websocket()) {  //是websokcet请求
+				handle_websocket();  //去处理websocket
+				return;
+			}
 			if (req_.has_body()) {  //has request body
 				auto type = req_.content_type();
 				switch (type)
@@ -253,14 +260,8 @@ namespace xfinal {
 				break;
 				}
 			}
-			else {  //如果没有body部分 也有可能是websocket
-				auto& wss = router_.websokcets();
-				if (wss.is_websocket(req_)) {  //是websokcet请求
-					handle_websocket();  //去处理websocket
-				}
-				else {  //普通http请求
-					post_router();
-				}
+			else {  //如果没有body部分
+				post_router(); //普通http请求
 			}
 		}
 
@@ -657,7 +658,7 @@ namespace xfinal {
 					else {
 						handler->socket_close_ = true; //对于connection来说 sokcet 进行逻辑关闭 http部分处理结束 转交给websocket处理
 						cancel_keep_timer();
-						auto ws = handler->router_.websokcets().start_webscoket(view2str(handler->req_.url()));
+						auto ws = handler->router_.websokcets().start_webscoket(view2str(handler->req_.get_event_index_str()));
 						ws->move_socket(std::move(handler->socket_));
 					}
 				});

@@ -153,6 +153,10 @@ namespace xfinal {
 			return url_;
 		}
 
+		bool is_websocket() {
+			return is_websocket_;
+		}
+
 		//template<typename T>
 		//typename std::enable_if<std::is_same<T, GBK>::value, nonstd::string_view>::type param(nonstd::string_view key) {
 		//	auto view = param(key);
@@ -260,6 +264,10 @@ namespace xfinal {
 
 		nonstd::string_view body() const noexcept {
 			return body_;
+		}
+
+		std::string get_event_index_str() {
+			return event_index_str_;
 		}
 
 		bool accept_range(std::int64_t& startpos, std::int64_t& endpos) {
@@ -424,6 +432,7 @@ namespace xfinal {
 		}
 	private:
 		void reset() {
+			event_index_str_.clear();
 			method_ = "";
 			url_ = "";
 			version_ = "";
@@ -439,6 +448,7 @@ namespace xfinal {
 			is_generic_ = false;
 			generic_base_path_ = "";
 			session_ = nullptr;
+			is_websocket_ = false;
 			user_data_.clear();
 		}
 		void set_generic_path(std::string const& path) {
@@ -469,6 +479,8 @@ namespace xfinal {
 		bool is_generic_ = false;
 		std::string generic_base_path_;
 		std::map<std::string, nonstd::any> user_data_;
+		bool is_websocket_ = false;
+		std::string event_index_str_;
 	};
 	///响应
 	template<typename Connection>
