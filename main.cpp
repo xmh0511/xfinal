@@ -452,7 +452,7 @@ int main()
 		}).on("close", [](websocket& ws) {
 				std::cout << ws.uuid()<< " close" << std::endl;
 		});
-		server.router("/ws", event);
+		server.router("/ws", event, limitRequest {});
 
 
 		websocket_event event2;

@@ -157,6 +157,30 @@ namespace xfinal {
 		response& res_;
 	};
 
+	template<typename MemberClass>
+	struct fiction_auto_lambda_for_ws {
+		fiction_auto_lambda_for_ws(nonstd::string_view url, MemberClass* that, websocket_event const& Event):url_(url), that_(that), event_(Event){
+
+		}
+		template<typename T>
+		void operator()(T&& tp) {
+			auto interceptor_tp = std::get<1>(tp);
+			auto interceptor_pre_process = [interceptor_tp](request& req, response& res) mutable->bool {
+				using tupleType = typename std::remove_reference<decltype(interceptor_tp)>::type;
+				bool result = true;
+				each_tuple<0, tuple_size<tupleType>::value>{}(interceptor_tp, c11_auto_lambda_interceptor_pre{ result,req,res });
+				return result;
+			};
+			auto url_str = view2str(url_);
+			that_->websockets_.add_event(url_str, event_);
+			that_->websocket_router_map_.emplace(url_str, nullptr);
+			that_->websocket_interceptor_map_.emplace(url_str, interceptor_pre_process);
+		}
+		nonstd::string_view url_;
+		MemberClass* that_;
+		websocket_event const& event_;
+	};
+
 	template<typename Methods,typename Function,typename MemberClass>
 	struct fiction_auto_lambda_in_router0 {
 		fiction_auto_lambda_in_router0(nonstd::string_view url,Methods methods, Function function, MemberClass* that):url_(url),methods_(methods), function_(function), that_(that){
@@ -222,6 +246,8 @@ namespace xfinal {
 		friend struct fiction_auto_lambda_in_router1;
 		template<typename Methods, typename Function, typename ClassType, typename MemberClass>
 		friend struct fiction_auto_lambda_in_router2;
+		template<typename MemberClass>
+		friend struct fiction_auto_lambda_for_ws;
 	public:
 		using router_function = std::function<void(request&, response&)>;
 		using interceptor_function = std::function<bool(request&, response&)>;
@@ -319,6 +345,13 @@ namespace xfinal {
 		template<typename Array, typename Class, typename Object, typename...Args>
 		typename std::enable_if<std::is_base_of<Controller, Class>::value>::type router(nonstd::string_view url, Array&& methods, void(Class::* memberfunc)(), Object* that, Args&& ...args) {  //controller with object pointer
 			fiction_auto_lambda_in_router2< Array, void(Class::*)(), Class, http_router> callable(url, std::forward<Array>(methods), memberfunc, static_cast<Object*>(that), this);
+			reorganize_tuple_v1(callable, std::tuple<>{}, std::tuple<>{}, std::tuple<>{}, std::forward<Args>(args)...);
+		}
+
+		// ws router
+		template<typename...Args>
+		void router_ws(nonstd::string_view url, websocket_event const& Event, Args&&...args) {
+			fiction_auto_lambda_for_ws<http_router> callable(url, this, Event);
 			reorganize_tuple_v1(callable, std::tuple<>{}, std::tuple<>{}, std::tuple<>{}, std::forward<Args>(args)...);
 		}
 
@@ -499,16 +532,22 @@ namespace xfinal {
 			}
 		}
 	public:
-		interceptor_function get_interceptors_process(std::string const& key,bool is_general) const {
-			if (!is_general) {
+		interceptor_function get_interceptors_process(std::string const& key, router_type type) const {
+			if (type == router_type::specify) {
 				auto iter = interceptor_map_.find(key);
 				if (iter != interceptor_map_.end()) {
 					return iter->second;
 				}
 			}
-			else {
+			else if(type == router_type::general){
 				auto iter = genera_interceptor_map_.find(key);
 				if (iter != genera_interceptor_map_.end()) {
+					return  iter->second;
+				}
+			}
+			else if (type == router_type::ws) {
+				auto iter = websocket_interceptor_map_.find(key);
+				if (iter != websocket_interceptor_map_.end()) {
 					return  iter->second;
 				}
 			}
@@ -551,6 +590,7 @@ namespace xfinal {
 		std::unordered_map<std::string, interceptor_function> interceptor_map_;
 		std::unordered_map<std::string, interceptor_function> genera_interceptor_map_;
 		std::unordered_map<std::string, router_function> websocket_router_map_;
+		std::unordered_map<std::string, interceptor_function> websocket_interceptor_map_;
 		std::unordered_map<std::string, std::pair<std::size_t, inja::CallbackFunction>> view_method_map_;
 		asio::io_service io_;
 		asio::steady_timer timer_;

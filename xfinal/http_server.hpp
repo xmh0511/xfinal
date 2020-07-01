@@ -245,10 +245,9 @@ namespace xfinal {
 			auto method_names = http_method_str<Methods...>::methods_to_name();
 			http_router_.router(url, std::move(method_names), std::forward<Function>(function), std::forward<Args>(args)...);
 		}
-		void router(nonstd::string_view url, websocket_event const& event) {
-			auto url_str = view2str(url);
-			http_router_.websockets_.add_event(url_str, event);
-			http_router_.websocket_router_map_.emplace(url_str, nullptr);
+		template<typename...Args>
+		void router(nonstd::string_view url, websocket_event const& Event, Args&&...args) {
+			http_router_.router_ws(url, Event, std::forward<Args>(args)...);
 		}
 	private:
 		void start_acceptor() {

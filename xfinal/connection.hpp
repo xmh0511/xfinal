@@ -198,8 +198,8 @@ namespace xfinal {
 				auto router_iter = router_.pre_router(req_, res_, rtype);
 				auto&& url_key = router_iter.first;
 				current_router_ = std::move(router_iter.second);
-				if (rtype== router_type::specify || rtype== router_type::general) {
-					auto process_interceptor = router_.get_interceptors_process(url_key, rtype== router_type::general);
+				if (rtype== router_type::specify || rtype== router_type::general || rtype == router_type::ws) {
+					auto process_interceptor = router_.get_interceptors_process(url_key, rtype);
 					if (process_interceptor != nullptr) {
 						auto r = process_interceptor(req_, res_);
 						if (!r) {  //终止此次请求
@@ -641,7 +641,7 @@ namespace xfinal {
 			if (!socket_close_) {
 				auto handler = this->shared_from_this();
 				start_read_waiter(true);  //开启超时
-				asio::async_write(*socket_, res_.to_buffers(), [handler, is_websokcet,this](std::error_code const& ec, std::size_t write_size) {
+				asio::async_write(*socket_, is_websokcet == false ? res_.to_buffers(): res_.header_to_buffer(), [handler, is_websokcet,this](std::error_code const& ec, std::size_t write_size) {
 					cancel_read_waiter();
 					if (ec) {
 						disconnect();
