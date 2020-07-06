@@ -223,10 +223,10 @@ namespace xfinal {
 			//http request error;
 		}
 		void handle_read() {  //读取请求头完毕后 开始下一步处理
-			if (req_.is_websocket()) {  //是websokcet请求
-				handle_websocket();  //去处理websocket
-				return;
-			}
+			//if (req_.is_websocket()) {  //是websokcet请求
+			//	handle_websocket();  //去处理websocket
+			//	return;
+			//}
 			if (req_.has_body()) {  //has request body
 				auto type = req_.content_type();
 				switch (type)
@@ -541,10 +541,10 @@ namespace xfinal {
 			post_router();
 		}
 		////处理content_type 为oct-stream 的body数据  --end
-
-		void handle_websocket() { ///websocket 处理
+	public:
+		void update_websocket() { ///websocket 处理
 			router_.websokcets().update_to_websocket(res_);
-			forward_write(true);
+			//forward_write(true);
 		}
 
 	private:
@@ -622,7 +622,7 @@ namespace xfinal {
 		}
 
 		void write() {
-			cancel_defer_waiter();
+			//cancel_defer_waiter();
 			if (need_terminate_request_ == true) {
 				auto it = res_.header_map_.find("Connection");
 				if (it == res_.header_map_.end()) {
@@ -659,6 +659,7 @@ namespace xfinal {
 						handler->socket_close_ = true; //对于connection来说 sokcet 进行逻辑关闭 http部分处理结束 转交给websocket处理
 						cancel_keep_timer();
 						auto ws = handler->router_.websokcets().start_webscoket(view2str(handler->req_.get_event_index_str()));
+						ws->user_data_ = req_.move_user_data();
 						ws->move_socket(std::move(handler->socket_));
 					}
 				});

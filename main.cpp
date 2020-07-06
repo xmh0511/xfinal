@@ -448,12 +448,13 @@ int main()
 		}
 		ws.write_string(message);
 		}).on("open", [&other_socket](websocket& ws) {
+			auto data = ws.get_user_data<std::shared_ptr<std::string>>("tag");
 			other_socket = ws.shared_from_this();
-			std::cout << ws.uuid() << " open" << std::endl;
+			std::cout << ws.uuid() << " open "<<*data << std::endl;
 		}).on("close", [](websocket& ws) {
 				std::cout << ws.uuid()<< " close" << std::endl;
 		});
-		server.router("/ws", event, limitRequest {});
+		server.router("/ws", event, Test {},limitRequest{});
 
 
 		websocket_event eventpath;
@@ -467,7 +468,7 @@ int main()
 			ws.write_string(message);
 			}).on("open", [&other_socket](websocket& ws) {
 				other_socket = ws.shared_from_this();
-				std::cout << ws.uuid() << " open" << std::endl;
+				std::cout << ws.uuid() << " open " << std::endl;
 				}).on("close", [](websocket& ws) {
 					std::cout << ws.uuid() << " close" << std::endl;
 					});

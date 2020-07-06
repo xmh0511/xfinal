@@ -248,7 +248,9 @@ namespace xfinal {
 		template<typename...Args>
 		void router(nonstd::string_view url, websocket_event const& Event, Args&&...args) {
 			std::array<std::string, 1> method = { "WEBSOSCKET" };
-			auto f = [](request& req, response& res) {};
+			auto f = [](request& req, response& res) {
+				req.connection().update_websocket();
+			};
 			http_router_.router_ws(url, Event,std::move(f), std::forward<Args>(args)...);
 		}
 	private:

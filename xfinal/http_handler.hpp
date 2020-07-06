@@ -455,6 +455,10 @@ namespace xfinal {
 			is_generic_ = true;
 			generic_base_path_ = path;
 		}
+
+		std::map<std::string, nonstd::any>&& move_user_data() {
+			return std::move(user_data_);
+		}
 	private:
 		nonstd::string_view method_;
 		nonstd::string_view url_;
@@ -492,9 +496,15 @@ namespace xfinal {
 		}
 	public:
 		~defer_guarder() {
+			conn_->cancel_defer_waiter();
 			if (conn_ != nullptr) {
 				conn_->do_after();
-				conn_->write(); //回应请求
+				if (!conn_->req_.is_websocket()) {
+					conn_->write(); //回应请求
+				}
+				else {
+					conn_->forward_write(true); //websocket
+				}
 			}
 		}
 		std::shared_ptr<Connection> operator ->() {
