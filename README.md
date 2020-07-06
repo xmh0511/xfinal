@@ -133,7 +133,7 @@ int main()
 }
 ````
 ## 支持泛化url重载 
-#### 自动路由到最佳匹配url的注册器 
+#### 自动路由到最佳匹配url的注册器 （websocket使用类似）
 >假设注册路由的集合是 { /* , /abc/* , /abc/ccc/* , /abc   }
 >请求示例  
 >> 1. url为 http://127.0.0.1:8080/abc/ccc/ddd,则最佳匹配的是 /abc/ccc/* 
@@ -522,6 +522,7 @@ int main()
 ### 以上所有使用lambda注册的路由 都可以替换成成员函数或controller
 
 # 好用的webscoket
+> 同样支持AOP 和前置拦截器
 ````cpp
 #include <xfinal.hpp>
 int main()
