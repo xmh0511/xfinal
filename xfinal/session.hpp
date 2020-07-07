@@ -21,6 +21,7 @@ namespace xfinal {
 		virtual void save(session& session) = 0;
 		virtual void remove(session& session) = 0;
 		virtual void remove(std::string const& uuid) = 0;
+		virtual ~session_storage() = default;
 	};
 	template<typename Session>
 	class cookie final :private nocopyable {
