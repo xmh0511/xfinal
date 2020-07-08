@@ -249,6 +249,8 @@ namespace xfinal {
 		http_router() :timer_(io_), websocket_hub_instance_(websocket_hub::get()){
 		}
 		~http_router() {
+			std::error_code ignore_err;
+			timer_.cancel(ignore_err);
 			io_.stop();
 			if (thread_->joinable()) {
 				thread_->join();
@@ -568,6 +570,9 @@ namespace xfinal {
 		void check_session_expires() {
 			timer_.expires_from_now(std::chrono::seconds(check_session_time_));
 			timer_.async_wait([this](std::error_code const& ec) {
+				if (ec) {
+					return;
+				}
 				session_manager<class session>::get().check_expires();
 				check_session_expires();
 			});

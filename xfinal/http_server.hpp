@@ -7,7 +7,9 @@
 #include "http_router.hpp"
 #include "session.hpp"
 #include "message_handler.hpp"
+#ifdef ENABLE_BUILDIN_LOG
 #include "nanolog.hpp"
+#endif
 namespace xfinal {
 	constexpr http_method GET = http_method::GET;
 	constexpr http_method POST = http_method::POST;
@@ -209,13 +211,16 @@ namespace xfinal {
 		std::time_t defer_write_max_wait_time() {
 			return defer_write_max_time_;
 		}
+
 		void init_nanolog(std::string const& log_directory,std::string const& prefix_file_name,std::uint32_t file_roll_size /*MB*/) {
+#ifdef ENABLE_BUILDIN_LOG
 			if (!disable_auto_create_directories_) {
 				if (!log_directory.empty() && !fs::exists(log_directory)) {
 					fs::create_directories(log_directory);
 				}
 			}
 			nanolog::Logger::initialize(nanolog::GuaranteedLogger(), log_directory, prefix_file_name, file_roll_size);
+#endif 
 		}
 	private:
 		bool listen(asio::ip::tcp::resolver::query& query) {

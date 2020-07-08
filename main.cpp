@@ -125,6 +125,7 @@ int main()
 	server.set_websocket_check_read_alive_time(200);
 	server.set_websocket_check_write_alive_time(200);
 	server.set_defer_write_max_wait_time(10);
+	//server.set_check_session_rate(2);
 	//server.set_max_body_size(3*1024*1024);
 
 	//server.set_upload_path("./myupload");
@@ -521,11 +522,12 @@ int main()
 					std::cout << ws.uuid() << " close" << std::endl;
 					});
 				server.router("/other2", event3);
-
+#ifdef ENABLE_BUILDIN_LOG
 		LOG_INFO << std::string("server start");
+#endif
 
 		//std::thread endth([&server]() {
-		//	std::this_thread::sleep_for(std::chrono::seconds(20));
+		//	std::this_thread::sleep_for(std::chrono::seconds(5));
 		//	server.stop();
 		//});
 		//endth.detach();
