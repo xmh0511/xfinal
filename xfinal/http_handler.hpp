@@ -531,9 +531,10 @@ namespace xfinal {
 	public:
 		class http_package {
 			friend class response;
-		protected:
+		public:
 			http_package() = default;
 			virtual ~http_package() = default;
+			virtual void dump() = 0;
 		protected:
 			http_status state_ = http_status::init;
 			std::unordered_multimap<std::string, std::string> header_map_;
@@ -722,6 +723,7 @@ namespace xfinal {
 		}
 
 		void write_http_package(http_package&& package) {
+			package.dump();
 			for (auto& iter : package.header_map_) {
 				if (!exist_header(iter.first)) {
 					add_header(iter.first, iter.second);

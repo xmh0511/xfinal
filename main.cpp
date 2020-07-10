@@ -418,6 +418,8 @@ int main()
 		struct CustomeResult :public response::http_package {
 			CustomeResult(std::string&& content) {
 				body_souce_ = std::move(content);
+			}
+			void dump() {
 				state_ = http_status::ok;
 				write_type_ = response::write_type::string;
 			}
@@ -429,6 +431,8 @@ int main()
 		struct CustomeResult :public response::http_package {
 			CustomeResult(std::string&& content) {
 				body_souce_ = std::move(content);
+			}
+			void dump() {
 				state_ = http_status::ok;
 				write_type_ = response::write_type::file;
 				is_chunked_ = true;
