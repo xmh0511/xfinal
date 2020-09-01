@@ -252,13 +252,13 @@ namespace xfinal {
 			std::error_code ignore_err;
 			timer_.cancel(ignore_err);
 			io_.stop();
-			if (thread_->joinable()) {
+			if (thread_!=nullptr && thread_->joinable()) {
 				thread_->join();
 			}
 			websocket_hub_instance_.end_thread_ = true;
 			websocket_hub_instance_.add({ nullptr,nullptr });
 			websocket_hub_instance_.condtion_.notify_all();
-			if (websocket_hub_thread_->joinable()) {
+			if (websocket_hub_thread_!=nullptr && websocket_hub_thread_->joinable()) {
 				websocket_hub_thread_->join();
 			}
 		}
