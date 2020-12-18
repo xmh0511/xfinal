@@ -6,7 +6,7 @@
 
 1. 统一而简单的接口
 2. header-only
-3. 跨平台
+3. 跨平台（Windows, Linux, Macos）
 4. 支持拦截器功能
 5. 支持session/cookie （持久化,默认保存到磁盘。用户可以自定义持久化介质）
 6. 支持websocket(无锁异步write,高效的数据写出能力) 
