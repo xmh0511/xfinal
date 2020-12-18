@@ -54,14 +54,14 @@ namespace xfinal {
 	template<std::size_t N>
 	struct router_caller {
 		template<typename Function, typename Tuple>
-		constexpr static void apply(bool& b, request& req, response& res, Tuple&& tp) {
+		static void apply(bool& b, request& req, response& res, Tuple&& tp) {
 			each_tuple<0, tuple_size<typename std::remove_reference<Tuple>::type>::value>{}(std::forward<Tuple>(tp), Function{ b,req,res });
 		}
 	};
 	template<>
 	struct router_caller<0> {
 		template<typename Function, typename Tuple>
-		constexpr static void apply(bool& b, request& req, response& res, Tuple&& tp) {
+		static void apply(bool& b, request& req, response& res, Tuple&& tp) {
 			b = true;
 		}
 	};

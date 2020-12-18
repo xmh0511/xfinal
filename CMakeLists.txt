@@ -26,7 +26,7 @@ if(ENABLE_CLIENT_SSL)
 endif()
 
 if (ENABLE_CLIENT_SSL)
-                find_package(OpenSSL REQUIRED)
+    find_package(OpenSSL REQUIRED)
 endif()
 
 set(XFINAL ./xfinal/xfinal.hpp main.cpp)
@@ -41,9 +41,17 @@ endif()
 
 
 if(ENABLE_CLIENT_SSL)
-target_link_libraries(${project_name} uuid ${OPENSSL_LIBRARIES})
+if(APPLE)
+    target_link_libraries(${project_name} ${OPENSSL_LIBRARIES} "-framework CoreFoundation")
+ else()
+    target_link_libraries(${project_name} uuid ${OPENSSL_LIBRARIES})
+endif()
 else()
-target_link_libraries(${project_name} uuid)
+  if(APPLE)
+    target_link_libraries(${project_name} "-framework CoreFoundation")
+  else()
+    target_link_libraries(${project_name} uuid)
+  endif()
 endif()
 
 install(TARGETS ${project_name} DESTINATION include)
