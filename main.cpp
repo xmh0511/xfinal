@@ -141,7 +141,7 @@ int main()
 		});
 
 	server.router<GET>("/sessionrecord", [](request& req, response& res) {
-		auto& session = req.session("test_session0");
+		auto& session = req.session("test_session");
 		session.set_expires(3600);
 		res.write_string("OK");
 		}, init_session{});
@@ -361,6 +361,12 @@ int main()
 
 	server.router<GET>("/session", [](request& req, response& res) {
 		auto& session = req.create_session();
+		auto& session0 = req.create_session("a0");
+		auto& session1 = req.create_session("a1");
+		session0.set_expires(30);
+		session1.set_expires(30);
+		session0.set_data("data", 10);
+		session1.set_data("data", 11);
 		session.set_data("time", std::to_string(std::time(nullptr)));
 		session.set_expires(30);
 		res.write_string("OK");
@@ -382,6 +388,10 @@ int main()
 			res.write_string("no");
 		}
 		else {
+			auto& session0 = req.session("a0");
+			auto& session1 = req.session("a1");
+			std::cout << session0.get_data<int>("data") << "\n";
+			std::cout << session1.get_data<int>("data") << "\n";
 			res.write_string("yes");
 		}
 	});

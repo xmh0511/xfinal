@@ -329,57 +329,70 @@ namespace xfinal {
 		class session& create_session() {
 			return create_session("XFINAL");
 		}
-		class session& create_session(std::string const& name) {
-			session_ = std::make_shared<class session>(false);
-			session_->get_cookie().set_name(name);
-			session_->init_id(uuids::uuid_system_generator{}().to_short_str());
+		class session& create_session(std::string const& name,bool overlay = true) {
+			auto it = sessions_.find(name);
+			if (overlay == false && it != sessions_.end()) {
+				return *(it->second);
+			}
+			auto session = std::make_shared<class session>(false);
+			session->get_cookie().set_name(name);
+			session->init_id(uuids::uuid_system_generator{}().to_short_str());
 			//session_->set_expires(600);
-			session_manager<class session>::get().add_session(session_->get_id(), session_);
-			return *session_;
+			session_manager<class session>::get().add_session(session->get_id(), session);
+			if (it != sessions_.end()) {
+				it->second = session;
+			}
+			else {
+				sessions_.insert(std::make_pair(name, session));
+			}
+			return *session;
 		}
 
 		class session& session(std::string const& name) {
-			if (session_ != nullptr && !session_->empty()) {
-				auto cookie_name = session_->get_cookie().name();
+			auto it = sessions_.find(name);
+			if (it!= sessions_.end() && it->second != nullptr) {
+				auto cookie_name = it->second->get_cookie().name();
 				if (cookie_name == name) {
-					return *session_;
+					return *(it->second);
 				}
 			}
 			auto cookies_value = header("cookie");
 			auto name_view = nonstd::string_view{ name.data(),name.size() };
-			auto it = cookies_value.find(name_view);
-			if (it == (nonstd::string_view::size_type)nonstd::string_view::npos) {
-				session_ = session_manager<class session>::get().empty_session();
+			auto it_view = cookies_value.find(name_view);
+			std::shared_ptr<class session> session;
+			if (it_view == (nonstd::string_view::size_type)nonstd::string_view::npos) {
+				session = session_manager<class session>::get().empty_session();
 			}
 			else {
-				auto pos = it + name.size() + 1;
+				auto pos = it_view + name.size() + 1;
 				auto dot_pos = cookies_value.find(';', pos);
 				auto id = dot_pos != (nonstd::string_view::size_type)nonstd::string_view::npos ? cookies_value.substr(pos, dot_pos - pos) : cookies_value.substr(pos, cookies_value.size() - pos);
 				if (id.empty()) {
-					session_ = session_manager<class session>::get().empty_session();
+					session = session_manager<class session>::get().empty_session();
 				}
 				else {
-					session_ = session_manager<class session>::get().validata(view2str(id));//验证session的有效性并返回
+					session = session_manager<class session>::get().validata(view2str(id));//验证session的有效性并返回
 				}
 			}
-			return *session_;
+			sessions_.insert(std::make_pair(name, session));
+			return *session;
 		}
 		class session& session() {
 			return session("XFINAL");
 		}
 
-		void set_session(std::weak_ptr<class session> weak) {
-			auto handler = weak.lock();
-			if (handler != nullptr) {
-				session_ = handler;
-				session_manager<class session>::get().add_session(handler->get_id(), handler);
-			}
-		}
+		//void set_session(std::weak_ptr<class session> weak) {
+		//	auto handler = weak.lock();
+		//	if (handler != nullptr) {
+		//		session_ = handler;
+		//		session_manager<class session>::get().add_session(handler->get_id(), handler);
+		//	}
+		//}
 
-		class session& session_by_id(std::string const& sessionId) {
-			session_ = session_manager<class session>::get().validata(sessionId);//验证session的有效性并返回
-			return *session_;
-		}
+		//class session& session_by_id(std::string const& sessionId) {
+		//	session_ = session_manager<class session>::get().validata(sessionId);//验证session的有效性并返回
+		//	return *session_;
+		//}
 
 		class session_manager<class session>& get_session_manager() {
 			return session_manager<class session>::get();
@@ -447,7 +460,8 @@ namespace xfinal {
 			boundary_key_ = "";
 			is_generic_ = false;
 			generic_base_path_ = "";
-			session_ = nullptr;
+			//session_ = nullptr;
+			sessions_.clear();
 			is_websocket_ = false;
 			user_data_.clear();
 		}
@@ -479,7 +493,8 @@ namespace xfinal {
 		xfinal::XFile* oct_steam_ = nullptr;
 		xfinal::XFile* empty_file_ = nullptr;
 		class connection* connecter_;
-		std::shared_ptr<class session> session_;
+		//std::shared_ptr<class session> session_;
+		std::map<std::string, std::shared_ptr<class session>> sessions_;
 		bool is_generic_ = false;
 		std::string generic_base_path_;
 		std::map<std::string, nonstd::any> user_data_;
@@ -777,6 +792,22 @@ namespace xfinal {
 			return T{};
 		}
 	private:
+		void write_sessions_to_client() {
+			auto&& map = req_.sessions_;
+			for (auto it = map.begin(); it != map.end(); ++it) {
+				auto&& session = it->second;
+				if ((session != nullptr) && !(session->empty())) {  //是否有session
+					if (session->cookie_update()) {
+						add_header("Set-Cookie", session->cookie_str());
+					}
+					if (session->cookie_update() || session->data_update()) {
+						session->save(session_manager<class session>::get().get_storage()); //保存到存储介质
+						session->set_data_update(false);
+					}
+					session->set_cookie_update(false);
+				}
+			}
+		}
 		std::vector<asio::const_buffer> header_to_buffer() noexcept {
 			std::vector<asio::const_buffer> buffers_;
 			add_header("server", "xfinal");//增加服务器标识
@@ -786,16 +817,7 @@ namespace xfinal {
 			http_version_ = view2str(req_.http_version()) + ' ';//写入回应状态行 
 			buffers_.emplace_back(asio::buffer(http_version_));
 			buffers_.emplace_back(http_state_to_buffer(state_));
-			if ((req_.session_ != nullptr) && !(req_.session_->empty())) {  //是否有session
-				if (req_.session_->cookie_update()) {
-					add_header("Set-Cookie", req_.session_->cookie_str());
-				}
-				if (req_.session_->cookie_update() || req_.session_->data_update()) {
-					req_.session_->save(session_manager<class session>::get().get_storage()); //保存到存储介质
-					req_.session_->set_data_update(false);
-				}
-				req_.session_->set_cookie_update(false);
-			}
+			write_sessions_to_client(); //sessions 写入客户端
 			for (auto& iter : header_map_) {  //回写响应头部
 				buffers_.emplace_back(asio::buffer(iter.first));
 				buffers_.emplace_back(asio::buffer(name_value_separator.data(), name_value_separator.size()));

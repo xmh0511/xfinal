@@ -52,6 +52,9 @@ namespace xfinal {
 			if (http_only_) {
 				content = content.append("; HttpOnly");
 			}
+			if (secure_) {
+				content = content.append("; Secure");
+			}
 			return content;
 		}
 		void set_http_only(bool is_http_only) {
@@ -75,6 +78,13 @@ namespace xfinal {
 		std::string domain() {
 			return domain_;
 		}
+		bool sercure() {
+			return secure_;
+		}
+		void set_secure(bool secure) {
+			session_.set_cookie_update(true);
+			secure_ = secure;
+		}
 	private:
 		std::string name_;
 		std::string const* uuid_;//point to session uuid;
@@ -82,6 +92,7 @@ namespace xfinal {
 		std::string domain_;
 		std::string path_;
 		bool http_only_ = false;
+		bool secure_ = false;
 		Session& session_;
 	};
 
@@ -263,6 +274,7 @@ namespace xfinal {
 			ss["http_only"] = cookie_.http_only();
 			ss["path"] = cookie_.path();
 			ss["domain"] = cookie_.domain();
+			ss["secure"] = cookie_.sercure();
 			return ss.dump();
 		}
 		bool empty() {
@@ -329,13 +341,14 @@ namespace xfinal {
 					try {
 						auto data = json::parse(buffer);
 						auto session = std::make_shared<class session>();
-						if (!data.is_null() && !data["expires"].is_null() && !data["id"].is_null() && !data["cookie_name"].is_null() && !data["path"].is_null() && !data["domain"].is_null() && !data["http_only"].is_null()) {
+						if (!data.is_null() && !data["expires"].is_null() && !data["id"].is_null() && !data["cookie_name"].is_null() && !data["path"].is_null() && !data["domain"].is_null() && !data["http_only"].is_null()&& !data["secure"].is_null()) {
 							session->init_id(data["id"].get<std::string>());
 							session->replace_expires(data["expires"].get<std::time_t>());
 							session->get_cookie().set_name(data["cookie_name"].get<std::string>());
 							session->get_cookie().set_path(data["path"].get<std::string>());
 							session->get_cookie().set_domain(data["domain"].get<std::string>());
 							session->get_cookie().set_http_only(data["http_only"].get<bool>());
+							session->get_cookie().set_secure(data["secure"].get<bool>());
 							session->set_cookie_update(false);
 							session->set_data_update(false);
 							if (!data["data"].is_null()) {
