@@ -686,7 +686,7 @@ namespace xfinal {
 			try {
 				write_string(json.dump(), is_chunked, http_status::ok, "application/json");
 			}
-			catch (json::type_error const& ec) {
+			catch (std::exception const& ec) {
 				write_string(ec.what(), false, http_status::bad_request);
 			}
 		}
@@ -695,7 +695,7 @@ namespace xfinal {
 			try {
 				write_string(std::move(json), is_chunked, http_status::ok, "application/json");
 			}
-			catch (json::type_error const& ec) {
+			catch (std::exception const& ec) {
 				write_string(ec.what(), false, http_status::bad_request);
 			}
 		}
@@ -713,7 +713,7 @@ namespace xfinal {
 			try {
 				write_string(view_env_->render_file(filename, view_data_), is_chunked, state, extension);
 			}
-			catch (std::runtime_error const& ec) {
+			catch (std::exception const& ec) {
 				write_string(ec.what(), false, http_status::bad_request);
 			}
 		}
@@ -727,7 +727,7 @@ namespace xfinal {
 			try {
 				write_string(view_env_->render(data, view_data_), is_chunked, state, content_type);
 			}
-			catch (std::runtime_error const& ec) {
+			catch (std::exception const& ec) {
 				write_string(ec.what(), false, http_status::bad_request);
 			}
 		}
