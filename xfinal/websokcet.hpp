@@ -444,6 +444,17 @@ namespace xfinal {
 			}
 		}
 		void read_data() {
+			if (frame_info_.payload_length == 0) {  //没有数据需要读取
+				if (frame_info_.eof) {
+					message_ = std::string();
+					buffers_.resize(0);
+					data_current_pos_ = 0;
+					//数据帧都处理完整 回调
+					websocket_event_manager.trigger(url_, "message", *this);
+				}
+				start_read();
+				return;
+			}
 			expand_buffer(frame_info_.payload_length);
 			auto handler = this->shared_from_this();
 			start_read_timeout();

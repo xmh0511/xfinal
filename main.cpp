@@ -453,6 +453,25 @@ int main()
 
 	std::shared_ptr<websocket> other_socket;
 
+
+	//websocket_event event;
+	//event.on("message", [](websocket& ws) {
+	//	std::cout << view2str(ws.messages()) << std::endl;
+	//	std::cout << (int)ws.message_code() << std::endl;
+	//	std::string message;
+	//	for (auto i = 0; i <= 18000; ++i) {
+	//		message.append(std::to_string(i) + ",");
+	//	}
+	//	ws.write_string(message);
+	//	}).on("open", [&other_socket](websocket& ws) {
+	//		//auto data = ws.get_user_data<std::shared_ptr<std::string>>("tag");
+	//		//other_socket = ws.shared_from_this();
+	//		std::cout << ws.uuid() << " open " <<  std::endl;
+	//		}).on("close", [](websocket& ws) {
+	//			std::cout << ws.uuid() << " close" << std::endl;
+	//			});
+	//		server.router("/ws", event);
+
 	websocket_event event;
 	event.on("message", [](websocket& ws) {
 		std::cout << view2str(ws.messages()) << std::endl;
