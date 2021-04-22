@@ -473,6 +473,9 @@ namespace xfinal {
 		std::map<std::string, nonstd::any>&& move_user_data() {
 			return std::move(user_data_);
 		}
+		std::map<std::string, std::string>&& move_key_params () {
+			return std::move (decode_url_params_);
+		}
 	private:
 		nonstd::string_view method_;
 		nonstd::string_view url_;
