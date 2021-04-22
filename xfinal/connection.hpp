@@ -660,7 +660,7 @@ namespace xfinal {
 						cancel_keep_timer();
 						auto ws = handler->router_.websokcets().start_webscoket(view2str(handler->req_.get_event_index_str()));
 						ws->user_data_ = req_.move_user_data();
-						ws->key_params().swap(req_.key_params());
+						ws->decode_url_params_ = req_.key_params ();
 						ws->move_socket(std::move(handler->socket_));
 					}
 				});

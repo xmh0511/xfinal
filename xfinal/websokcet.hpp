@@ -113,7 +113,7 @@ namespace xfinal {
 		asio::ip::tcp::socket& socket() {
 			return *socket_;
 		}
-		std::map<std::string, std::string> &key_params () noexcept {
+		std::map<std::string, std::string> key_params () const noexcept {
 			return decode_url_params_;
 		}
 	private:

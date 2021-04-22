@@ -143,7 +143,7 @@ namespace xfinal {
 			return {};
 		}
 
-		std::map<std::string, std::string> &key_params() noexcept { //获取问号键值对的map
+		std::map<std::string, std::string> key_params() const noexcept { //获取问号键值对的map
 			return decode_url_params_;
 		}
 
