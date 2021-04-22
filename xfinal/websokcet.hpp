@@ -113,6 +113,9 @@ namespace xfinal {
 		asio::ip::tcp::socket& socket() {
 			return *socket_;
 		}
+		std::map<std::string, std::string> &key_params () noexcept {
+			return decode_url_params_;
+		}
 	private:
 		void move_socket(std::unique_ptr<asio::ip::tcp::socket>&& socket) {
 			socket_ = std::move(socket);
@@ -554,6 +557,7 @@ namespace xfinal {
 		std::atomic_bool socket_is_open_{ false };
 		std::atomic_bool is_writing_{ false };
 		std::map<std::string, nonstd::any> user_data_;
+		std::map<std::string, std::string> decode_url_params_;
 	};
 
 	class websocket_hub {
