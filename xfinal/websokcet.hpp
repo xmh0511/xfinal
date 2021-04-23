@@ -28,6 +28,8 @@ namespace xfinal {
 	class websocket;
 	template<typename T>
 	void close_ws(websocket& ws);
+
+	inline void close_ws_with_notification(websocket& ws);
 	class websocket_event final {
 		friend class websockets;
 	public:
@@ -79,6 +81,14 @@ namespace xfinal {
 			auto it = websockets_.find(uuid);
 			if (it != websockets_.end()) {
 				websockets_.erase(it);
+			}
+		}
+		~websocket_event_map() {
+			map_mutex_.lock();
+			auto copy_sockets = websockets_;
+			map_mutex_.unlock();
+			for (auto&& wsocket : copy_sockets) {
+				close_ws_with_notification(*wsocket.second);
 			}
 		}
 	private:
@@ -651,6 +661,10 @@ namespace xfinal {
 	void close_ws(websocket& ws)
 	{
 		ws.null_close();
+	}
+
+	void close_ws_with_notification(websocket& ws) {
+		ws.close();
 	}
 
 
