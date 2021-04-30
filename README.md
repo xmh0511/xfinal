@@ -116,6 +116,36 @@ int main()
    serve.run();
 }
 ````
+### 有关接口介绍
+> request::query
+>> 参数类型为string
+>> 返回值类型为string, 根据索引返回表单提交的值（url-encode-form 和 multipart-form） 
+
+> request::formdata_form_map
+>> 返回通过url-encode-form提交的所有键值对集合
+
+> multipart_form_map
+>> 返回通过multipart-form提交的所有非文件键值对集合
+
+> request::param
+>> 1. 当参数类型为string，返回url中的键值对中key为参数值所对应的值
+>> 2. 当参数类型为std::size_t，返回url中与通配符匹配的对应索引的值
+
+> request::path_params_string
+>> 返回通配符对应的path路径的原始文本  
+
+> request::pair_params_string
+>> 返回URL路径中?后的原始文本  
+
+>request::path_params_list
+>> 返回通配符对应的每一个参数组成的集合 
+
+> request::pair_params_map
+>> 返回URL中？后的参数键值对集合  
+
+>request::raw_url
+>> 返回请求头中URL的原始文本 
+
 ## octet-stream 请求处理
 
 ````cpp
@@ -553,7 +583,7 @@ int main()
 }
 ````
 ### webosocket write系列接口
-> 可选最后一个参数，其泛化类型为 void(bool, std::error_code)
+> 可选最后一个参数，其可调用类型为 void(bool, std::error_code)
 >> 1. 参数1: 是否成功写出
 >> 2. 参数2: 可以获取错误码  
 
