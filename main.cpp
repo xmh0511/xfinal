@@ -462,14 +462,19 @@ int main()
 	//	for (auto i = 0; i <= 18000; ++i) {
 	//		message.append(std::to_string(i) + ",");
 	//	}
-	//	ws.write_string(message);
+	//	ws.write_string(message, [](bool r,std::error_code const& ec) {
+	//		if (r) {
+	//			std::cout << "write ok\n";
+	//			std::cout<<"ec error: "<<(bool)ec <<" ec message: " << ec.message()<<"\n";
+	//		}
+	//	});
 	//	}).on("open", [&other_socket](websocket& ws) {
 	//		//auto data = ws.get_user_data<std::shared_ptr<std::string>>("tag");
 	//		//other_socket = ws.shared_from_this();
 	//		std::cout << ws.uuid() << " open " <<  std::endl;
-	//		}).on("close", [](websocket& ws) {
+	//	}).on("close", [](websocket& ws) {
 	//			std::cout << ws.uuid() << " close" << std::endl;
-	//			});
+	//	});
 	//		server.router("/ws", event);
 
 	websocket_event event;
