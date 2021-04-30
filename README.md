@@ -552,6 +552,11 @@ int main()
 	server.router("/ws", event);  //定义webscoket 路由
 }
 ````
+### webosocket write系列接口
+> 可选最后一个参数，其泛化类型为 void(bool, std::error_code)
+>> 1. 参数1: 是否成功写出
+>> 2. 参数2: 可以获取错误码  
+
 # 功能配置
 >如果没有特殊说明,默认在run方法调用前进行设置
 
