@@ -103,7 +103,7 @@ namespace xfinal {
 			return "";
 		}
 
-		nonstd::string_view raw_url_params() const noexcept {  //获取url参数字符串
+		nonstd::string_view path_params_string() const noexcept {  //获取url参数字符串
 			if (is_generic_) {
 				auto pos = generic_base_path_.size();
 				auto url_fix = url();
@@ -116,7 +116,7 @@ namespace xfinal {
 			return "";
 		}
 
-		nonstd::string_view raw_key_params() const noexcept {  //获取问号后的参数字符串
+		nonstd::string_view pair_params_string() const noexcept {  //获取问号后的参数字符串
 			auto it = url_.rfind('?');
 			auto view = url_.substr(it + 1);
 			if (it != (nonstd::string_view::size_type)nonstd::string_view::npos) {
@@ -129,7 +129,7 @@ namespace xfinal {
 			return "";
 		}
 
-		std::vector<nonstd::string_view> url_params() const noexcept {  //获取url类型参数的数组
+		std::vector<nonstd::string_view> path_params_list() const noexcept {  //获取url类型参数的数组
 			if (is_generic_) {
 				auto pos = generic_base_path_.size();
 				auto url_fix = url();
@@ -143,7 +143,7 @@ namespace xfinal {
 			return {};
 		}
 
-		std::map<std::string, std::string> key_params() const noexcept { //获取问号键值对的map
+		std::map<std::string, std::string> pair_params_map() const noexcept { //获取问号键值对的map
 			return decode_url_params_;
 		}
 
@@ -254,11 +254,11 @@ namespace xfinal {
 		//	}
 		//}
 
-		std::map<std::string, std::string> const& url_form() const noexcept {
+		std::map<std::string, std::string> const& formdata_form_map() const noexcept {
 			return decode_form_map_;
 		}
 
-		std::map<std::string, std::string> const& multipart_form() const noexcept {
+		std::map<std::string, std::string> const& multipart_form_map() const noexcept {
 			return *multipart_form_map_;
 		}
 

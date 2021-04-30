@@ -91,7 +91,7 @@ struct limitRequest {
 	bool prehandle(request& req, response& res) {
 		using namespace nonstd::literals;
 		auto id = req.param("id");
-		auto info = req.url_params();
+		auto info = req.path_params_list();
 		if (id == "0"_sv) {
 			res.write_file_view("./www/error.html", true, http_status::bad_request);
 			return false;
@@ -202,10 +202,10 @@ int main()
 		});
 
 	server.router<GET>("/params", [](request& req, response& res) {
-		auto params = req.key_params();
+		auto params = req.pair_params_map();
 		std::cout << "id: " << req.param("id") << std::endl;
 		std::cout << "text: " << req.param("text") << std::endl;
-		std::cout << "all value: " << req.raw_key_params() << std::endl;
+		std::cout << "all value: " << req.pair_params_string() << std::endl;
 		res.write_string("id");
 	});
 
@@ -221,7 +221,7 @@ int main()
 			file_info["key"] = file.first;
 			data["files"].push_back(file_info);
 		}
-		auto& texts = req.multipart_form();
+		auto& texts = req.multipart_form_map();
 		for (auto& iter : texts) {
 			json text_info;
 			text_info["text"] = iter.second;
@@ -251,9 +251,9 @@ int main()
 		});
 
 	server.router<GET, POST>("/pathinfo/*", [](request& req, response& res) {
-		auto raw_param = req.raw_url_params();
+		auto raw_param = req.path_params_string();
 		auto param = req.param(0);
-		auto params = req.url_params();
+		auto params = req.path_params_list();
 		res.write_string("abc");
 	});
 
