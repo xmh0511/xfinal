@@ -456,6 +456,7 @@ int main()
 }
 ````
 ## xfinal 请求拦截处理
+> 请求body接受前会调用prehandle，返回true则继续处理当前http请求，如果为false则丢弃当前http请求体数据
 ````cpp
 #include <xfinal.hpp>
 using namespace xfinal;
