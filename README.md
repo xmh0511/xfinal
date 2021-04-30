@@ -116,7 +116,7 @@ int main()
    serve.run();
 }
 ````
-### 有关接口介绍
+### request中相关接口介绍
 > request::query
 >> 参数类型为string
 >> 返回值类型为string, 根据索引返回表单提交的值（url-encode-form 和 multipart-form） 
@@ -166,10 +166,10 @@ int main()
 #### 自动路由到最佳匹配url的注册器 （websocket使用类似）
 >假设注册路由的集合是 { /* , /abc/* , /abc/ccc/* , /abc   }
 >请求示例  
->> 1. url为 http://127.0.0.1:8080/abc/ccc/ddd,则最佳匹配的是 /abc/ccc/* 
->> 2. url为 http://127.0.0.1:8080/abc/cccc/ddd, 则匹配 /abc/* ,  
->> 3. url为 http://127.0.0.1:8080/ddd/kkk,则只匹配 /*
->> 4. url为 http://127.0.0.1:8080/abc,则最佳匹配的就是 /abc
+>> 1. url为 `http://127.0.0.1:8080/abc/ccc/ddd` ,则最佳匹配的是 /abc/ccc/* 
+>> 2. url为 `http://127.0.0.1:8080/abc/cccc/ddd`, 则匹配 /abc/* ,  
+>> 3. url为 `http://127.0.0.1:8080/ddd/kkk`,则只匹配 /*
+>> 4. url为 `http://127.0.0.1:8080/abc`,则最佳匹配的就是 /abc
 ````cpp
 #include <xfinal.hpp>
 using namespace xfinal;
