@@ -72,10 +72,11 @@ namespace xfinal {
 		nonstd::string_view url() const noexcept {
 			auto it = url_.rfind('?');
 			if (it != (nonstd::string_view::size_type)nonstd::string_view::npos) {
-				bool r = is_key_params(url_.substr(it + 1));
-				if (r) {
-					return url_.substr(0, it);
-				}
+				// bool r = is_key_params(url_.substr(it + 1));
+				// if (r) {
+				// 	return url_.substr(0, it);
+				// }
+				return url_.substr(0, it);
 			}
 			return url_;
 		}

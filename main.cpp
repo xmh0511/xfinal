@@ -451,6 +451,11 @@ int main()
 		res.write_http_package(CustomeResult{ "./static/a.mp4" });
 	});
 
+
+	server.router<GET>("/inspect",[](request& req, response& res){
+		res.write_file_view("./swagger-ui-bundle.js");
+	});
+
 	std::shared_ptr<websocket> other_socket;
 
 
