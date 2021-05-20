@@ -130,6 +130,7 @@ namespace xfinal {
 	private:
 		void move_socket(std::unique_ptr<asio::ip::tcp::socket>&& socket) {
 			socket_ = std::move(socket);
+			socket = nullptr;
 			socket_is_open_ = true;
 			auto& io = static_cast<asio::io_service&>(socket_->get_executor().context());
 			wait_read_timer_ = std::move(std::unique_ptr<asio::steady_timer>(new asio::steady_timer(io)));

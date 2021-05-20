@@ -762,13 +762,15 @@ namespace xfinal {
 		}
 	private:
 		void disconnect() {
-			std::error_code ignore_write_ec;
-			socket_->write_some(asio::buffer("\0\0"), ignore_write_ec);  //solve time_wait problem
-			std::error_code ignore_shutdown_ec;
-			socket_->shutdown(asio::ip::tcp::socket::shutdown_both, ignore_shutdown_ec);
-			std::error_code ignore_close_ec;
-			socket_->close(ignore_close_ec);
-			socket_close_ = true;
+			if(socket_close_== false && socket_ != nullptr){
+				std::error_code ignore_write_ec;
+				socket_->write_some(asio::buffer("\0\0"), ignore_write_ec);  //solve time_wait problem
+				std::error_code ignore_shutdown_ec;
+				socket_->shutdown(asio::ip::tcp::socket::shutdown_both, ignore_shutdown_ec);
+				std::error_code ignore_close_ec;
+				socket_->close(ignore_close_ec);
+				socket_close_ = true;
+			}
 		}
 	private:
 		void reset() {
