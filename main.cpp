@@ -75,7 +75,7 @@ struct limitUpload {
 		//	res.write_string("too large", true, http_status::bad_request);
 		//	return false;
 		//}
-		auto type = req.content_type();
+		auto type = req.get_content_type();
 		if (type == content_type::multipart_form) {
 			res.write_file_view("./www/test.html", true, http_status::bad_request);
 			return false;

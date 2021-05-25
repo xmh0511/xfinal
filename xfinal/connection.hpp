@@ -228,7 +228,7 @@ namespace xfinal {
 			//	return;
 			//}
 			if (req_.has_body()) {  //has request body
-				auto type = req_.content_type();
+				auto type = req_.get_content_type();
 				switch (type)
 				{
 				case xfinal::content_type::url_encode_form:

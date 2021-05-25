@@ -211,7 +211,7 @@ namespace xfinal {
 			return version_;
 		}
 
-		enum content_type content_type() const noexcept {
+		enum content_type get_content_type() const noexcept {
 			return content_type_;
 		}
 
