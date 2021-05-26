@@ -507,7 +507,7 @@ namespace xfinal {
 				auto wb_iter = websocket_router_map_.find(url_str);
 				if (wb_iter != websocket_router_map_.end()) {
 					rtype = router_type::ws;
-					return { url_str ,nullptr };
+					return std::pair<std::string,router_function>{ url_str ,nullptr };
 				}
 			}
 			//if (req.content_type() == content_type::multipart_form) {
@@ -522,10 +522,10 @@ namespace xfinal {
 			//}
 			rtype = router_type::unknow;
 			if (not_found_callback_ != nullptr) {
-				return { "",not_found_callback_ };
+				return std::pair<std::string,router_function>{ "",not_found_callback_ };
 			}
 			else {
-				return { "",[](request& req, response& res) {
+				return std::pair<std::string,router_function>{ "",[](request& req, response& res) {
 					std::stringstream ss;
 					ss << "the request " << view2str(req.method()) << " \"" << view2str(req.url()) << "\" is not found";
 					res.write_string(ss.str(), false, http_status::bad_request);

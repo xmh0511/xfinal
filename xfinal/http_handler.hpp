@@ -141,7 +141,7 @@ namespace xfinal {
 				auto vec = split(parms, "/");
 				return vec;
 			}
-			return {};
+			return std::vector<nonstd::string_view>{};
 		}
 
 		std::map<std::string, std::string> pair_params_map() const noexcept { //获取问号键值对的map
@@ -841,6 +841,7 @@ namespace xfinal {
 		}
 
 		std::tuple<bool, std::vector<asio::const_buffer>> chunked_body() noexcept {
+			using return_type = std::tuple<bool, std::vector<asio::const_buffer>>;
 			std::vector<asio::const_buffer> buffers;
 			switch (write_type_) {
 			case write_type::string: //如果是文本数据
@@ -852,7 +853,7 @@ namespace xfinal {
 					buffers.emplace_back(asio::buffer(crlf.data(), crlf.size()));
 					buffers.emplace_back(asio::buffer(&body_[(std::size_t)init_start_pos_], left_size));
 					buffers.emplace_back(asio::buffer(crlf.data(), crlf.size()));
-					return { true, buffers };
+					return return_type{ true, buffers };
 				}
 				else {  //还有超过每次chunked传输的数据大小
 					chunked_write_size_ = to_hex(chunked_size_);
@@ -861,7 +862,7 @@ namespace xfinal {
 					buffers.emplace_back(asio::buffer(&body_[(std::size_t)init_start_pos_], (std::size_t)chunked_size_));
 					buffers.emplace_back(asio::buffer(crlf.data(), crlf.size()));
 					init_start_pos_ = init_start_pos_ + chunked_size_;
-					return { false,buffers };
+					return return_type{ false,buffers };
 				}
 			}
 			break;
@@ -885,11 +886,11 @@ namespace xfinal {
 				buffers.emplace_back(asio::buffer(crlf.data(), crlf.size()));
 				init_start_pos_ = -1;  //下一次就不需要在重新定位文件
 				init_end_pos_ = -1;
-				return { eof,buffers };
+				return return_type{ eof,buffers };
 			}
 			break;
 			default:
-				return { true,buffers };
+				return return_type{ true,buffers };
 				break;
 			}
 		}

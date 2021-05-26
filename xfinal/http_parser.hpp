@@ -101,9 +101,9 @@ namespace xfinal {
 				auto begin = request_header.http_header_str_.data();
 				begin_ = begin;
 				end_ = begin + request_header.http_header_str_.size();
-				return { parse_state::valid,true };
+				return std::pair<parse_state, bool>{ parse_state::valid,true };
 			}
-			return { parse_state::valid,false };
+			return std::pair<parse_state, bool>{ parse_state::valid,false };
 			//auto view = nonstd::string_view(begin_, end_ - begin_);
 			//auto pos = view.find("\r\n\r\n");
 			//auto npos = (nonstd::string_view::size_type)nonstd::string_view::npos;
@@ -476,16 +476,17 @@ namespace xfinal {
 			}
 		}
 		std::pair<multipart_data_state, std::size_t> is_end_part_data(char const* buffers, std::size_t size) const {
+			using return_type = std::pair<multipart_data_state, std::size_t>;
 			nonstd::string_view buffer{ buffers ,size };
 			auto it = buffer.find(boundary_start_key_);
 			if (it != (nonstd::string_view::size_type)nonstd::string_view::npos) {
 				//std::cout << buffer.substr( it ,boundary_start_key_.size() ) << std::endl;
-				return { multipart_data_state::is_end, it - 2 };
+				return return_type{ multipart_data_state::is_end, it - 2 };
 			}
 			else {
 				auto it2 = buffer.find(boundary_end_key_);
 				if (it2 != (nonstd::string_view::size_type)nonstd::string_view::npos) {
-					return { multipart_data_state::is_end ,it2 - 2 };
+					return return_type{ multipart_data_state::is_end ,it2 - 2 };
 				}
 				else {
 					auto it3 = buffer.rfind("\r");
@@ -493,16 +494,17 @@ namespace xfinal {
 						auto padding_start = it3 + boundary_start_key_.size() + 1;
 						auto padding_end = it3 + boundary_end_key_.size() + 1;
 						if ((padding_start <= size) || (padding_end <= size)) {
-							return { multipart_data_state::all_part_data,0 };
+							return return_type{ multipart_data_state::all_part_data,0 };
 						}
-						return { multipart_data_state::maybe_end ,it3 };
+						return return_type{ multipart_data_state::maybe_end ,it3 };
 					}
-					return { multipart_data_state::all_part_data,0 };
+					return return_type{ multipart_data_state::all_part_data,0 };
 				}
 			}
 		}
 
 		std::pair<std::size_t, std::map<std::string, std::string>> parser_part_head(std::vector<char>::iterator begin_, std::vector<char>::iterator end_) const {
+			using return_type = std::pair<std::size_t, std::map<std::string, std::string>>;
 			nonstd::string_view buffer{ &(*begin_) ,std::size_t(end_ - begin_) };
 			auto it = buffer.find(boundary_start_key_);
 			if (it != (nonstd::string_view::size_type)nonstd::string_view::npos) {
@@ -511,14 +513,14 @@ namespace xfinal {
 				if (parse_end != (nonstd::string_view::size_type)nonstd::string_view::npos) {
 					auto head_size = parse_end + 4;
 					auto multipart_head = get_header(buffer.begin() + parse_begin, buffer.begin() + head_size);
-					return { head_size,multipart_head };
+					return return_type{ head_size,multipart_head };
 				}
 				else {
-					return { 0,{} };
+					return return_type{ 0,{} };
 				}
 			}
 			else {
-				return { 0,{} };
+				return return_type{ 0,{} };
 			}
 		}
 		bool is_end(std::vector<char>::iterator begin_, std::vector<char>::iterator end_) const {
@@ -556,7 +558,7 @@ namespace xfinal {
 						++start_;
 					}
 					if (start_ != start) {
-						return {};
+						return std::map<std::string, std::string>{};
 					}
 				}
 				++start;
