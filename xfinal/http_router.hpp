@@ -528,7 +528,7 @@ namespace xfinal {
 				return std::pair<std::string,router_function>{ "",[](request& req, response& res) {
 					std::stringstream ss;
 					ss << "the request " << view2str(req.method()) << " \"" << view2str(req.url()) << "\" is not found";
-					res.write_string(ss.str(), false, http_status::bad_request);
+					res.write_string(ss.str(), false, http_status::not_found);
 				} };
 			}
 		}

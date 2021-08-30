@@ -287,7 +287,7 @@ namespace xfinal {
 				auto ab = fs::absolute(p);
 				try {
 					if (!fs::exists(p) || (ab.parent_path() == fs::current_path())) { //目录到了程序文件的目录 视为不合法请求
-						res.write_string("", false, http_status::bad_request, view2str(content_type));
+						res.write_string("", false, http_status::not_found, view2str(content_type));
 					}
 					else {
 #ifdef _WIN32
