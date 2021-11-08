@@ -374,11 +374,19 @@ namespace xfinal {
 		}
 		void remove(session& session) {
 			auto filepath = save_dir_ +"/" + session.get_id();
-			fs::remove(filepath);
+			try{
+				fs::remove(filepath);
+			}catch(std::exception const& ec){
+				utils::messageCenter::get().trigger_message(ec.what());
+			}
 		}
 		void remove(std::string const& uuid) {
 			auto filepath = save_dir_ + "/" + uuid;
-			fs::remove(filepath);
+			try{
+				fs::remove(filepath);
+			}catch(std::exception const& ec){
+				utils::messageCenter::get().trigger_message(ec.what());
+			}
 		}
 	public:
 		std::string save_dir_ = "./session";
