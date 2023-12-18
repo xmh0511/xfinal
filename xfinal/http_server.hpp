@@ -1,6 +1,7 @@
 #pragma once
 #include <asio.hpp>
 #include <string>
+#include <vector>
 #include "ioservice_pool.hpp"
 #include "connection.hpp"
 #include "utils.hpp"
@@ -29,6 +30,10 @@ namespace xfinal {
 		}
 	public:
 		bool listen(std::string const& ip,std::string const& port) {
+            if(port.empty()){
+                server_query_ = std::unique_ptr<asio::ip::tcp::resolver::query>(new asio::ip::tcp::resolver::query{ ip, port });
+                return true;
+            }
 			auto ec = port_occupied(atoi(port.c_str()));
 			if (ec == asio::error::address_in_use) {
 				utils::messageCenter::get().trigger_message(ec.message());
@@ -38,7 +43,7 @@ namespace xfinal {
 			return true;
 		}
 	public:
-		void run() {
+        std::vector<asio::ip::tcp::endpoint> serve() {
 			if (!disable_auto_register_static_handler_) {
 				register_static_router(); //注册静态文件处理逻辑
 			}
@@ -53,19 +58,23 @@ namespace xfinal {
 			if (!has_set_session_storager_) {
 				set_default_session_storager();
 			}
+            std::tuple<bool,std::vector<asio::ip::tcp::endpoint>> r;
 			if (server_query_ != nullptr) {
-				bool r = listen(*server_query_);
-				if (!r) {
-					return;
+                r = listen(*server_query_);
+				if (!std::get<0>(r)) {
+					return {};
 				}
 			}
 			else {
 				utils::messageCenter::get().trigger_message("listen fail");
-				return;
+				return {};
 			}
 			http_router_.run();
-			ioservice_pool_handler_.run();
+            return std::get<1>(r);
 		}
+        void run(){
+            ioservice_pool_handler_.run();
+        }
 		void stop() {
 			ioservice_pool_handler_.stop();
 		}
@@ -223,7 +232,8 @@ namespace xfinal {
 #endif 
 		}
 	private:
-		bool listen(asio::ip::tcp::resolver::query& query) {
+		std::tuple<bool,std::vector<asio::ip::tcp::endpoint>> listen(asio::ip::tcp::resolver::query& query) {
+            std::vector<asio::ip::tcp::endpoint> bind_endpoints{};
 			bool result = false;
 			asio::ip::tcp::resolver resolver(ioservice_pool_handler_.get_io());
 			auto endpoints  = resolver.resolve(query);
@@ -234,6 +244,8 @@ namespace xfinal {
 				try {
 					acceptor_.bind(endpoint);
 					acceptor_.listen();
+                    asio::ip::tcp::endpoint used_endpoint = acceptor_.local_endpoint();
+                    bind_endpoints.push_back(used_endpoint);
 					start_acceptor();
 					result = true;
 				}
@@ -242,7 +254,7 @@ namespace xfinal {
 					utils::messageCenter::get().trigger_message(e.what());
 				}
 			}
-			return result;
+			return std::tuple<bool,std::vector<asio::ip::tcp::endpoint>>(result,bind_endpoints);
 		}
 	public:
 		template<http_method...Methods,typename Function,typename...Args>

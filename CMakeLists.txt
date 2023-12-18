@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.8)
 set(project_name xfinal)
 project(${project_name})
-set(CMAKE_BUILD_TYPE Release)
+#set(CMAKE_BUILD_TYPE Release)
 SET(ENABLE_CLIENT_SSL OFF)
 SET(ENABLE_BUILDIN_LOG OFF)
 #SET(CMAKE_CXX_FLAGS_RELEASE "$ENV{CXXFLAGS} -O3 -Wall")

@@ -576,7 +576,8 @@ int main()
 		//endth.detach();
 
 
-		server.run();
+		auto bind_endpoints = server.serve();
+        server.run();
 		std::cout << "server end" << std::endl;
 		return 0;
 }
