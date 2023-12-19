@@ -51,6 +51,7 @@ int main()
    serve.router<GET>("/hello",[](request& req,response& res){
       res.write_string("hello,world");
    });
+   serve.serve();
    serve.run();
 }
 ````
@@ -66,6 +67,7 @@ int main()
       auto id = req.param("id");
       res.write_string(view2str(id));
    });
+   serve.serve();
    serve.run();
 }
 ````
@@ -81,6 +83,7 @@ int main()
    serve.router<GET>("/redirect",[](request& req,response& res){
        res.redirect("/abc",false); /*接口的第二个参数用来告诉框架是临时重定向 还是永久重定向 */
    });
+   serve.serve();
    serve.run();
 }
 ````
@@ -97,6 +100,7 @@ int main()
         auto name = req.query("name");  /*query接口用于查询 name="xxx" 的值*/ 
         res.write_string(view2str(name));
    });
+   serve.serve();
    serve.run();
 }
 ````
@@ -113,6 +117,7 @@ int main()
         auto& file = req.file("img"); /*file 接口用于查询 name="xxx" 的文件 */ 
         res.write_string(std::to_string(file.size()));
    });
+   serve.serve();
    serve.run();
 }
 ````
@@ -159,6 +164,7 @@ int main()
         auto& file = req.file();  /*octet-stream 只能提交单个二进制流数据 所以这里的file没有参数 */
         res.write_string(std::to_string(file.size()));
    });
+   serve.serve();
    serve.run();
 }
 ````
@@ -228,7 +234,7 @@ int main()
 		root["param_size"] = req.url_params().size();
 		res.write_json(root);
 	});
-	
+	serve.serve();
 	server.run();
 	return 0;
 }
@@ -248,6 +254,7 @@ int main()
       data["language"] = "morden c++";
       res.write_json(data); /*第一个参数也可以直接传入json字符串,第二个接口用来控制返回方式*/
    });
+   serve.serve();
    serve.run();
 }
 ````
@@ -290,6 +297,7 @@ int main()
        res.set_attr("language", "c++");
        res.write_file_view("./static/test.html");/*也可以写内存中的模板 res.write_data_view("@{name}")*/
    });
+   serve.serve();
    serve.run();
 }
 ````
@@ -314,6 +322,7 @@ int main()
       /*chunked 方式支持断点续传 */
       /*框架内置的静态文件处理提供了通用的处理能力，这里提供了让用户处理更多资源文件请求的可能性，比如通过参数进行图片视频等多媒体文件的裁剪*/
    });
+   serve.serve();
    serve.run();
 }
 ````
@@ -372,6 +381,7 @@ int main()
    /*可以通过serve.static_path("./static") 改变目录 同时会自动改变静态资源的url的标识*/
    /*内置处理方式默认设置了static  用户可以通过localhost:8080/static/abc.png 来访问静态资源文件*/
    /*对于多媒体等文件默认支持断点续传功能*/
+   serve.serve();
    serve.run();
 }
 ````
@@ -395,6 +405,7 @@ int main()
 	  res.write_string("no");
 	}
    });
+   serve.serve();
    serve.run();
 }
 ````
@@ -422,6 +433,7 @@ int main()
    http_server serve(4); //线程数
    serve.listen("0.0.0.0","8080");
    serve.set_session_storager(std::unique_ptr<sql_storage>(new sql_storage{})); /*设置session存储方式*/
+   serve.serve();
    serve.run();
 }
 ````
@@ -452,6 +464,7 @@ int main()
    serve.router<POST>("/interceptor",[](request& req,response& res){
        res.write_string("OK");
    },http_interceptor{}); //可以注册多个拦截器 定义如示例中的http_interceptor
+   serve.serve();
    serve.run();
 }
 ````
@@ -480,6 +493,7 @@ int main()
    serve.router<POST>("/interceptor",[](request& req,response& res){
        res.write_string("OK");
    },pre_interceptor{}); //可以注册多个拦截器 定义如示例中的http_interceptor
+   serve.serve();
    serve.run();
 }
 ````
@@ -493,6 +507,7 @@ int main(){
   serve.on_error([](std::exception const& ec) {  //提供用户记录错误日志
        std::cout << ec.what() << std::endl;
   });
+  serve.serve();
   serve.run();
 }
 ````
@@ -522,6 +537,7 @@ int main()
    /*这里可以记录下每次请求的一些信息，用于下次请求使用*/
    Test t;
    serve.router<GET,POST>("/shop",&Test::shop,t);
+   serve.serve();
    serve.run();
 }
 ````
@@ -551,6 +567,7 @@ int main()
     /*这里可以记录下每次请求的一些信息，用于下次请求使用*/
    Shop t;
    serve.router<GET,POST>("/shop",&Shop::go,t);
+   serve.serve();
    serve.run();
 }
 ````
@@ -708,6 +725,7 @@ int main(){
 		  auto state = con.get_status_code();  //获取响应状态码
 		  res.write_string(con.get_content());  //获取响应的body
    });
+   serve.serve();
    serve.run();
 }
 ````
@@ -731,7 +749,7 @@ int main(){
          client.run();
          res.write_string("OK");
 	   });
-
+     serve.serve();
      serve.run();
 }
 ````
@@ -755,7 +773,7 @@ int main(){
             res.write_string("error");
          }
 	   });
-
+      serve.serve();
       serve.run();
 }
 ````
@@ -779,6 +797,7 @@ int main(){
             res.write_string("error");
          }
 	   });
+      serve.serve();
       serve.run();
 }
 ````
